@@ -16,11 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
 from core import views as core_views
+from django.urls import path, include
+
 
 urlpatterns = [
-    path("", core_views.home, name="home"),  # raíz del sitio → nuestra landing
+    path("", include("admin_soft.urls")),
+#    path("", core_views.home, name="home"),  # raíz del sitio → nuestra landing
     path("admin/", admin.site.urls),
 ]
 

@@ -10,6 +10,8 @@ dependencies = [
   "django-environ",
   "django-material-admin",
   "django-admin-rangefilter>=0.12.0,<0.13",
+  "requests>=2.31.0",
+  "django-admin-soft-dashboard>=1.0.26",
 ]
 
 [tool.uv]

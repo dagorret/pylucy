@@ -47,6 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    "admin_soft.apps.AdminSoftDashboardConfig",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -155,20 +156,25 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-
 # ======================================
-# Configuración API UTI  (#97 / #101-pre)
+# Configuración API UTI  (#97 / #101 / #102)
 # ======================================
 import os
 
+# Dónde vive la API UTI (mock, ngrok o real)
 UTI_API_BASE_URL = os.environ.get(
     "UTI_API_BASE_URL",
-    "http://localhost:8001",  # por ahora: mock local
+    "http://localhost:8088",  # mock local actual (puerto 8088)
 )
 
-UTI_API_PREINSCRIPTOS_ENDPOINT = "/api/preinscriptos"
-UTI_API_INGRESANTES_ENDPOINT = "/api/ingresantes"
-UTI_API_ALUMNOS_ENDPOINT = "/api/alumnos"
-UTI_API_DETALLE_ALUMNO_ENDPOINT = "/api/alumno"  # ajustaremos si el mock usa otro path
+# Endpoints base según el OpenAPI del mock:
+# /webservice/sial/V2/04/{tipo}/listas/{desde}/{hasta}
+UTI_API_LISTAS_BASE = "/webservice/sial/V2/04/{tipo}/listas"
+
+# /webservice/sial/V2/04/alumnos/datospersonales/{nrodoc}
+UTI_API_DATOS_PERSONALES = "/webservice/sial/V2/04/alumnos/datospersonales/{nrodoc}"
+
+# Auth básica (mock y probablemente UTI real)
+UTI_API_USER = os.environ.get("UTI_API_USER", "usuario")
+UTI_API_PASS = os.environ.get("UTI_API_PASS", "contrasena")
 

@@ -34,14 +34,16 @@ DB_PASS=app
 # API UTI — CONFIGURACIÓN DEL BASE_URL
 #######################################
 # En desarrollo local usando mock (docker-compose o python)
-#UTI_API_BASE_URL=http://localhost:8001
+UTI_API_BASE_URL=http://localhost:8088
+UTI_API_USER=usuario
+UTI_API_PASS=contrasena
 
 # Si estás usando ngrok para exponer el mock o la UTI real:
 # Copiar la URL que genere ngrok, por ejemplo:
 #UTI_API_BASE_URL=https://pepito-1234.ngrok-free.dev
 
 # En producción, apuntar a la API real de la UTI (predefinido en settings)
-UTI_API_BASE_URL=https://uti.unrc.edu.ar
+#UTI_API_BASE_URL=https://uti.unrc.edu.ar
 
 
 #######################################
