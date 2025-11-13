@@ -34,8 +34,15 @@ SECRET_KEY = 'django-insecure-g2h_(rha6*9d0*1p03sq1-o)w-1d!wf4$#$c2r4)&wc941v@ds
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    ".ngrok-free.dev",   # 👈 permite cualquier subdominio de ngrok-free.dev
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.ngrok-free.dev",
+]
 
 # Application definition
 
@@ -147,3 +154,21 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+# ======================================
+# Configuración API UTI  (#97 / #101-pre)
+# ======================================
+import os
+
+UTI_API_BASE_URL = os.environ.get(
+    "UTI_API_BASE_URL",
+    "http://localhost:8001",  # por ahora: mock local
+)
+
+UTI_API_PREINSCRIPTOS_ENDPOINT = "/api/preinscriptos"
+UTI_API_INGRESANTES_ENDPOINT = "/api/ingresantes"
+UTI_API_ALUMNOS_ENDPOINT = "/api/alumnos"
+UTI_API_DETALLE_ALUMNO_ENDPOINT = "/api/alumno"  # ajustaremos si el mock usa otro path
+
