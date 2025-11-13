@@ -1,6 +1,7 @@
 [project]
 name = "lucy-app"
 version = "0.1.0"
+requires-python = ">=3.12"
 dependencies = [
   "django>=5.0",
   "djangorestframework",
@@ -12,5 +13,5 @@ dependencies = [
 ]
 
 [tool.uv]
-python = "3.12"
+# por ahora no necesitás nada acá, lo podés dejar vacío
 
