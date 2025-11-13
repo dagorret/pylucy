@@ -101,12 +101,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-admin-soft-dashboard"
-version = "1.0.26"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/82/66/f51636e92b3140e0dd4a61c55cf0988e0adb1c26d9db3d48d656302371f0/django-admin-soft-dashboard-1.0.26.tar.gz", hash = "sha256:acf7cb21f8e17f09a7fdbf903bb4b93a9a5dffe0a7f421e2c1b23c2d0aa74821", size = 26625674, upload-time = "2025-04-19T06:43:41.594Z" }
-
-[[package]]
 name = "django-environ"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -164,7 +158,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-admin-rangefilter" },
-    { name = "django-admin-soft-dashboard" },
     { name = "django-environ" },
     { name = "django-filter" },
     { name = "django-material-admin" },
@@ -177,7 +170,6 @@ dependencies = [
 requires-dist = [
     { name = "django", specifier = ">=5.0" },
     { name = "django-admin-rangefilter", specifier = ">=0.12.0,<0.13" },
-    { name = "django-admin-soft-dashboard", specifier = ">=1.0.26" },
     { name = "django-environ" },
     { name = "django-filter" },
     { name = "django-material-admin" },

@@ -21,8 +21,7 @@ from django.urls import path, include
 
 
 urlpatterns = [
-    path("", include("admin_soft.urls")),
-#    path("", core_views.home, name="home"),  # raíz del sitio → nuestra landing
+    path("", core_views.home, name="home"),  # raíz del sitio → nuestra landing
     path("admin/", admin.site.urls),
 ]
 
