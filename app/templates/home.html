@@ -2,27 +2,55 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lucy | Sistema de Gestión Académica</title>
+
+    <!-- Tailwind cargado desde tu static, NO desde internet -->
     <script src="{% static 'js/lucy.js' %}"></script>
 </head>
-<body>
-    <main class="lucy-wrapper">
-        <section class="lucy-hero">
-            <h1>Facultad de Ciencias Económicas</h1>
-            <h2>Universidad Nacional de Río Cuarto</h2>
+<body class="bg-gradient-to-b from-blue-700 via-blue-800 to-blue-900 text-white min-h-screen flex items-center justify-center">
 
-            <p class="lucy-subtitle">Sistema de Gestión Académica</p>
+    <div class="container mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+        <!-- Izquierda -->
+        <div class="hidden md:block text-justify text-blue-200 leading-relaxed">
+            <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+                Pellentesque viverra, justo in tincidunt faucibus, eros sem facilisis nulla, 
+                ac laoreet justo enim at nisl. Donec vitae augue nec justo feugiat ornare.
+            </p>
+        </div>
 
-            <a href="#" class="lucy-button">LUCY</a>
+        <!-- Centro -->
+        <div class="text-center space-y-6">
+            <h1 class="text-3xl md:text-4xl font-semibold">
+                Facultad de Ciencias Económicas
+            </h1>
+            <h2 class="text-xl md:text-2xl text-blue-200">
+                Universidad Nacional de Río Cuarto
+            </h2>
+            <p class="text-lg text-blue-100 tracking-wide">
+                Sistema de Gestión Académica
+            </p>
 
-            <p class="lucy-text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque viverra,
-                justo in tincidunt faucibus, eros sem facilisis nulla, ac laoreet justo enim at nisl.
-                Donec vitae augue nec justo feugiat ornare. Praesent at urna sed nisl ultrices euismod.
+            <a href="/admin" 
+               class="inline-block mt-6 px-8 py-3 text-lg font-bold rounded-full 
+                      bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 
+                      hover:scale-105 transform transition shadow-lg shadow-purple-500/40">
+                LUCY
+            </a>
+        </div>
+
+        <!-- Derecha -->
+        <div class="hidden md:block text-justify text-blue-200 leading-relaxed">
+            <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+                Praesent at urna sed nisl ultrices euismod. 
                 Suspendisse potenti. Nulla facilisi. Mauris a turpis nec sapien mattis euismod.
             </p>
-        </section>
-    </main>
+        </div>
+    </div>
+
 </body>
 </html>
+
