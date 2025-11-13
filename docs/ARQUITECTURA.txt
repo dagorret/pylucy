@@ -1,0 +1,7 @@
+Estructura del proyecto:
+
+infra/           -> Docker compose, Postgres, pgweb, Mock API
+app/             -> Proyecto Django (código Python)
+ops/             -> Scripts, Makefile para automatizar
+docs/            -> Documentación técnica
+mock-api-uti/    -> API simulada de UTI (clonada del repo GitHub)

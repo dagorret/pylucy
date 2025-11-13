@@ -1,0 +1,13 @@
+[project]
+name = "lucy-app"
+version = "0.1.0"
+dependencies = [
+  "django>=5.0",
+  "djangorestframework",
+  "django-filter",
+  "psycopg[binary]",
+  "django-environ",
+  "django-material-admin"
+]
+[tool.uv]
+python = "3.12"

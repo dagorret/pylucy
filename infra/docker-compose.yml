@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dev-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgweb:
+    image: sosedoff/pgweb:0.14.0
+    container_name: dev-pgweb
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-appdb}?sslmode=disable
+    ports:
+      - "8081:8081"
+    command: ["pgweb","--bind=0.0.0.0","--listen=8081"]
+
+  mock-api-uti:
+    build:
+      context: ../mock-api-uti
+      dockerfile: Dockerfile
+    container_name: dev-mock-api-uti
+    environment:
+      BASIC_USER: "usuario"
+      BASIC_PASS: "contrasena"
+      TZ: "America/Argentina/Cordoba"
+    ports:
+      - "8090:8000"
+
+volumes:
+  pgdata:
