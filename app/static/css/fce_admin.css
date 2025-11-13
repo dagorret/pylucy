@@ -1,0 +1,63 @@
+:root {
+  --fce-primary: #004b7a;   /* azul oscuro UNRC/FCE aprox */
+  --fce-secondary: #f2a900; /* amarillo/naranja de acento */
+}
+
+/* Header principal del admin */
+#header {
+  background: var(--fce-primary);
+  color: #fff;
+}
+
+#header a:link,
+#header a:visited {
+  color: #fff;
+}
+
+/* Barra superior custom */
+.fce-topbar {
+  background: #ffffff;
+  border-bottom: 2px solid var(--fce-primary);
+  padding: 4px 16px;
+  text-align: right;
+}
+
+.fce-topbar a {
+  margin-left: 12px;
+  font-size: 12px;
+  color: var(--fce-primary);
+  text-decoration: none;
+}
+
+.fce-topbar a:hover {
+  text-decoration: underline;
+}
+
+/* Botones importantes */
+.submit-row input.default,
+.button,
+input[type=submit].default {
+  background-color: var(--fce-primary);
+  border-color: var(--fce-primary);
+  color: #fff;
+}
+
+.module h2,
+#content h1 {
+  background-color: var(--fce-primary);
+  color: #fff;
+}
+
+/* Links de la barra lateral */
+#nav-sidebar .current-model,
+#nav-sidebar .current-app {
+  background-color: rgba(0, 75, 122, 0.08);
+  border-left: 3px solid var(--fce-secondary);
+}
+
+/* Breadcrumbs */
+.breadcrumbs {
+  background: #f7f7f7;
+  border-bottom: 1px solid #ddd;
+}
+

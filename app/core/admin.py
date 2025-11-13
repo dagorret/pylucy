@@ -100,3 +100,12 @@ class InscripcionAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("alumno", "materia", "comision")
     date_hierarchy = "fecha_api"
+
+
+# Se puede meter import dentro
+from django.contrib import admin
+
+admin.site.site_header = "Facultad de Ciencias Económicas - UNRC"
+admin.site.site_title = "FCE - Administración"
+admin.site.index_title = "Panel de gestión académica"
+

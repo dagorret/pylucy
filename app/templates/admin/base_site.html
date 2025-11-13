@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Panel FCE - Lucy{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/fce_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">Facultad de Ciencias Económicas - UNRC</a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}
+    <div class="fce-topbar">
+        <a href="https://www.eco.unrc.edu.ar/">Sitio FCE</a>
+        <a href="https://www.unrc.edu.ar/">UNRC</a>
+    </div>
+{% endblock %}
+

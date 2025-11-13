@@ -96,6 +96,10 @@ class Comision(models.Model):
     def __str__(self):
         return f"{self.materia} - {self.nombre}"
 
+    class Meta:
+        verbose_name = "Comisión"
+        verbose_name_plural = "Comisiones"
+
 
 class Alumno(models.Model):
     """
@@ -169,6 +173,8 @@ class Inscripcion(models.Model):
     class Meta:
         # evita duplicados absurdos para misma combinación en el mismo año
         unique_together = ("alumno", "materia", "comision", "anio")
+        verbose_name = "Incripción"
+        verbose_name_plural = "Incripciones"
 
     def __str__(self):
         return f"{self.alumno} → {self.materia} [{self.comision}] ({self.anio})"
