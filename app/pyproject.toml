@@ -7,7 +7,10 @@ dependencies = [
   "django-filter",
   "psycopg[binary]",
   "django-environ",
-  "django-material-admin"
+  "django-material-admin",
+  "django-admin-rangefilter>=0.12.0,<0.13",
 ]
+
 [tool.uv]
 python = "3.12"
+

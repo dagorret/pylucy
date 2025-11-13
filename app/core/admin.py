@@ -8,6 +8,8 @@ from .models import (
     Alumno,
     Inscripcion,
 )
+from rangefilter.filters import DateRangeFilter
+
 
 
 class InscripcionInline(admin.TabularInline):
@@ -34,10 +36,13 @@ class AlumnoAdmin(admin.ModelAdmin):
         "creado",
     )
     search_fields = ("dni", "apellido", "nombre", "email", "localidad")
-    list_filter = ("modalidad",)
+    # 👇 acá están los filtros de la barra derecha
+    list_filter = (
+        "modalidad",
+        "localidad",
+        ("creado", DateRangeFilter),   # 👈 ahora es rango desde/hasta
+    )
     ordering = ("apellido", "nombre")
-    inlines = [InscripcionInline]
-
 
 class ComisionInline(admin.TabularInline):
     """
