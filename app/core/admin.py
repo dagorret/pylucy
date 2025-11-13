@@ -29,6 +29,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         "dni",
         "apellido",
         "nombre",
+        "estado_actual",
         "email",
         "localidad",
         "telefono",
@@ -38,6 +39,7 @@ class AlumnoAdmin(admin.ModelAdmin):
     search_fields = ("dni", "apellido", "nombre", "email", "localidad")
     # 👇 acá están los filtros de la barra derecha
     list_filter = (
+        "estado_actual",
         "modalidad",
         "localidad",
         ("creado", DateRangeFilter),   # 👈 ahora es rango desde/hasta

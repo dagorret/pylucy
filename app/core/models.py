@@ -100,6 +100,11 @@ class Comision(models.Model):
         verbose_name = "Comisión"
         verbose_name_plural = "Comisiones"
 
+class AlumnoEstado(models.TextChoices):
+    PREINSCRIPTO = "PRE", "Preinscripto"
+    ASPIRANTE = "ASP", "Aspirante"
+    INGRESANTE = "ING", "Ingresante"
+    ALUMNO = "ALU", "Alumno"
 
 class Alumno(models.Model):
     """
@@ -132,6 +137,12 @@ class Alumno(models.Model):
 
     creado = models.DateTimeField(auto_now_add=True)
     modificado = models.DateTimeField(auto_now=True)
+    estado_actual = models.CharField(
+        max_length=3,
+        choices=AlumnoEstado.choices,
+        default=AlumnoEstado.PREINSCRIPTO,
+        db_index=True,
+    )
 
     class Meta:
         ordering = ["apellido", "nombre"]
