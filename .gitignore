@@ -1,0 +1,73 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# --- Virtual environments ---
+.venv/
+env/
+venv/
+
+# --- Django ---
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# --- Environment variables ---
+.env
+*.env
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.iml
+
+# --- Docker ---
+# Docker build caches, volumes, and artifacts
+**/.docker
+docker-compose.override.yml
+
+# --- Bytecode / Cache ---
+*/__pycache__/
+**/__pycache__/
+.DS_Store
+
+# --- Migrations (opcional, si querés ignorarlas al principio) ---
+# No recomendado en producción, pero útil si estás prototipando:
+# */migrations/
+# !*/migrations/__init__.py
+
+# --- pyLucy project ---
+# Logs
+logs/
+*.log
+
+# Coverage / testing
+.coverage
+coverage.xml
+htmlcov/
+
+# pytest
+.pytest_cache/
+
+# --- Node (por si agregás front-end más tarde) ---
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# --- Backup / temp ---
+*.bak
+*.tmp
+*.swp
+*.swo
+
