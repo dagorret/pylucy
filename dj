@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+
+# Permite ejecutar manage.py dentro del contenedor web de desarrollo
+# Ejemplos:
+#   ./dj migrate
+#   ./dj createsuperuser
+#   ./dj shell
+#   ./dj makemigrations alumnos
+
+docker exec -it pylucy-web-dev python manage.py "$@"
+

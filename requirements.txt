@@ -1,0 +1,40 @@
+# ---- Framework principal ----
+Django>=5.0,<6.0
+
+# Servidor WSGI para producción (usado por docker-compose.prod)
+gunicorn>=21.2,<22.0
+
+# ---- Base de datos Postgres ----
+
+# Desarrollo (más simple, no requiere compilación):
+# psycopg2-binary viene precompilado, ideal para dev en Docker + Linux + Windows.
+psycopg2-binary>=2.9,<3.0
+
+# Producción (recomendado por el equipo oficial de psycopg):
+# Reemplazar psycopg2-binary por psycopg2 en entornos formales de despliegue,
+# ya que psycopg2 compila optimizado para la plataforma de ejecución.
+# Descomentar esta línea cuando prepares tu build de producción:
+# psycopg2>=2.9,<3.0
+
+
+# ---- APIs, HTTP, utilidades ----
+requests>=2.32,<3.0
+python-dotenv>=1.0,<2.0  # para cargar variables desde .env si querés
+
+# ---- Django REST Framework (para exponer APIs propias) ----
+djangorestframework>=3.15,<4.0
+
+# ---- CORS (útil si en el futuro tenés front separado) ----
+django-cors-headers>=4.4,<5.0
+
+# ---- Tareas en segundo plano (futuro: integraciones pesadas) ----
+celery>=5.4,<6.0
+redis>=5.0,<6.0
+
+# ---- Extra útil: herramientas de seguridad/estilo (se pueden usar desde dev) ----
+# No son obligatorias, pero ayudan:
+# dj-database-url>=2.2,<3.0    # si querés manejar DATABASE_URL desde envs
+# black>=24.0,<25.0            # formateador de código
+# isort>=5.13,<6.0             # ordena imports
+# mypy>=1.10,<2.0              # chequeo de tipos si te animás
+
