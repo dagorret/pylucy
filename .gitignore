@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# --- Virtual environments ---
+.venv/
+env/
+venv/
+
+# --- Django ---
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# --- Environment variables ---
+.env
+*.env
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.iml
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Bytecode / Cache ---
+*/__pycache__/
+**/__pycache__/
+.DS_Store
+
+# --- Tests / coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+
