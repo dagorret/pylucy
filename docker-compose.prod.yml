@@ -4,6 +4,7 @@ services:
   web:
     build: .
     container_name: pylucy-web-prod
+    working_dir: /app
     command: gunicorn pylucy.wsgi:application --bind 0.0.0.0:8000
     environment:
       - DJANGO_DEBUG=False
@@ -39,6 +40,7 @@ services:
       - web
     ports:
       - "80:80"
+      # - "443:443"  # cuando tengas SSL
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
@@ -49,3 +51,4 @@ networks:
 
 volumes:
   pylucy-db-prod:
+

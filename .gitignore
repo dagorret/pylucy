@@ -33,6 +33,8 @@ static/
 *.iml
 
 # --- Docker ---
+# Docker build caches, volumes, and artifacts
+**/.docker
 docker-compose.override.yml
 
 # --- Bytecode / Cache ---
@@ -40,8 +42,32 @@ docker-compose.override.yml
 **/__pycache__/
 .DS_Store
 
-# --- Tests / coverage ---
+# --- Migrations (opcional, si querés ignorarlas al principio) ---
+# No recomendado en producción, pero útil si estás prototipando:
+# */migrations/
+# !*/migrations/__init__.py
+
+# --- pyLucy project ---
+# Logs
+logs/
+*.log
+
+# Coverage / testing
 .coverage
+coverage.xml
 htmlcov/
+
+# pytest
 .pytest_cache/
+
+# --- Node (por si agregás front-end más tarde) ---
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# --- Backup / temp ---
+*.bak
+*.tmp
+*.swp
+*.swo
 
