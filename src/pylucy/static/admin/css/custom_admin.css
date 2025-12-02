@@ -1,0 +1,421 @@
+/*
+ * Custom Django Admin Styles for Lucy AMS
+ * Colors inspired by the landing page
+ */
+
+:root {
+    --lucy-blue-900: #1e3a8a;
+    --lucy-blue-800: #1e40af;
+    --lucy-blue-600: #2563eb;
+    --lucy-blue-500: #3b82f6;
+    --lucy-blue-400: #60a5fa;
+    --lucy-blue-200: #bfdbfe;
+    --lucy-red-600: #dc2626;
+    --lucy-red-500: #ef4444;
+    --lucy-red-400: #f87171;
+    --lucy-slate-900: #0f172a;
+    --lucy-slate-800: #1e293b;
+    --lucy-slate-700: #334155;
+    --lucy-gray-400: #9ca3af;
+    --lucy-gray-500: #6b7280;
+}
+
+/* Header personalizado */
+#header {
+    background: linear-gradient(135deg, var(--lucy-slate-900) 0%, var(--lucy-blue-900) 50%, var(--lucy-slate-900) 100%);
+    border-bottom: 3px solid var(--lucy-blue-500);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+#branding h1 {
+    margin: 0;
+    padding: 20px 10px;
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+}
+
+#branding h1, #branding h1 a:link, #branding h1 a:visited {
+    background: linear-gradient(135deg, var(--lucy-blue-400) 0%, #ffffff 50%, var(--lucy-red-500) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none;
+    filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.3));
+}
+
+#branding h1 a:hover {
+    filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.5));
+}
+
+/* Subtítulo del admin */
+#branding h1::after {
+    content: " AMS";
+    font-size: 1rem;
+    font-weight: 400;
+    display: block;
+    margin-top: 5px;
+    background: linear-gradient(90deg, var(--lucy-blue-400) 0%, var(--lucy-red-400) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.3em;
+    opacity: 0.8;
+}
+
+/* Usuario y links del header */
+#user-tools {
+    padding: 10px;
+    margin: 0;
+    text-align: right;
+    color: var(--lucy-blue-200);
+}
+
+#user-tools a {
+    color: var(--lucy-blue-200);
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#user-tools a:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: #ffffff;
+}
+
+/* Navegación breadcrumbs */
+.breadcrumbs {
+    background: var(--lucy-slate-800);
+    border-bottom: 1px solid var(--lucy-blue-800);
+    padding: 12px 20px;
+}
+
+.breadcrumbs a {
+    color: var(--lucy-blue-400);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    color: var(--lucy-blue-200);
+    text-decoration: underline;
+}
+
+/* Módulos del dashboard */
+.module {
+    border: 1px solid var(--lucy-slate-700);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.module h2 {
+    background: linear-gradient(135deg, var(--lucy-blue-900) 0%, var(--lucy-blue-800) 100%);
+    color: #ffffff;
+    padding: 12px 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid var(--lucy-blue-500);
+}
+
+.module caption {
+    background: linear-gradient(135deg, var(--lucy-blue-900) 0%, var(--lucy-blue-800) 100%);
+    color: #ffffff;
+    padding: 12px 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid var(--lucy-blue-500);
+}
+
+/* Botones primarios */
+.button, input[type=submit], input[type=button], .submit-row input, button {
+    background: linear-gradient(135deg, var(--lucy-blue-600) 0%, var(--lucy-red-600) 100%);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover, button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.button:active, input[type=submit]:active, input[type=button]:active, .submit-row input:active, button:active {
+    transform: translateY(0);
+}
+
+/* Botón default */
+.default {
+    background: linear-gradient(135deg, var(--lucy-blue-600) 0%, var(--lucy-blue-800) 100%);
+}
+
+/* Links de acciones */
+a.addlink, a.changelink, a.deletelink {
+    padding-left: 20px;
+    background-position: 0 center;
+    background-repeat: no-repeat;
+}
+
+a.addlink {
+    color: var(--lucy-blue-500);
+}
+
+a.changelink {
+    color: var(--lucy-blue-600);
+}
+
+a.deletelink {
+    color: var(--lucy-red-500);
+}
+
+a.addlink:hover, a.changelink:hover {
+    color: var(--lucy-blue-400);
+}
+
+a.deletelink:hover {
+    color: var(--lucy-red-400);
+}
+
+/* Tablas */
+#changelist table thead th {
+    background: linear-gradient(135deg, var(--lucy-blue-900) 0%, var(--lucy-slate-800) 100%);
+    color: #ffffff;
+    border-bottom: 2px solid var(--lucy-blue-500);
+}
+
+#changelist table thead th a {
+    color: #ffffff;
+}
+
+#changelist table thead th a:hover {
+    color: var(--lucy-blue-200);
+}
+
+.row1 {
+    background: #f9fafb;
+}
+
+.row2 {
+    background: #ffffff;
+}
+
+tr:hover {
+    background: rgba(59, 130, 246, 0.05) !important;
+}
+
+/* Filtros en el sidebar */
+#changelist-filter {
+    background: #f9fafb;
+    border-left: 3px solid var(--lucy-blue-500);
+}
+
+#changelist-filter h2 {
+    background: linear-gradient(135deg, var(--lucy-blue-900) 0%, var(--lucy-blue-800) 100%);
+    color: #ffffff;
+    padding: 10px 15px;
+    margin: 0;
+    font-size: 1rem;
+}
+
+#changelist-filter h3 {
+    color: var(--lucy-slate-900);
+    font-weight: 600;
+    margin-top: 15px;
+}
+
+#changelist-filter a {
+    color: var(--lucy-blue-600);
+}
+
+#changelist-filter a:hover {
+    color: var(--lucy-blue-400);
+}
+
+#changelist-filter li.selected a {
+    color: var(--lucy-red-600);
+    font-weight: 600;
+}
+
+/* Campo de búsqueda */
+#searchbar {
+    border: 2px solid var(--lucy-blue-500);
+    border-radius: 6px;
+    padding: 8px;
+}
+
+#searchbar:focus {
+    outline: none;
+    border-color: var(--lucy-blue-400);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Formularios */
+.form-row {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 15px 10px;
+}
+
+.form-row:hover {
+    background: rgba(59, 130, 246, 0.02);
+}
+
+input[type="text"], input[type="password"], input[type="email"],
+input[type="url"], input[type="number"], textarea, select {
+    border: 1px solid var(--lucy-gray-400);
+    border-radius: 4px;
+    padding: 8px;
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus,
+input[type="url"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+    border-color: var(--lucy-blue-500);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Mensajes de error y éxito */
+.errornote {
+    background: linear-gradient(135deg, var(--lucy-red-600) 0%, var(--lucy-red-500) 100%);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.messagelist .success {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 12px 15px;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+}
+
+.messagelist .warning {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 12px 15px;
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+}
+
+.messagelist .error {
+    background: linear-gradient(135deg, var(--lucy-red-600) 0%, var(--lucy-red-500) 100%);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 12px 15px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+/* Dashboard recent actions */
+#recent-actions-module h2 {
+    background: linear-gradient(135deg, var(--lucy-slate-900) 0%, var(--lucy-blue-900) 100%);
+}
+
+#recent-actions-module ul {
+    padding-left: 0;
+}
+
+/* Selector de objetos relacionados */
+.selector {
+    border: 1px solid var(--lucy-slate-700);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.selector h2 {
+    background: linear-gradient(135deg, var(--lucy-blue-900) 0%, var(--lucy-blue-800) 100%);
+    color: #ffffff;
+    padding: 10px;
+}
+
+.selector .selector-chosen h2 {
+    background: linear-gradient(135deg, var(--lucy-blue-800) 0%, var(--lucy-red-600) 100%);
+}
+
+/* Paginator */
+.paginator a:link, .paginator a:visited {
+    background: var(--lucy-blue-600);
+    color: #ffffff;
+    border-radius: 4px;
+    padding: 5px 10px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.paginator a:hover {
+    background: var(--lucy-blue-500);
+    transform: translateY(-1px);
+}
+
+.paginator .this-page {
+    background: linear-gradient(135deg, var(--lucy-blue-600) 0%, var(--lucy-red-600) 100%);
+    color: #ffffff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Login page */
+.login {
+    background: linear-gradient(135deg, var(--lucy-slate-900) 0%, var(--lucy-blue-900) 50%, var(--lucy-slate-900) 100%);
+}
+
+.login #header {
+    background: transparent;
+    border-bottom: none;
+}
+
+.login #container {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid var(--lucy-blue-500);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.login #content-main {
+    padding: 30px;
+}
+
+.login .form-row {
+    padding: 15px 0;
+}
+
+.login .submit-row {
+    padding: 20px 0 0 0;
+}
+
+/* Efectos hover para items del menú */
+#content-main a {
+    transition: all 0.2s ease;
+}
+
+#content-main a:hover {
+    color: var(--lucy-blue-500);
+}
+
+/* Card effect para módulos */
+.module {
+    transition: all 0.3s ease;
+}
+
+.module:hover {
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Badge style para contadores */
+.changelink::after, .addlink::after {
+    background: linear-gradient(135deg, var(--lucy-blue-600) 0%, var(--lucy-red-600) 100%);
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
