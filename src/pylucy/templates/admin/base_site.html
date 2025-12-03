@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Lucy AMS{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {# cache-buster para evitar CSS viejo #}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}?v=6">
+    <style>
+        /* Estilos adicionales para el logo SVG */
+        #branding-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+
+        #branding h1 {
+            margin: 0;
+            padding: 0;
+            display: inline;
+        }
+
+        .lucy-logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        @keyframes logo-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3)); }
+            50% { filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6)); }
+        }
+
+        .lucy-logo-svg {
+            animation: logo-glow 3s ease-in-out infinite;
+        }
+    </style>
+{% endblock %}
+
+{% block branding %}
+<div id="branding" class="lucy-logo-container">
+    <a href="{% url 'admin:index' %}" id="branding-logo">
+        <!-- Logo SVG LUCY -->
+        <svg class="lucy-logo-svg" width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="lucy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#ffffff;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="circle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.4" />
+                    <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0.3" />
+                </linearGradient>
+                <filter id="logo-glow">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- Círculo de fondo -->
+            <circle cx="50" cy="50" r="45" fill="url(#circle-grad)" opacity="0.3"/>
+
+            <!-- Letra L -->
+            <path d="M 25 25 L 25 75 L 45 75 L 45 70 L 30 70 L 30 25 Z"
+                  fill="url(#lucy-grad)" filter="url(#logo-glow)"/>
+
+            <!-- Elementos decorativos -->
+            <circle cx="50" cy="50" r="35" fill="none" stroke="url(#lucy-grad)" stroke-width="2" opacity="0.5"/>
+            <circle cx="50" cy="50" r="28" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3"/>
+
+            <!-- Puntos decorativos -->
+            <circle cx="75" cy="25" r="3" fill="#3b82f6" opacity="0.8"/>
+            <circle cx="75" cy="75" r="3" fill="#ef4444" opacity="0.8"/>
+            <circle cx="50" cy="15" r="2" fill="#ffffff" opacity="0.9"/>
+        </svg>
+
+        <h1>LUCY</h1>
+    </a>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

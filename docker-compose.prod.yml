@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: pylucy-web-prod
+    working_dir: /app
+    command: gunicorn pylucy.wsgi:application --bind 0.0.0.0:8000
+    environment:
+      - DJANGO_DEBUG=False
+      - DJANGO_ENV=production
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=pylucy
+      - DB_USER=pylucy
+      - DB_PASSWORD=pylucy
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    networks:
+      - pylucy-net
+
+  db:
+    image: postgres:16
+    container_name: pylucy-db-prod
+    restart: always
+    environment:
+      - POSTGRES_DB=pylucy
+      - POSTGRES_USER=pylucy
+      - POSTGRES_PASSWORD=pylucy
+    volumes:
+      - pylucy-db-prod:/var/lib/postgresql/data
+    networks:
+      - pylucy-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: pylucy-nginx-prod
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      # - "443:443"  # cuando tengas SSL
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - pylucy-net
+
+networks:
+  pylucy-net:
+
+volumes:
+  pylucy-db-prod:
+

@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: pylucy-web-dev
+    working_dir: /app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./src:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_DEBUG=True
+      - DJANGO_ENV=development
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=pylucy
+      - DB_USER=pylucy
+      - DB_PASSWORD=pylucy
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    networks:
+      - pylucy-net
+
+  db:
+    image: postgres:16
+    container_name: pylucy-db-dev
+    restart: always
+    environment:
+      - POSTGRES_DB=pylucy
+      - POSTGRES_USER=pylucy
+      - POSTGRES_PASSWORD=pylucy
+    # Podés eliminar esta línea si no necesitás acceder desde fuera:
+    ports:
+      - "5432:5432"
+    volumes:
+      - pylucy-db-dev:/var/lib/postgresql/data
+    networks:
+      - pylucy-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pylucy-pgadmin-dev
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@unrc.edu.ar
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    networks:
+      - pylucy-net
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: pylucy-mailhog-dev
+    restart: always
+    ports:
+      - "8025:8025"   # UI Web
+      - "1025:1025"   # SMTP
+    networks:
+      - pylucy-net
+
+
+networks:
+  pylucy-net:
+
+volumes:
+  pylucy-db-dev:
+
