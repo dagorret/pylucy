@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cursos',
 ]
 
 MIDDLEWARE = [
@@ -161,3 +162,5 @@ if os.getenv("DJANGO_ENV") == "development":
     EMAIL_HOST_PASSWORD = ""
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = False
+
+ALLOWED_HOSTS = ['*']

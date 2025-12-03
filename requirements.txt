@@ -37,4 +37,3 @@ redis>=5.0,<6.0
 # black>=24.0,<25.0            # formateador de código
 # isort>=5.13,<6.0             # ordena imports
 # mypy>=1.10,<2.0              # chequeo de tipos si te animás
-
