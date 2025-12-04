@@ -1,25 +1,13 @@
-from django import forms
+from django_select2.forms import Select2TagWidget
 
 
-class CarrerasTagWidget(forms.SelectMultiple):
-    """
-    Renderiza un select múltiple con select2 en modo tags (usando assets del admin).
-    Permite buscar y añadir, construyendo el array de carreras.
-    """
-
-    class Media:
-        js = [
-            "admin/js/vendor/select2/select2.full.js",
-            "admin/js/jquery.init.js",
-            "cursos/js/carreras_widget.js",
-        ]
-        css = {
-            "all": ["admin/css/autocomplete.css"],
-        }
+class CarrerasTagWidget(Select2TagWidget):
+    """Widget Select2 en modo tags para cargar listas (carreras, modalidades, comisiones)."""
 
     def __init__(self, *args, **kwargs):
         attrs = kwargs.pop("attrs", {})
-        css_class = attrs.get("class", "")
-        attrs["class"] = f"{css_class} lucy-tag-select".strip()
+        attrs.setdefault("data-placeholder", "Selecciona o escribe carreras")
         attrs.setdefault("style", "width: 100%;")
+        # Solo consolidar con Enter o coma; permitir espacios dentro del tag.
+        attrs.setdefault("data-token-separators", "[',']")
         super().__init__(attrs=attrs, *args, **kwargs)

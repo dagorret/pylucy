@@ -1,10 +1,27 @@
 CARRERAS_CHOICES = [
-    ("CP", "CP"),
-    ("LE", "LE"),
-    ("LA", "LA"),
-    ("TSG", "TSG"),
-    ("TSI", "TSI"),
-    ("LAG", "LAG"),
+    ("LE", "LE (2)"),
+    ("CP", "CP (3)"),
+    ("LA", "LA (4)"),
+    ("TGA", "TGA (7)"),
+    ("TGE", "TGE (8)"),
 ]
 
-# Ajusta esta lista según tu catálogo real de carreras.
+# Diccionario base para mapear IDs externos -> código interno de carrera.
+CARRERAS_DICT = {
+    "2": "LE",
+    "3": "CP",
+    "4": "LA",
+    "7": "TGA",
+    "8": "TGE",
+    # soporta enteros también
+    2: "LE",
+    3: "CP",
+    4: "LA",
+    7: "TGA",
+    8: "TGE",
+}
+
+MODALIDADES_CHOICES = [
+    ("PRES", "Presencial"),
+    ("DIST", "Distancia"),
+]

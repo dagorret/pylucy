@@ -31,6 +31,9 @@ django-cors-headers>=4.4,<5.0
 celery>=5.4,<6.0
 redis>=5.0,<6.0
 
+# ---- Widgets enriquecidos (Select2) ----
+django-select2>=8.1,<9.0
+
 # ---- Extra útil: herramientas de seguridad/estilo (se pueden usar desde dev) ----
 # No son obligatorias, pero ayudan:
 # dj-database-url>=2.2,<3.0    # si querés manejar DATABASE_URL desde envs
