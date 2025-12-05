@@ -1,0 +1,54 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+<div class="module" style="margin-bottom: 20px;">
+  <h2>Herramientas UTI</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 12px;">
+    <form method="post" action="{% url 'admin:alumnos_alumno_ingesta' %}" class="aligned">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="seed_pre">
+      <h3>Seed Preinscriptos</h3>
+      <label>Cantidad (n): <input type="number" name="n" min="0" max="50" value="5"></label>
+      <label>Seed (opcional): <input type="number" name="seed" min="0"></label>
+      <p><button type="submit" class="button default">Ejecutar</button></p>
+    </form>
+
+    <form method="post" action="{% url 'admin:alumnos_alumno_ingesta' %}" class="aligned">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="seed_asp">
+      <h3>Seed Aspirantes</h3>
+      <label>Cantidad (n): <input type="number" name="n" min="0" max="50" value="5"></label>
+      <label>Seed (opcional): <input type="number" name="seed" min="0"></label>
+      <p><button type="submit" class="button default">Ejecutar</button></p>
+    </form>
+
+    <form method="post" action="{% url 'admin:alumnos_alumno_ingesta' %}" class="aligned">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="consume">
+      <h3>Consumir</h3>
+      <label>Tipo:
+        <select name="tipo">
+          <option value="preinscriptos">preinscriptos</option>
+          <option value="aspirantes">aspirantes</option>
+          <option value="ingresantes">ingresantes</option>
+        </select>
+      </label>
+      <label>Cantidad (n, opcional): <input type="number" name="n" min="0" max="50"></label>
+      <label>Seed (opcional): <input type="number" name="seed" min="0"></label>
+      <label>Desde (AAAAMMDDHHMM, opcional): <input type="text" name="desde" placeholder="202501010000"></label>
+      <label>Hasta (AAAAMMDDHHMM, opcional): <input type="text" name="hasta" placeholder="202501312359"></label>
+      <p><button type="submit" class="button default">Consumir</button></p>
+    </form>
+
+    <form method="post" action="{% url 'admin:alumnos_alumno_ingesta' %}" class="aligned">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="truncate">
+      <h3>Borrar todos</h3>
+      <p>Elimina todos los alumnos.</p>
+      <p><button type="submit" class="button delete">Borrar</button></p>
+    </form>
+  </div>
+</div>
+
+{{ block.super }}
+{% endblock %}

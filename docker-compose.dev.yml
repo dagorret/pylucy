@@ -13,6 +13,9 @@ services:
     environment:
       - DJANGO_DEBUG=True
       - DJANGO_ENV=development
+      - SIAL_BASE_URL=http://host.docker.internal:8088
+      - SIAL_BASIC_USER=usuario
+      - SIAL_BASIC_PASS=contrasena
       - DB_ENGINE=django.db.backends.postgresql
       - DB_NAME=pylucy
       - DB_USER=pylucy
@@ -68,4 +71,3 @@ networks:
 
 volumes:
   pylucy-db-dev:
-

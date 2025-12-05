@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_select2',
+    'alumnos',
     'cursos',
 ]
 
@@ -96,6 +97,11 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
+
+# Configuración de la API SIAL/UTI (mock o producción)
+SIAL_BASE_URL = os.getenv("SIAL_BASE_URL", "http://localhost:8088").rstrip("/")
+SIAL_BASIC_USER = os.getenv("SIAL_BASIC_USER", "usuario")
+SIAL_BASIC_PASS = os.getenv("SIAL_BASIC_PASS", "contrasena")
 
 
 # Password validation

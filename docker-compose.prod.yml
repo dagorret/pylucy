@@ -9,6 +9,9 @@ services:
     environment:
       - DJANGO_DEBUG=False
       - DJANGO_ENV=production
+      - SIAL_BASE_URL=
+      - SIAL_BASIC_USER=
+      - SIAL_BASIC_PASS=
       - DB_ENGINE=django.db.backends.postgresql
       - DB_NAME=pylucy
       - DB_USER=pylucy
@@ -51,4 +54,3 @@ networks:
 
 volumes:
   pylucy-db-prod:
-
