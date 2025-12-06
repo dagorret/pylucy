@@ -22,7 +22,14 @@ class AlumnoAdmin(admin.ModelAdmin):
     )
     list_filter = ("estado_actual", "modalidad_actual", "cohorte")
     search_fields = ("apellido", "nombre", "dni", "email_personal", "email_institucional")
-    readonly_fields = ("created_at", "updated_at", "fecha_ultima_modificacion")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "fecha_ultima_modificacion",
+        "teams_payload",
+        "email_payload",
+        "moodle_payload",
+    )
     ordering = ("apellido", "nombre")
 
     def get_urls(self):

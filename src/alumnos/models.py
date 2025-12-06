@@ -28,6 +28,8 @@ class Alumno(models.Model):
     modalidad_actual = models.CharField(max_length=1, null=True, blank=True)
     teams_password = models.CharField(max_length=255, null=True, blank=True)
     teams_payload = models.JSONField(null=True, blank=True)
+    email_payload = models.JSONField(null=True, blank=True)
+    moodle_payload = models.JSONField(null=True, blank=True)
     fecha_ultima_modificacion = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

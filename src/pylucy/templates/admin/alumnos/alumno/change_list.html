@@ -35,8 +35,16 @@
       </label>
       <label>Cantidad (n, opcional): <input type="number" name="n" min="0" max="50"></label>
       <label>Seed (opcional): <input type="number" name="seed" min="0"></label>
-      <label>Desde (AAAAMMDDHHMM, opcional): <input type="text" name="desde" placeholder="202501010000"></label>
-      <label>Hasta (AAAAMMDDHHMM, opcional): <input type="text" name="hasta" placeholder="202501312359"></label>
+      <label>Desde (AAAAMMDDHHMM, opcional):
+        <input id="uti-desde" type="text" name="desde" placeholder="202501010000">
+      </label>
+      <label>Hasta (AAAAMMDDHHMM, opcional):
+        <input id="uti-hasta" type="text" name="hasta" placeholder="202501312359">
+      </label>
+      <div style="display:flex; gap:8px; flex-wrap: wrap;">
+        <button type="button" class="button" onclick="window.setUtiRangoAhora()">Ahora</button>
+        <button type="button" class="button" onclick="window.setUtiRangoHoy()">Hoy</button>
+      </div>
       <p><button type="submit" class="button default">Consumir</button></p>
     </form>
 
@@ -49,6 +57,33 @@
     </form>
   </div>
 </div>
+
+<script>
+  (function() {
+    function fmt(dt) {
+      const pad = (n, w = 2) => String(n).padStart(w, "0");
+      return (
+        dt.getFullYear().toString() +
+        pad(dt.getMonth() + 1) +
+        pad(dt.getDate()) +
+        pad(dt.getHours()) +
+        pad(dt.getMinutes())
+      );
+    }
+    window.setUtiRangoAhora = function() {
+      const now = new Date();
+      document.getElementById("uti-desde").value = fmt(now);
+      document.getElementById("uti-hasta").value = fmt(now);
+    };
+    window.setUtiRangoHoy = function() {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59);
+      document.getElementById("uti-desde").value = fmt(start);
+      document.getElementById("uti-hasta").value = fmt(end);
+    };
+  })();
+</script>
 
 {{ block.super }}
 {% endblock %}
