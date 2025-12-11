@@ -121,6 +121,19 @@ services:
     networks:
       - pylucy-net
 
+  mock-api-uti:
+    build: ./mock-api-uti
+    container_name: pylucy-mock-api-uti-testing
+    restart: always
+    environment:
+      BASIC_USER: "usuario"
+      BASIC_PASS: "contrasena"
+      TZ: "America/Argentina/Cordoba"
+    ports:
+      - "8088:8000"
+    networks:
+      - pylucy-net
+
 networks:
   pylucy-net:
     driver: bridge

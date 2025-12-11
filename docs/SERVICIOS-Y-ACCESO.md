@@ -2,7 +2,7 @@
 
 ## 📦 Servicios del Docker Compose
 
-El archivo `docker-compose.testing.yml` levanta **7 servicios** en contenedores Docker:
+El archivo `docker-compose.testing.yml` levanta **8 servicios** en contenedores Docker:
 
 ### 1️⃣ **db** - Base de Datos PostgreSQL
 - **Imagen**: `postgres:16`
@@ -117,7 +117,33 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
 
 ---
 
-### 7️⃣ **pgadmin** - Administrador de PostgreSQL
+### 7️⃣ **mock-api-uti** - API Mock de SIAL/UTI
+- **Build**: Construida desde `./mock-api-uti`
+- **Puerto**: `8088:8000` (expuesto)
+- **Propósito**:
+  - Simula la API de SIAL/UTI para testing
+  - Devuelve datos de prueba para preinscriptos
+  - Evita depender de servicios externos en testing
+- **Credenciales**:
+  - Usuario: `usuario`
+  - Contraseña: `contrasena`
+  - Autenticación: HTTP Basic Auth
+- **Endpoints disponibles**:
+  - `/webservice/sial/V2/04/preinscriptos/listas/{desde}/{hasta}`
+  - `/webservice/sial/V2/04/preinscriptos/preinscripto/{nro_tramite}`
+
+**Configuración en `.env.dev`**:
+```bash
+SIAL_BASE_URL=http://mock-api-uti:8000
+SIAL_BASIC_USER=usuario
+SIAL_BASIC_PASS=contrasena
+```
+
+**Importante**: En el servidor de testing, el servicio web se conecta al mock usando el nombre del contenedor `mock-api-uti` a través de la red `pylucy-net`. NO usa `host.docker.internal` (que no funciona en Linux).
+
+---
+
+### 8️⃣ **pgadmin** - Administrador de PostgreSQL
 - **Imagen**: `dpage/pgadmin4`
 - **Puerto**: `5050:80` (expuesto)
 - **Propósito**: Interfaz web para administrar la base de datos

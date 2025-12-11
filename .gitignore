@@ -21,7 +21,9 @@ venv/
 db.sqlite3
 media/
 staticfiles/
+# Ignorar static/ excepto src/static/
 static/
+!src/static/
 
 # --- Environment variables ---
 # Repo privado: Permitimos archivos de desarrollo y examples
