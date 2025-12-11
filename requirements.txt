@@ -30,6 +30,7 @@ django-cors-headers>=4.4,<5.0
 # ---- Tareas en segundo plano (futuro: integraciones pesadas) ----
 celery>=5.4,<6.0
 redis>=5.0,<6.0
+django-celery-beat>=2.6,<3.0  # Tareas programadas con BD
 
 # ---- Widgets enriquecidos (Select2) ----
 django-select2>=8.1,<9.0
