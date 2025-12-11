@@ -187,13 +187,15 @@ def _build_defaults(
                 continue
         return shortnames
 
+    from alumnos.utils.config import get_moodle_base_url, get_moodle_wstoken
+
     moodle_courses = _resolver_cursos()
     moodle_payload = {
         "auth": {
-            "domain": settings.MOODLE_BASE_URL,
+            "domain": get_moodle_base_url(),
             "user": "moodle_api_user",
             "password": "moodle_api_pass",
-            "token": settings.MOODLE_WSTOKEN or "MOODLE_TOKEN_PLACEHOLDER",
+            "token": get_moodle_wstoken() or "MOODLE_TOKEN_PLACEHOLDER",
         },
         "usuario": {
             "username": upn,
