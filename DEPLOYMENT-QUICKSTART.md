@@ -26,6 +26,7 @@ nano .env.prod
 ```
 
 **Mínimo a configurar:**
+
 - `SECRET_KEY` (generar con: `python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`)
 - `DB_PASSWORD`
 - `ALLOWED_HOSTS`
@@ -66,6 +67,7 @@ docker compose -f docker-compose.prod.yml logs -f
 ```
 
 **Servicios esperados:**
+
 - ✅ pylucy-db-prod (healthy)
 - ✅ pylucy-redis-prod (healthy)
 - ✅ pylucy-web-prod (healthy)
@@ -80,16 +82,19 @@ docker compose -f docker-compose.prod.yml logs -f
 1. Ir a: **Alumnos > Configuración del Sistema**
 
 2. Configurar **Procesamiento en Lotes**:
+   
    - batch_size: 20
    - rate_limit_teams: 10
    - rate_limit_moodle: 30
 
 3. Configurar **Ingesta de Preinscriptos**:
+   
    - Día inicio: (fecha de inicio del período de inscripción)
    - Día fin: (fecha de fin del período)
    - Frecuencia: 3600 (cada 1 hora)
 
 4. **Setup de tareas periódicas**:
+   
    ```bash
    docker compose -f docker-compose.prod.yml exec web python manage.py setup_periodic_tasks
    ```
@@ -129,12 +134,12 @@ docker compose -f docker-compose.prod.yml exec web python manage.py shell
 
 ## Troubleshooting Rápido
 
-| Problema | Solución |
-|----------|----------|
-| Error 502 Bad Gateway | `docker compose -f docker-compose.prod.yml restart web` |
-| Can't connect to database | Verificar `DB_PASSWORD` en `.env.prod` |
-| Tareas no se ejecutan | `docker compose -f docker-compose.prod.yml restart celery celery-beat` |
-| Static files no cargan | `docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput` |
+| Problema                  | Solución                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| Error 502 Bad Gateway     | `docker compose -f docker-compose.prod.yml restart web`                                       |
+| Can't connect to database | Verificar `DB_PASSWORD` en `.env.prod`                                                        |
+| Tareas no se ejecutan     | `docker compose -f docker-compose.prod.yml restart celery celery-beat`                        |
+| Static files no cargan    | `docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput` |
 
 ---
 
