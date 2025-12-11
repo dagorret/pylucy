@@ -53,6 +53,7 @@ services:
       - "8000:8000"
     volumes:
       - ./src:/app
+      - pylucy-static-testing:/app/staticfiles
     depends_on:
       db:
         condition: service_healthy
@@ -127,3 +128,4 @@ networks:
 volumes:
   pylucy-db-testing:
   pylucy-redis-testing:
+  pylucy-static-testing:

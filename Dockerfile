@@ -23,6 +23,15 @@ RUN pip install --upgrade pip && \
 # En desarrollo se va a montar ./src sobre /app y esto se "pisa".
 COPY src/ /app/
 
+# Copiar entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
+
+# Entrypoint que ejecuta inicialización
+ENTRYPOINT ["/entrypoint.sh"]
+
 # El comando lo define docker-compose (runserver en dev, gunicorn en prod)
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
