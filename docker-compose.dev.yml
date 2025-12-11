@@ -13,19 +13,52 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # Django
       - DJANGO_DEBUG=True
       - DJANGO_ENV=development
+
+      # #ETME - Modo testing/producción
+      - ENVIRONMENT_MODE=testing
+
+      # SIAL/UTI Mock
       - SIAL_BASE_URL=http://host.docker.internal:8088
       - SIAL_BASIC_USER=usuario
       - SIAL_BASIC_PASS=contrasena
+
+      # Database
       - DB_ENGINE=django.db.backends.postgresql
       - DB_NAME=pylucy
       - DB_USER=pylucy
       - DB_PASSWORD=pylucy
       - DB_HOST=db
       - DB_PORT=5432
+
+      # Moodle (Testing: Sandbox)
+      - MOODLE_BASE_URL=https://sandbox.moodledemo.net
+      - MOODLE_WSTOKEN=
+
+      # Email (MailHog para testing, pero enviará desde no-reply@v.eco.unrc.edu.ar en prod)
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+      - EMAIL_USE_TLS=False
+      - EMAIL_FROM=no-reply@v.eco.unrc.edu.ar
+
+      # Microsoft Teams (Testing: App Registration)
+      - TEAMS_TENANT=1f7d4699-ccd7-45d6-bc78-b8b950bcaedc
+      - TEAMS_DOMAIN=eco.unrc.edu.ar
+      - TEAMS_CLIENT_ID=138e98af-33e5-439c-9981-3caaedc65c70
+      - TEAMS_CLIENT_SECRET=VE~8Q~SbnnIUg-iEHnr1m8nxu5J0RAskpLJPlbuU
+      # Valores viejos comentados:
+      # - TEAMS_TENANT=eco.unrc.edu.ar
+      # - TEAMS_CLIENT_ID=
+      # - TEAMS_CLIENT_SECRET=
+
+      # Celery
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - db
+      - redis
     networks:
       - pylucy-net
 
@@ -67,9 +100,90 @@ services:
     networks:
       - pylucy-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: pylucy-redis-dev
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - pylucy-net
+    volumes:
+      - pylucy-redis-dev:/data
+
+  celery:
+    build: .
+    container_name: pylucy-celery-dev
+    working_dir: /app
+    command: celery -A pylucy worker -l info
+    volumes:
+      - ./src:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Mismas variables que web
+      - DJANGO_DEBUG=True
+      - DJANGO_ENV=development
+      - ENVIRONMENT_MODE=testing
+      - SIAL_BASE_URL=http://host.docker.internal:8088
+      - SIAL_BASIC_USER=usuario
+      - SIAL_BASIC_PASS=contrasena
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=pylucy
+      - DB_USER=pylucy
+      - DB_PASSWORD=pylucy
+      - DB_HOST=db
+      - DB_PORT=5432
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+      - EMAIL_USE_TLS=False
+      - EMAIL_FROM=no-reply@v.eco.unrc.edu.ar
+      - MOODLE_BASE_URL=https://sandbox.moodledemo.net
+      - MOODLE_WSTOKEN=
+      - TEAMS_TENANT=1f7d4699-ccd7-45d6-bc78-b8b950bcaedc
+      - TEAMS_DOMAIN=eco.unrc.edu.ar
+      - TEAMS_CLIENT_ID=138e98af-33e5-439c-9981-3caaedc65c70
+      - TEAMS_CLIENT_SECRET=VE~8Q~SbnnIUg-iEHnr1m8nxu5J0RAskpLJPlbuU
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - pylucy-net
+
+  celery-beat:
+    build: .
+    container_name: pylucy-celery-beat-dev
+    working_dir: /app
+    command: celery -A pylucy beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./src:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Mismas variables que web
+      - DJANGO_DEBUG=True
+      - DJANGO_ENV=development
+      - ENVIRONMENT_MODE=testing
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=pylucy
+      - DB_USER=pylucy
+      - DB_PASSWORD=pylucy
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - pylucy-net
+
 
 networks:
   pylucy-net:
 
 volumes:
   pylucy-db-dev:
+  pylucy-redis-dev:

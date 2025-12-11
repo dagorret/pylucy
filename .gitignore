@@ -24,8 +24,14 @@ staticfiles/
 static/
 
 # --- Environment variables ---
-.env
-*.env
+# Repo privado: Permitimos archivos de desarrollo y examples
+# SOLO ignoramos .env.prod (contiene credenciales reales de producción)
+.env.prod
+.env.production
+.env.secrets
+
+# Permitidos: .env.dev, .env.dev.example, .env.prod.example
+# Estos tienen credenciales de testing/desarrollo
 
 # --- IDEs ---
 .vscode/
