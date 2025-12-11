@@ -664,8 +664,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'teams_tenant_id',
                 'teams_client_id',
                 'teams_client_secret',
+                'account_prefix',
             ),
-            'description': 'Credenciales de Teams. Si están vacías, se usan las variables de entorno.',
+            'description': 'Credenciales de Teams y prefijo de cuentas. Si están vacías, se usan las variables de entorno. ACCOUNT_PREFIX: "test-a" para testing, "a" para producción.',
             'classes': ('collapse',)
         }),
         ('🎓 Credenciales Moodle', {

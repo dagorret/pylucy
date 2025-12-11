@@ -121,3 +121,195 @@ def get_batch_size() -> int:
         pass
 
     return 20  # Default
+
+
+# ========================================
+# Teams Configuration
+# ========================================
+
+def get_teams_tenant() -> str:
+    """
+    Obtiene el Tenant ID de Azure AD para Teams.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno TEAMS_TENANT
+    3. Default: string vacío
+
+    Returns:
+        str: Tenant ID de Azure AD
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.teams_tenant_id:
+            return config.teams_tenant_id
+    except Exception:
+        pass
+
+    return getattr(settings, 'TEAMS_TENANT', '')
+
+
+def get_teams_client_id() -> str:
+    """
+    Obtiene el Client ID de Teams App.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno TEAMS_CLIENT_ID
+    3. Default: string vacío
+
+    Returns:
+        str: Client ID de Teams App
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.teams_client_id:
+            return config.teams_client_id
+    except Exception:
+        pass
+
+    return getattr(settings, 'TEAMS_CLIENT_ID', '')
+
+
+def get_teams_client_secret() -> str:
+    """
+    Obtiene el Client Secret de Teams App.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno TEAMS_CLIENT_SECRET
+    3. Default: string vacío
+
+    Returns:
+        str: Client Secret de Teams App
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.teams_client_secret:
+            return config.teams_client_secret
+    except Exception:
+        pass
+
+    return getattr(settings, 'TEAMS_CLIENT_SECRET', '')
+
+
+def get_account_prefix() -> str:
+    """
+    Obtiene el prefijo para cuentas de usuario.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno ACCOUNT_PREFIX
+    3. Default: 'test-a' (para ambientes de testing)
+
+    Returns:
+        str: Prefijo de cuentas (ej: 'test-a' o 'a')
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.account_prefix:
+            return config.account_prefix
+    except Exception:
+        pass
+
+    return getattr(settings, 'ACCOUNT_PREFIX', 'test-a')
+
+
+# ========================================
+# Email Configuration
+# ========================================
+
+def get_email_from() -> str:
+    """
+    Obtiene el email remitente para notificaciones.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno DEFAULT_FROM_EMAIL
+    3. Default: 'no-reply@eco.unrc.edu.ar'
+
+    Returns:
+        str: Email remitente
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.email_from:
+            return config.email_from
+    except Exception:
+        pass
+
+    return getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@eco.unrc.edu.ar')
+
+
+def get_email_host() -> str:
+    """
+    Obtiene el servidor SMTP para envío de emails.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno EMAIL_HOST
+    3. Default: 'mailhog' (para testing con Docker)
+
+    Returns:
+        str: Servidor SMTP
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.email_host:
+            return config.email_host
+    except Exception:
+        pass
+
+    return getattr(settings, 'EMAIL_HOST', 'mailhog')
+
+
+def get_email_port() -> int:
+    """
+    Obtiene el puerto SMTP para envío de emails.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no es NULL)
+    2. Variable de entorno EMAIL_PORT
+    3. Default: 1025 (puerto de MailHog para testing)
+
+    Returns:
+        int: Puerto SMTP
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.email_port is not None:
+            return config.email_port
+    except Exception:
+        pass
+
+    return int(getattr(settings, 'EMAIL_PORT', 1025))
+
+
+def get_email_use_tls() -> bool:
+    """
+    Determina si se debe usar TLS para conexión SMTP.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no es NULL)
+    2. Variable de entorno EMAIL_USE_TLS
+    3. Default: False (MailHog no usa TLS)
+
+    Returns:
+        bool: True si se debe usar TLS
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.email_use_tls is not None:
+            return config.email_use_tls
+    except Exception:
+        pass
+
+    return getattr(settings, 'EMAIL_USE_TLS', False)

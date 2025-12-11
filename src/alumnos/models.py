@@ -298,6 +298,11 @@ class Configuracion(models.Model):
         blank=True,
         help_text="Client Secret de Teams App. Si está vacío, usa variable de entorno"
     )
+    account_prefix = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Prefijo para cuentas (ej: 'test-a' para testing, 'a' para producción). Si está vacío, usa variable de entorno"
+    )
     moodle_base_url = models.URLField(
         max_length=255,
         blank=True,

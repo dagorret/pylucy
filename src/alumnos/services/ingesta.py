@@ -134,29 +134,40 @@ def _build_defaults(
         return "".join(secrets.choice(alphabet) for _ in range(length))
 
     nrodoc = str(lista_item.get("nrodoc") or "").strip()
-    # Usar prefijo según modo (#ETME: test-a en testing, a en producción)
-    upn = f"{settings.ACCOUNT_PREFIX}{nrodoc}@eco.unrc.edu.ar" if nrodoc else None
+    # Usar prefijo desde configuración (DB > env > default 'test-a')
+    from alumnos.utils.config import (
+        get_account_prefix,
+        get_teams_tenant,
+        get_teams_client_id,
+        get_teams_client_secret,
+        get_email_from,
+        get_email_host,
+        get_email_port,
+    )
+    upn = f"{get_account_prefix()}{nrodoc}@eco.unrc.edu.ar" if nrodoc else None
     email_inst = upn or (personal.get("email_institucional") or "").strip() or None
 
     teams_password = existing.teams_password if existing and existing.teams_password else _gen_password()
 
+    email_host = get_email_host()
+    email_port = get_email_port()
     email_payload = {
         "metadata": {"origen": "sial-mock", "tipo": estado_normalizado},
         "email": {
-            "from": "no-reply@eco.unrc.edu.ar",
-            "server": "smtp.eco.unrc.edu.ar",
+            "from": get_email_from(),
+            "server": email_host,
             "to": email_inst or personal.get("email") or "",
         },
         "api": {
-            "enviar": "smtp.eco.unrc.edu.ar:587"
+            "enviar": f"{email_host}:{email_port}"
         },
     }
 
     teams_payload = {
         "auth": {
-            "tenant": settings.TEAMS_TENANT,
-            "client_id": settings.TEAMS_CLIENT_ID or "TEAMS_CLIENT_ID_PLACEHOLDER",
-            "client_secret": settings.TEAMS_CLIENT_SECRET or "TEAMS_CLIENT_SECRET_PLACEHOLDER",
+            "tenant": get_teams_tenant(),
+            "client_id": get_teams_client_id() or "TEAMS_CLIENT_ID_PLACEHOLDER",
+            "client_secret": get_teams_client_secret() or "TEAMS_CLIENT_SECRET_PLACEHOLDER",
         },
         "usuario": {
             "upn": upn,
