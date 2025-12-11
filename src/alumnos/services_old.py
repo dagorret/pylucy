@@ -88,13 +88,40 @@ def _build_defaults(
     personal: dict,
     existing: Optional[Alumno],
 ) -> Dict:
-    """Arma los defaults para update_or_create de Alumno."""
+    """
+    Arma los defaults para update_or_create de Alumno.
+    Implementa lógica de evolución: solo avanza estados, nunca retrocede.
+    """
+    # Jerarquía de estados (de menor a mayor)
+    JERARQUIA_ESTADOS = {
+        "preinscripto": 1,
+        "aspirante": 2,
+        "ingresante": 3,
+        "alumno": 4,
+    }
+
     estado_map = {
         "preinscriptos": "preinscripto",
         "aspirantes": "aspirante",
         "ingresantes": "ingresante",
     }
-    estado_normalizado = estado_map.get(tipo_estado, tipo_estado)
+    estado_nuevo = estado_map.get(tipo_estado, tipo_estado)
+
+    # Determinar el estado final según evolución
+    if existing and existing.estado_actual:
+        estado_actual = existing.estado_actual
+        nivel_actual = JERARQUIA_ESTADOS.get(estado_actual, 0)
+        nivel_nuevo = JERARQUIA_ESTADOS.get(estado_nuevo, 0)
+
+        # Solo evolucionar si el nuevo estado es superior
+        if nivel_nuevo > nivel_actual:
+            estado_normalizado = estado_nuevo
+        else:
+            # Mantener el estado actual (no retroceder)
+            estado_normalizado = estado_actual
+    else:
+        # Alumno nuevo, usar el estado que viene
+        estado_normalizado = estado_nuevo
     carreras = lista_item.get("carreras") or []
     carrera_primaria = carreras[0] if carreras else {}
     cohorte = carrera_primaria.get("cohorte")
@@ -107,7 +134,8 @@ def _build_defaults(
         return "".join(secrets.choice(alphabet) for _ in range(length))
 
     nrodoc = str(lista_item.get("nrodoc") or "").strip()
-    upn = f"a{nrodoc}@eco.unrc.edu.ar" if nrodoc else None
+    # Usar prefijo según modo (#ETME: test-a en testing, a en producción)
+    upn = f"{settings.ACCOUNT_PREFIX}{nrodoc}@eco.unrc.edu.ar" if nrodoc else None
     email_inst = upn or (personal.get("email_institucional") or "").strip() or None
 
     teams_password = existing.teams_password if existing and existing.teams_password else _gen_password()
@@ -126,9 +154,9 @@ def _build_defaults(
 
     teams_payload = {
         "auth": {
-            "tenant": "eco.unrc.edu.ar",
-            "client_id": "TEAMS_CLIENT_ID_PLACEHOLDER",
-            "client_secret": "TEAMS_CLIENT_SECRET_PLACEHOLDER",
+            "tenant": settings.TEAMS_TENANT,
+            "client_id": settings.TEAMS_CLIENT_ID or "TEAMS_CLIENT_ID_PLACEHOLDER",
+            "client_secret": settings.TEAMS_CLIENT_SECRET or "TEAMS_CLIENT_SECRET_PLACEHOLDER",
         },
         "usuario": {
             "upn": upn,
@@ -162,10 +190,10 @@ def _build_defaults(
     moodle_courses = _resolver_cursos()
     moodle_payload = {
         "auth": {
-            "domain": "https://moodle.eco.unrc.edu.ar",
+            "domain": settings.MOODLE_BASE_URL,
             "user": "moodle_api_user",
             "password": "moodle_api_pass",
-            "token": "MOODLE_TOKEN_PLACEHOLDER",
+            "token": settings.MOODLE_WSTOKEN or "MOODLE_TOKEN_PLACEHOLDER",
         },
         "usuario": {
             "username": upn,
