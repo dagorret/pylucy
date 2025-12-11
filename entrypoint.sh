@@ -52,7 +52,7 @@ python manage.py collectstatic --noinput --clear
 
 # Crear superuser por defecto si no existe
 echo "👤 Verificando superuser por defecto..."
-python << END
+python manage.py shell << END
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(username='admin').exists():
