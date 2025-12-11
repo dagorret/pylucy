@@ -147,7 +147,7 @@ THOUSAND_SEPARATOR = "."
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'pylucy' / 'static',
+    BASE_DIR / 'static',  # /app/static/ cuando se monta ./src:/app
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 

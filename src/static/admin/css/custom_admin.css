@@ -1,0 +1,81 @@
+/* Estilos personalizados del panel de administración Lucy AMS */
+:root {
+  --lucy-blue: #1d4ed8;
+  --lucy-red: #ef4444;
+  --lucy-bg: #0f172a;
+}
+
+body.login {
+  background: radial-gradient(circle at 20% 20%, rgba(29, 78, 216, 0.2), transparent 35%),
+              radial-gradient(circle at 80% 0%, rgba(239, 68, 68, 0.2), transparent 40%),
+              var(--lucy-bg);
+  color: #e2e8f0;
+}
+
+#header {
+  background: linear-gradient(90deg, var(--lucy-blue), var(--lucy-red));
+  border-bottom: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+#branding h1, #branding h1 a:link, #branding h1 a:visited {
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+#user-tools a, #user-tools {
+  color: #e2e8f0;
+}
+
+.module caption {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+div.breadcrumbs {
+  background: #0b1222;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+a:link, a:visited {
+  color: var(--lucy-blue);
+}
+
+.button, input[type=submit], input[type=button], .submit-row input {
+  background: linear-gradient(90deg, var(--lucy-blue), var(--lucy-red));
+  border: none;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+  filter: brightness(1.05);
+}
+
+/* Titulos de módulos en el dashboard (lado izquierdo) */
+#content-main .module h2 {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222);
+  color: #e2e8f0;
+  padding: 8px 12px;
+}
+
+/* Barras de mensajes (éxito/info) con azul */
+ul.messagelist li {
+  border: none;
+  color: #0b1222;
+}
+ul.messagelist li.success {
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.2), rgba(29, 78, 216, 0.25));
+}
+ul.messagelist li.info {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Sidebar de filtros y título del changelist */
+.filter-panel, .changelist-filter h2 {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 50%, #0b1222);
+  color: #e2e8f0;
+}
