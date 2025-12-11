@@ -1,0 +1,15 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test CSS</title>
+    <link href="{% static 'css/tailwind.css' %}?v={{ timestamp }}" rel="stylesheet">
+</head>
+<body class="bg-blue-500 text-white p-10">
+    <h1 class="text-4xl font-bold">Test CSS</h1>
+    <p class="text-xl">Si ves esto en azul con texto blanco, el CSS funciona.</p>
+    <div class="bg-gradient-to-r from-blue-600 to-red-600 p-5 rounded-lg mt-4">
+        <p>Gradiente de prueba</p>
+    </div>
+</body>
+</html>

@@ -22,6 +22,7 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('test-css/', views.test_css, name='test_css'),
     path('admin/', admin.site.urls),
     path('select2/', include('django_select2.urls')),
 ]
