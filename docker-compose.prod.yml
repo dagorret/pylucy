@@ -45,6 +45,8 @@ services:
     environment:
       - DJANGO_DEBUG=False
       - DJANGO_ENV=production
+    volumes:
+      - pylucy-static:/app/staticfiles
     depends_on:
       db:
         condition: service_healthy
