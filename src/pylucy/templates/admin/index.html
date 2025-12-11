@@ -1,0 +1,105 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="module" style="margin-top: 20px;">
+    <h2>📋 Tareas Asíncronas Recientes</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                <th style="padding: 10px; text-align: left;">ID</th>
+                <th style="padding: 10px; text-align: left;">Tipo</th>
+                <th style="padding: 10px; text-align: left;">Estado</th>
+                <th style="padding: 10px; text-align: left;">Programada</th>
+                <th style="padding: 10px; text-align: left;">Entidades</th>
+                <th style="padding: 10px; text-align: left;">Duración</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tarea in tareas_recientes %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px;">
+                    <a href="{% url 'admin:alumnos_tarea_change' tarea.id %}">#{{ tarea.id }}</a>
+                </td>
+                <td style="padding: 10px;">
+                    {% if tarea.tipo == 'ingesta_preinscriptos' %}
+                        <span style="color: #3498db; font-weight: bold;">📥 Preinscriptos</span>
+                    {% elif tarea.tipo == 'ingesta_aspirantes' %}
+                        <span style="color: #2ecc71; font-weight: bold;">📥 Aspirantes</span>
+                    {% elif tarea.tipo == 'ingesta_ingresantes' %}
+                        <span style="color: #9b59b6; font-weight: bold;">📥 Ingresantes</span>
+                    {% elif tarea.tipo == 'eliminar_cuenta' %}
+                        <span style="color: #e74c3c; font-weight: bold;">🗑️ Eliminar Cuenta</span>
+                    {% elif tarea.tipo == 'enviar_email' %}
+                        <span style="color: #f39c12; font-weight: bold;">📧 Enviar Email</span>
+                    {% elif tarea.tipo == 'activar_servicios' %}
+                        <span style="color: #1abc9c; font-weight: bold;">🚀 Activar Servicios</span>
+                    {% elif tarea.tipo == 'crear_usuario_teams' %}
+                        <span style="color: #34495e; font-weight: bold;">👤 Crear Usuario</span>
+                    {% elif tarea.tipo == 'resetear_password' %}
+                        <span style="color: #e67e22; font-weight: bold;">🔑 Resetear Password</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if tarea.estado == 'pending' %}
+                        <span style="color: #f39c12; font-weight: bold;">⏳ Pendiente</span>
+                    {% elif tarea.estado == 'running' %}
+                        <span style="color: #3498db; font-weight: bold;">▶️ Ejecutando</span>
+                    {% elif tarea.estado == 'completed' %}
+                        <span style="color: #27ae60; font-weight: bold;">✅ Completada</span>
+                    {% elif tarea.estado == 'failed' %}
+                        <span style="color: #e74c3c; font-weight: bold;">❌ Fallida</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">{{ tarea.hora_programada|date:"d/m/Y H:i:s" }}</td>
+                <td style="padding: 10px;">{{ tarea.cantidad_entidades }}</td>
+                <td style="padding: 10px;">
+                    {% if tarea.duracion %}
+                        {{ tarea.duracion|floatformat:2 }} seg
+                    {% elif tarea.estado == 'running' %}
+                        <span style="color: #3498db;">En progreso...</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="padding: 20px; text-align: center; color: #999;">
+                    No hay tareas recientes
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="margin-top: 15px;">
+        <a href="{% url 'admin:alumnos_tarea_changelist' %}" style="color: #417690; font-weight: bold;">
+            Ver todas las tareas →
+        </a>
+    </p>
+
+    <div style="margin-top: 30px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #1976D2;">📊 Resumen</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #f39c12;">{{ resumen.pending }}</div>
+                <div style="color: #666; font-size: 12px;">Pendientes</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #3498db;">{{ resumen.running }}</div>
+                <div style="color: #666; font-size: 12px;">En Ejecución</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #27ae60;">{{ resumen.completed }}</div>
+                <div style="color: #666; font-size: 12px;">Completadas (24h)</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">{{ resumen.failed }}</div>
+                <div style="color: #666; font-size: 12px;">Fallidas (24h)</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

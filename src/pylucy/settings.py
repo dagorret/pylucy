@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_select2',
+    'django_celery_beat',  # Tareas programadas con BD
     'alumnos',
     'cursos',
 ]
@@ -160,14 +161,50 @@ ADMIN_SITE_HEADER = "Lucy AMS"
 ADMIN_SITE_TITLE = "Lucy Admin"
 ADMIN_INDEX_TITLE = "Panel de Administración"
 
-# En Development: enviar correos a MailHog
-if os.getenv("DJANGO_ENV") == "development":
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = "mailhog"
-    EMAIL_PORT = 1025
-    EMAIL_HOST_USER = ""
-    EMAIL_HOST_PASSWORD = ""
-    EMAIL_USE_TLS = False
-    EMAIL_USE_SSL = False
+# Email configuration
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "mailhog")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv("EMAIL_FROM", "no-reply@v.eco.unrc.edu.ar")
 
 ALLOWED_HOSTS = ['*']
+
+# =============================================================================
+# CONFIGURACIÓN TESTING vs PRODUCCIÓN (#ETME)
+# =============================================================================
+
+# Modo de ejecución (testing o production)
+ENVIRONMENT_MODE = os.getenv("ENVIRONMENT_MODE", "testing").lower()
+
+# Prefijo para cuentas de testing
+# testing: test-a12345678@eco.unrc.edu.ar
+# production: a12345678@eco.unrc.edu.ar
+ACCOUNT_PREFIX = "test-a" if ENVIRONMENT_MODE == "testing" else "a"
+
+# Moodle
+MOODLE_BASE_URL = os.getenv(
+    "MOODLE_BASE_URL",
+    "https://sandbox.moodledemo.net" if ENVIRONMENT_MODE == "testing" else "https://moodle.eco.unrc.edu.ar"
+)
+MOODLE_WSTOKEN = os.getenv("MOODLE_WSTOKEN", "")
+
+# Microsoft Teams / Graph API
+TEAMS_TENANT = os.getenv("TEAMS_TENANT", "")  # Tenant ID (GUID)
+TEAMS_DOMAIN = os.getenv("TEAMS_DOMAIN", "eco.unrc.edu.ar")  # Dominio para UPNs
+TEAMS_CLIENT_ID = os.getenv("TEAMS_CLIENT_ID", "")
+TEAMS_CLIENT_SECRET = os.getenv("TEAMS_CLIENT_SECRET", "")
+
+# =============================================================================
+# CELERY CONFIGURATION
+# =============================================================================
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
