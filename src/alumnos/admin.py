@@ -395,8 +395,13 @@ class AlumnoAdmin(admin.ModelAdmin):
 
         # Solo mostrar la primera carrera (caso normal)
         carrera = obj.carreras_data[0]
-        nombre = carrera.get("nombre_carrera", "")
+        id_carrera = carrera.get("id_carrera")
         modalidad = carrera.get("modalidad", "")
+
+        # Obtener nombre real de la carrera desde la base de datos
+        from cursos.utils import get_carrera_nombre
+        nombre = get_carrera_nombre(id_carrera) if id_carrera else carrera.get("nombre_carrera", "Sin nombre")
+
         mod_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
 
         return f"{nombre} ({mod_texto})"
@@ -409,12 +414,21 @@ class AlumnoAdmin(admin.ModelAdmin):
             return "No tiene carrera asignada"
 
         from django.utils.safestring import mark_safe
+        from cursos.utils import get_carrera_nombre, get_carrera_codigo
         import json
 
         # Solo mostrar la primera carrera (caso normal: una sola carrera)
         carrera = obj.carreras_data[0]
         id_carrera = carrera.get("id_carrera", "N/A")
-        nombre_carrera = carrera.get("nombre_carrera", "Sin nombre")
+
+        # Obtener nombre real desde la base de datos
+        if id_carrera != "N/A":
+            nombre_carrera = get_carrera_nombre(id_carrera)
+            codigo_carrera = get_carrera_codigo(id_carrera) or "N/A"
+        else:
+            nombre_carrera = carrera.get("nombre_carrera", "Sin nombre")
+            codigo_carrera = "N/A"
+
         modalidad = carrera.get("modalidad", "N/A")
         modalidad_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
         fecha_inscri = carrera.get("fecha_inscri", "N/A")
@@ -434,6 +448,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         html = f"""
             <div style="border: 1px solid #ddd; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
                 <p><strong>ID Carrera (UTI):</strong> {id_carrera}</p>
+                <p><strong>Código:</strong> {codigo_carrera}</p>
                 <p><strong>Nombre:</strong> {nombre_carrera}</p>
                 <p><strong>Modalidad:</strong> {modalidad_texto} (código: {modalidad})</p>
                 <p><strong>Fecha Inscripción:</strong> {fecha_inscri}</p>

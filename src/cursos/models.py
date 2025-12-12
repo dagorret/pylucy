@@ -2,6 +2,40 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
+class Carrera(models.Model):
+    """
+    Modelo para definir las carreras de la facultad.
+    Mapea el ID de la UTI con el código interno y nombre completo.
+    """
+    id_uti = models.IntegerField(
+        unique=True,
+        help_text="ID de carrera desde API UTI/SIAL (ej: 2, 3, 4, 7, 8)"
+    )
+    codigo = models.CharField(
+        max_length=10,
+        unique=True,
+        help_text="Código interno de la carrera (ej: LE, CP, LA, TGA, TGE)"
+    )
+    nombre_completo = models.CharField(
+        max_length=255,
+        help_text="Nombre completo de la carrera"
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Si la carrera está activa para nuevas inscripciones"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Carrera"
+        verbose_name_plural = "Carreras"
+        ordering = ["nombre_completo"]
+
+    def __str__(self):
+        return f"{self.nombre_completo} ({self.codigo})"
+
+
 def _normalizar_lista(valor):
     """
     Acepta list/tuple de strings o string separada por comas.

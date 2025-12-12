@@ -3,12 +3,33 @@ from django.contrib import admin
 
 from .constants import CARRERAS_CHOICES, MODALIDADES_CHOICES
 from .models import (
+    Carrera,
     CursoIngreso,
     _normalizar_carreras,
     _normalizar_comisiones,
     _normalizar_modalidades,
 )
 from .widgets import CarrerasTagWidget
+
+
+@admin.register(Carrera)
+class CarreraAdmin(admin.ModelAdmin):
+    """Admin para el modelo Carrera."""
+    list_display = ("nombre_completo", "codigo", "id_uti", "activo", "updated_at")
+    list_filter = ("activo",)
+    search_fields = ("nombre_completo", "codigo")
+    ordering = ("nombre_completo",)
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        ("Información de la Carrera", {
+            "fields": ("nombre_completo", "codigo", "id_uti", "activo")
+        }),
+        ("Metadatos", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",)
+        }),
+    )
 
 
 class BaseCursoAdmin(admin.ModelAdmin):
