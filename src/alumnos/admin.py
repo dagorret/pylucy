@@ -788,6 +788,13 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'description': 'Credenciales de Teams y prefijo de cuentas. Si están vacías, se usan las variables de entorno. ACCOUNT_PREFIX: "test-a" para testing, "a" para producción.',
             'classes': ('collapse',)
         }),
+        ('🏛️ API SIAL/UTI', {
+            'fields': (
+                'sial_base_url',
+            ),
+            'description': 'URL de la API SIAL/UTI. Ejemplos: https://sial.unrc.edu.ar (producción) o http://mock-api-uti:8000 (mock). Si está vacío, usa variable de entorno.',
+            'classes': ('collapse',)
+        }),
         ('🎓 Credenciales Moodle', {
             'fields': (
                 'moodle_base_url',

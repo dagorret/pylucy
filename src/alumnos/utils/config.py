@@ -60,12 +60,23 @@ def get_sial_base_url() -> str:
     """
     Obtiene la URL base de SIAL/UTI API.
 
-    Por ahora solo lee de variables de entorno.
-    Podría extenderse para leer de BD en el futuro.
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno SIAL_BASE_URL
+    3. Default: http://localhost:8088
 
     Returns:
         str: URL base de SIAL/UTI
     """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.sial_base_url:
+            return config.sial_base_url
+    except Exception:
+        # Si hay error al leer BD, usar env
+        pass
+
     return settings.SIAL_BASE_URL
 
 
