@@ -410,7 +410,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         if not obj.carreras_data:
             return "No tiene carreras asignadas"
 
-        from django.utils.html import format_html
+        from django.utils.safestring import mark_safe
         import json
 
         html_parts = []
@@ -439,14 +439,15 @@ class AlumnoAdmin(admin.ModelAdmin):
             """)
 
         html_final = "".join(html_parts)
+        json_str = json.dumps(obj.carreras_data, indent=2, ensure_ascii=False)
         html_final += f"""
             <details style="margin-top: 10px;">
                 <summary style="cursor: pointer; color: #417690;">Ver JSON completo</summary>
-                <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{json.dumps(obj.carreras_data, indent=2, ensure_ascii=False)}</pre>
+                <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{json_str}</pre>
             </details>
         """
 
-        return format_html(html_final)
+        return mark_safe(html_final)
 
     carreras_formatted.short_description = "Carreras (desde API UTI)"
 
