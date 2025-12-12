@@ -183,6 +183,8 @@ def _build_defaults(
     }
 
     def _resolver_cursos() -> List[str]:
+        from cursos.constants import CARRERAS_DICT
+
         shortnames: List[str] = []
         for carrera in carreras:
             id_carrera = carrera.get("id_carrera")
@@ -191,8 +193,14 @@ def _build_defaults(
             comision = None
             if comisiones:
                 comision = str(comisiones[0].get("id_comision") or "").strip() or None
+
+            # Mapear id_carrera de UTI a código interno (ej: 3 -> CP)
+            codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
+            if not codigo_carrera:
+                continue  # Carrera no reconocida, skip
+
             try:
-                short = resolver_curso(str(id_carrera), modalidad_carrera, comision)
+                short = resolver_curso(codigo_carrera, modalidad_carrera, comision)
                 shortnames.append(short)
             except Exception:
                 continue
