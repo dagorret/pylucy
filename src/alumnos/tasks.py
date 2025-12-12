@@ -270,10 +270,13 @@ def activar_servicios_alumno(alumno_id):
     """
     Tarea asíncrona para activar Teams + Email para un alumno.
 
+    Si Teams falla, envía email de bienvenida sin credenciales.
+    Los errores se registran en logs y en la tabla Log.
+
     Args:
         alumno_id: ID del alumno
     """
-    from .models import Alumno
+    from .models import Alumno, Log
 
     try:
         alumno = Alumno.objects.get(id=alumno_id)
@@ -284,20 +287,101 @@ def activar_servicios_alumno(alumno_id):
     teams_svc = TeamsService()
     email_svc = EmailService()
 
-    # 1. Crear usuario en Teams
-    teams_result = teams_svc.create_user(alumno)
+    teams_success = False
+    teams_result = None
 
-    if not teams_result or not teams_result.get('created'):
-        logger.error(f"Error creando usuario Teams para alumno {alumno_id}")
-        return
+    # 1. Intentar crear usuario en Teams
+    try:
+        teams_result = teams_svc.create_user(alumno)
 
-    # 2. Enviar email
-    email_sent = email_svc.send_credentials_email(alumno, teams_result)
+        if teams_result and teams_result.get('created'):
+            teams_success = True
+            logger.info(f"✅ Usuario Teams creado para alumno {alumno_id}: {teams_result.get('upn')}")
+            Log.objects.create(
+                tipo=Log.TipoLog.SUCCESS,
+                modulo='activar_servicios',
+                mensaje=f"Usuario Teams creado exitosamente",
+                detalles={'upn': teams_result.get('upn'), 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+        else:
+            logger.warning(f"⚠️ Teams no retornó resultado válido para alumno {alumno_id}")
+            Log.objects.create(
+                tipo=Log.TipoLog.WARNING,
+                modulo='activar_servicios',
+                mensaje=f"Teams no retornó resultado válido",
+                detalles={'teams_result': teams_result, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+    except Exception as e:
+        logger.error(f"❌ Error creando usuario Teams para alumno {alumno_id}: {e}")
+        Log.objects.create(
+            tipo=Log.TipoLog.ERROR,
+            modulo='activar_servicios',
+            mensaje=f"Error al crear usuario en Teams",
+            detalles={'error': str(e), 'alumno_id': alumno_id},
+            alumno=alumno
+        )
 
-    if email_sent:
-        logger.info(f"Servicios activados para alumno {alumno_id}")
+    # 2. Enviar email (siempre, aunque Teams falle)
+    email_sent = False
+
+    if teams_success and teams_result:
+        # Enviar email con credenciales
+        logger.info(f"📧 Enviando email con credenciales a {alumno.email}")
+        email_sent = email_svc.send_credentials_email(alumno, teams_result)
+
+        if email_sent:
+            logger.info(f"✅ Email con credenciales enviado a {alumno.email}")
+            Log.objects.create(
+                tipo=Log.TipoLog.SUCCESS,
+                modulo='activar_servicios',
+                mensaje=f"Email con credenciales enviado exitosamente",
+                detalles={'email': alumno.email, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+        else:
+            logger.error(f"❌ Error enviando email con credenciales a {alumno.email}")
+            Log.objects.create(
+                tipo=Log.TipoLog.ERROR,
+                modulo='activar_servicios',
+                mensaje=f"Error al enviar email con credenciales",
+                detalles={'email': alumno.email, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
     else:
-        logger.warning(f"Usuario creado pero email no enviado para alumno {alumno_id}")
+        # Teams falló, enviar email de bienvenida sin credenciales
+        logger.info(f"📧 Teams falló, enviando email de bienvenida a {alumno.email}")
+        email_sent = email_svc.send_welcome_email(alumno)
+
+        if email_sent:
+            logger.info(f"✅ Email de bienvenida enviado a {alumno.email}")
+            Log.objects.create(
+                tipo=Log.TipoLog.INFO,
+                modulo='activar_servicios',
+                mensaje=f"Email de bienvenida enviado (Teams no disponible)",
+                detalles={'email': alumno.email, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+        else:
+            logger.error(f"❌ Error enviando email de bienvenida a {alumno.email}")
+            Log.objects.create(
+                tipo=Log.TipoLog.ERROR,
+                modulo='activar_servicios',
+                mensaje=f"Error al enviar email de bienvenida",
+                detalles={'email': alumno.email, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+
+    # 3. Resumen final
+    if teams_success and email_sent:
+        logger.info(f"🎉 Servicios completamente activados para alumno {alumno_id}")
+    elif teams_success and not email_sent:
+        logger.warning(f"⚠️ Usuario Teams creado pero email no enviado para alumno {alumno_id}")
+    elif not teams_success and email_sent:
+        logger.info(f"📬 Email de bienvenida enviado (Teams no disponible) para alumno {alumno_id}")
+    else:
+        logger.error(f"💥 Falló todo el proceso para alumno {alumno_id}")
 
 
 @shared_task(bind=True)
