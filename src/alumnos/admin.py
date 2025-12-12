@@ -21,7 +21,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         "dni",
         "estado_actual",
         "modalidad_actual",
-        "carreras_display",
+        "carreras_display",  # Muestra solo la primera carrera
         "cohorte",
         "fecha_ingreso",
     )
@@ -389,67 +389,66 @@ class AlumnoAdmin(admin.ModelAdmin):
         )
 
     def carreras_display(self, obj):
-        """Muestra las carreras del alumno en formato legible."""
-        if not obj.carreras_data:
+        """Muestra la carrera del alumno (siempre la primera)."""
+        if not obj.carreras_data or len(obj.carreras_data) == 0:
             return "-"
 
-        carreras_list = []
-        for carrera in obj.carreras_data:
-            nombre = carrera.get("nombre_carrera", "")
-            id_carrera = carrera.get("id_carrera", "")
-            modalidad = carrera.get("modalidad", "")
-            mod_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
-            carreras_list.append(f"{nombre} ({mod_texto})")
+        # Solo mostrar la primera carrera (caso normal)
+        carrera = obj.carreras_data[0]
+        nombre = carrera.get("nombre_carrera", "")
+        modalidad = carrera.get("modalidad", "")
+        mod_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
 
-        return ", ".join(carreras_list) if carreras_list else "-"
+        return f"{nombre} ({mod_texto})"
 
-    carreras_display.short_description = "Carreras"
+    carreras_display.short_description = "Carrera"
 
     def carreras_formatted(self, obj):
-        """Muestra las carreras del alumno en formato HTML para el formulario de edición."""
-        if not obj.carreras_data:
-            return "No tiene carreras asignadas"
+        """Muestra la carrera del alumno (primera carrera de la lista)."""
+        if not obj.carreras_data or len(obj.carreras_data) == 0:
+            return "No tiene carrera asignada"
 
         from django.utils.safestring import mark_safe
         import json
 
-        html_parts = []
-        for idx, carrera in enumerate(obj.carreras_data, 1):
-            id_carrera = carrera.get("id_carrera", "N/A")
-            nombre_carrera = carrera.get("nombre_carrera", "Sin nombre")
-            modalidad = carrera.get("modalidad", "N/A")
-            modalidad_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
-            fecha_inscri = carrera.get("fecha_inscri", "N/A")
-            comisiones = carrera.get("comisiones", [])
+        # Solo mostrar la primera carrera (caso normal: una sola carrera)
+        carrera = obj.carreras_data[0]
+        id_carrera = carrera.get("id_carrera", "N/A")
+        nombre_carrera = carrera.get("nombre_carrera", "Sin nombre")
+        modalidad = carrera.get("modalidad", "N/A")
+        modalidad_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
+        fecha_inscri = carrera.get("fecha_inscri", "N/A")
+        comisiones = carrera.get("comisiones", [])
 
-            comisiones_texto = ", ".join([
-                f"{c.get('nombre_comision', '')} (ID: {c.get('id_comision', '')})"
-                for c in comisiones
-            ]) if comisiones else "Sin comisiones"
+        comisiones_texto = ", ".join([
+            f"{c.get('nombre_comision', '')} (ID: {c.get('id_comision', '')})"
+            for c in comisiones
+        ]) if comisiones else "Sin comisiones"
 
-            html_parts.append(f"""
-                <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; background-color: #f9f9f9; border-radius: 5px;">
-                    <h4 style="margin-top: 0; color: #417690;">Carrera {idx}</h4>
-                    <p><strong>ID Carrera (UTI):</strong> {id_carrera}</p>
-                    <p><strong>Nombre:</strong> {nombre_carrera}</p>
-                    <p><strong>Modalidad:</strong> {modalidad_texto} (código: {modalidad})</p>
-                    <p><strong>Fecha Inscripción:</strong> {fecha_inscri}</p>
-                    <p><strong>Comisiones:</strong> {comisiones_texto}</p>
-                </div>
-            """)
+        # Nota si hay más de una carrera (caso raro)
+        nota_multiple = ""
+        if len(obj.carreras_data) > 1:
+            nota_multiple = f'<p style="color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px;"><strong>⚠️ Nota:</strong> Este alumno tiene {len(obj.carreras_data)} carreras. Solo se muestra la primera. Casos múltiples se gestionan manualmente.</p>'
 
-        html_final = "".join(html_parts)
         json_str = json.dumps(obj.carreras_data, indent=2, ensure_ascii=False)
-        html_final += f"""
+        html = f"""
+            <div style="border: 1px solid #ddd; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                <p><strong>ID Carrera (UTI):</strong> {id_carrera}</p>
+                <p><strong>Nombre:</strong> {nombre_carrera}</p>
+                <p><strong>Modalidad:</strong> {modalidad_texto} (código: {modalidad})</p>
+                <p><strong>Fecha Inscripción:</strong> {fecha_inscri}</p>
+                <p><strong>Comisiones:</strong> {comisiones_texto}</p>
+            </div>
+            {nota_multiple}
             <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; color: #417690;">Ver JSON completo</summary>
-                <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{json_str}</pre>
+                <summary style="cursor: pointer; color: #417690;">Ver datos completos (JSON)</summary>
+                <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 12px;">{json_str}</pre>
             </details>
         """
 
-        return mark_safe(html_final)
+        return mark_safe(html)
 
-    carreras_formatted.short_description = "Carreras (desde API UTI)"
+    carreras_formatted.short_description = "Carrera (desde API UTI)"
 
 
 class CarreraListFilter(admin.SimpleListFilter):
