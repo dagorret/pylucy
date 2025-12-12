@@ -14,9 +14,9 @@ class SIALClient:
     """Cliente HTTP simple para la API SIAL/UTI (mock o prod)."""
 
     def __init__(self, base_url: str = None, user: str = None, password: str = None):
-        from ..utils.config import get_sial_base_url
+        from ..utils.config import get_sial_base_url, get_sial_basic_user, get_sial_basic_pass
         self.base_url = (base_url or get_sial_base_url()).rstrip("/")
-        self.auth = (user or settings.SIAL_BASIC_USER, password or settings.SIAL_BASIC_PASS)
+        self.auth = (user or get_sial_basic_user(), password or get_sial_basic_pass())
         self.session = requests.Session()
         self.session.auth = self.auth
 

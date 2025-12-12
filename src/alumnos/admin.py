@@ -791,8 +791,10 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         ('🏛️ API SIAL/UTI', {
             'fields': (
                 'sial_base_url',
+                'sial_basic_user',
+                'sial_basic_pass',
             ),
-            'description': 'URL de la API SIAL/UTI. Ejemplos: https://sial.unrc.edu.ar (producción) o http://mock-api-uti:8000 (mock). Si está vacío, usa variable de entorno.',
+            'description': 'Configuración de API SIAL/UTI. URL: https://sial.unrc.edu.ar (producción) o http://mock-api-uti:8000 (mock). Credenciales para autenticación básica. Si están vacíos, usan variables de entorno.',
             'classes': ('collapse',)
         }),
         ('🎓 Credenciales Moodle', {

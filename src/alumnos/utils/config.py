@@ -80,6 +80,52 @@ def get_sial_base_url() -> str:
     return settings.SIAL_BASE_URL
 
 
+def get_sial_basic_user() -> str:
+    """
+    Obtiene el usuario para autenticación básica en API SIAL/UTI.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno SIAL_BASIC_USER
+    3. Default: 'usuario'
+
+    Returns:
+        str: Usuario para autenticación básica
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.sial_basic_user:
+            return config.sial_basic_user
+    except Exception:
+        pass
+
+    return getattr(settings, 'SIAL_BASIC_USER', 'usuario')
+
+
+def get_sial_basic_pass() -> str:
+    """
+    Obtiene la contraseña para autenticación básica en API SIAL/UTI.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe y no está vacía)
+    2. Variable de entorno SIAL_BASIC_PASS
+    3. Default: 'contrasena'
+
+    Returns:
+        str: Contraseña para autenticación básica
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.sial_basic_pass:
+            return config.sial_basic_pass
+    except Exception:
+        pass
+
+    return getattr(settings, 'SIAL_BASIC_PASS', 'contrasena')
+
+
 def get_rate_limit_moodle() -> int:
     """
     Obtiene el rate limit de Moodle (requests por minuto).

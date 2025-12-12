@@ -313,6 +313,16 @@ class Configuracion(models.Model):
         blank=True,
         help_text="URL base de API SIAL/UTI (ej: https://sial.unrc.edu.ar o http://mock-api-uti:8000). Si está vacío, usa variable de entorno"
     )
+    sial_basic_user = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Usuario para autenticación básica en API SIAL/UTI. Si está vacío, usa variable de entorno"
+    )
+    sial_basic_pass = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Contraseña para autenticación básica en API SIAL/UTI. Si está vacío, usa variable de entorno"
+    )
     moodle_base_url = models.URLField(
         max_length=255,
         blank=True,
