@@ -5,6 +5,7 @@
 El archivo `docker-compose.testing.yml` levanta **8 servicios** en contenedores Docker:
 
 ### 1️⃣ **db** - Base de Datos PostgreSQL
+
 - **Imagen**: `postgres:16`
 - **Puerto**: `5432:5432` (expuesto)
 - **Propósito**: Base de datos principal de PyLucy
@@ -16,6 +17,7 @@ El archivo `docker-compose.testing.yml` levanta **8 servicios** en contenedores 
 - **Healthcheck**: Verifica que PostgreSQL esté listo cada 10 segundos
 
 **Conectarse desde fuera del contenedor**:
+
 ```bash
 psql -h localhost -p 5432 -U pylucy -d pylucy
 # Password: pylucy
@@ -24,6 +26,7 @@ psql -h localhost -p 5432 -U pylucy -d pylucy
 ---
 
 ### 2️⃣ **redis** - Cache y Message Broker
+
 - **Imagen**: `redis:7-alpine`
 - **Puerto**: `6379:6379` (expuesto)
 - **Propósito**:
@@ -35,6 +38,7 @@ psql -h localhost -p 5432 -U pylucy -d pylucy
 - **Healthcheck**: Ping a Redis cada 10 segundos
 
 **Conectarse**:
+
 ```bash
 redis-cli -h localhost -p 6379
 # > PING
@@ -44,6 +48,7 @@ redis-cli -h localhost -p 6379
 ---
 
 ### 3️⃣ **web** - Aplicación Django
+
 - **Build**: Construida desde `Dockerfile` local
 - **Puerto**: `8000:8000` (expuesto)
 - **Comando**: `python manage.py runserver 0.0.0.0:8000`
@@ -56,12 +61,14 @@ redis-cli -h localhost -p 6379
 - **Reinicio**: Automático siempre
 
 **Acceder**:
+
 - Aplicación: `http://IP_SERVIDOR:8000/`
 - Admin: `http://IP_SERVIDOR:8000/admin/`
 
 ---
 
 ### 4️⃣ **celery** - Worker de Tareas Asíncronas
+
 - **Build**: Misma imagen que `web`
 - **Comando**: `celery -A pylucy worker -l info`
 - **Propósito**: Procesa tareas en segundo plano:
@@ -74,6 +81,7 @@ redis-cli -h localhost -p 6379
 - **Volumen**: `./src:/app` (mismo código que web)
 
 **Ver tareas activas**:
+
 ```bash
 docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspect active
 ```
@@ -81,6 +89,7 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
 ---
 
 ### 5️⃣ **celery-beat** - Scheduler de Tareas Periódicas
+
 - **Build**: Misma imagen que `web`
 - **Comando**: `celery -A pylucy beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler`
 - **Propósito**: Programa tareas periódicas:
@@ -91,11 +100,13 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
 - **Volumen**: `./src:/app`
 
 **Tareas periódicas** se configuran en:
+
 - Django Admin → Periodic Tasks
 
 ---
 
 ### 6️⃣ **mailhog** - Captura de Emails
+
 - **Imagen**: `mailhog/mailhog`
 - **Puertos**:
   - `8025:8025` (UI Web)
@@ -107,8 +118,10 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
 - **Sin persistencia**: Los emails se pierden al reiniciar
 
 **Acceder**:
+
 - UI Web: `http://IP_SERVIDOR:8025/`
 - Configuración SMTP en `.env.dev`:
+  
   ```
   EMAIL_HOST=mailhog
   EMAIL_PORT=1025
@@ -118,6 +131,7 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
 ---
 
 ### 7️⃣ **mock-api-uti** - API Mock de SIAL/UTI
+
 - **Build**: Construida desde `./mock-api-uti`
 - **Puerto**: `8088:8000` (expuesto)
 - **Propósito**:
@@ -133,6 +147,7 @@ docker compose -f docker-compose.testing.yml exec celery celery -A pylucy inspec
   - `/webservice/sial/V2/04/preinscriptos/preinscripto/{nro_tramite}`
 
 **Configuración en `.env.dev`**:
+
 ```bash
 SIAL_BASE_URL=http://mock-api-uti:8000
 SIAL_BASIC_USER=usuario
@@ -144,6 +159,7 @@ SIAL_BASIC_PASS=contrasena
 ---
 
 ### 8️⃣ **pgadmin** - Administrador de PostgreSQL
+
 - **Imagen**: `dpage/pgadmin4`
 - **Puerto**: `5050:80` (expuesto)
 - **Propósito**: Interfaz web para administrar la base de datos
@@ -152,6 +168,7 @@ SIAL_BASIC_PASS=contrasena
   - Password: `admin`
 
 **Acceder**:
+
 1. Ir a: `http://IP_SERVIDOR:5050/`
 2. Login: `admin@unrc.edu.ar` / `admin`
 3. Add Server:
@@ -168,15 +185,18 @@ SIAL_BASIC_PASS=contrasena
 ## 🌐 Red y Volúmenes
 
 ### Red
+
 - **Nombre**: `pylucy-net`
 - **Driver**: bridge
 - **Propósito**: Conecta todos los servicios entre sí
 
 Los contenedores pueden comunicarse usando sus nombres:
+
 - `web` se conecta a `db:5432`
 - `celery` se conecta a `redis:6379`
 
 ### Volúmenes Persistentes
+
 1. **pylucy-db-testing**: Datos de PostgreSQL
 2. **pylucy-redis-testing**: Datos de Redis
 3. **pylucy-static-testing**: Archivos estáticos de Django
@@ -274,25 +294,27 @@ print('✅ Contraseña actualizada')
 
 ## 🔐 Resumen de Credenciales
 
-| Servicio | URL | Usuario | Contraseña |
-|----------|-----|---------|------------|
-| **PyLucy Admin** | http://IP:8000/admin/ | `admin` | `admin` |
-| **PyLucy Admin** | http://IP:8000/admin/ | `AdminFCE.16` | `Milei2027!` |
-| **MailHog** | http://IP:8025/ | - | - |
-| **PgAdmin** | http://IP:5050/ | `admin@unrc.edu.ar` | `admin` |
-| **PostgreSQL** | localhost:5432 | `pylucy` | `pylucy` |
-| **Redis** | localhost:6379 | - | - |
+| Servicio         | URL                   | Usuario             | Contraseña   |
+| ---------------- | --------------------- | ------------------- | ------------ |
+| **PyLucy Admin** | http://IP:8000/admin/ | `admin`             | `admin`      |
+| **PyLucy Admin** | http://IP:8000/admin/ | `AdminFCE.16`       | `Milei2027!` |
+| **MailHog**      | http://IP:8025/       | -                   | -            |
+| **PgAdmin**      | http://IP:5050/       | `admin@unrc.edu.ar` | `admin`      |
+| **PostgreSQL**   | localhost:5432        | `pylucy`            | `pylucy`     |
+| **Redis**        | localhost:6379        | -                   | -            |
 
 ---
 
 ## 📊 Comandos Útiles
 
 ### Ver estado de todos los servicios:
+
 ```bash
 docker compose -f docker-compose.testing.yml ps
 ```
 
 ### Ver logs en tiempo real:
+
 ```bash
 # Todos los servicios
 docker compose -f docker-compose.testing.yml logs -f
@@ -305,11 +327,13 @@ docker compose -f docker-compose.testing.yml logs -f celery
 ```
 
 ### Reiniciar un servicio específico:
+
 ```bash
 docker compose -f docker-compose.testing.yml restart web
 ```
 
 ### Ejecutar comandos Django:
+
 ```bash
 # Migraciones
 docker compose -f docker-compose.testing.yml exec web python manage.py migrate
@@ -325,6 +349,7 @@ docker compose -f docker-compose.testing.yml exec web python manage.py collectst
 ```
 
 ### Acceder a la shell de un contenedor:
+
 ```bash
 docker compose -f docker-compose.testing.yml exec web bash
 ```
@@ -344,6 +369,7 @@ Los servicios inician en este orden (por dependencias):
 7. **pgadmin** - Independiente
 
 El **entrypoint** del contenedor `web` ejecuta automáticamente:
+
 1. Espera a que la DB esté lista
 2. Ejecuta migraciones
 3. Colecta archivos estáticos
@@ -355,22 +381,26 @@ El **entrypoint** del contenedor `web` ejecuta automáticamente:
 ## 🛠️ Troubleshooting
 
 ### Un servicio no inicia:
+
 ```bash
 docker compose -f docker-compose.testing.yml logs nombre_servicio
 ```
 
 ### Resetear todo (¡CUIDADO! Borra datos):
+
 ```bash
 docker compose -f docker-compose.testing.yml down -v
 docker compose -f docker-compose.testing.yml up -d
 ```
 
 ### Ver recursos usados:
+
 ```bash
 docker stats
 ```
 
 ### Limpiar espacio:
+
 ```bash
 docker system prune -a
 ```

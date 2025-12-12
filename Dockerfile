@@ -21,7 +21,11 @@ RUN pip install --upgrade pip && \
 
 # Copiar código de la app para producción.
 # En desarrollo se va a montar ./src sobre /app y esto se "pisa".
+# Incluye scripts de inicialización en src/scripts/
 COPY src/ /app/
+
+# Dar permisos de ejecución a scripts
+RUN chmod +x /app/scripts/*.py || true
 
 # Copiar entrypoint script
 COPY entrypoint.sh /entrypoint.sh

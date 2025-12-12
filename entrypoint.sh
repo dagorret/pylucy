@@ -62,6 +62,10 @@ else:
     print('ℹ️  Superuser admin ya existe')
 END
 
+# Inicializar configuración del sistema (solo en testing)
+echo "⚙️  Inicializando configuración del sistema..."
+python /app/scripts/init_config.py
+
 echo "🎉 Inicialización completada"
 echo ""
 
