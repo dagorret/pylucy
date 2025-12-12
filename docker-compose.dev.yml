@@ -97,11 +97,6 @@ services:
     ports:
       - "8025:8025"   # UI Web
       - "1025:1025"   # SMTP
-    volumes:
-      - pylucy-mailhog-dev:/maildir
-    environment:
-      - MH_STORAGE=maildir
-      - MH_MAILDIR_PATH=/maildir
     networks:
       - pylucy-net
 
@@ -192,4 +187,3 @@ networks:
 volumes:
   pylucy-db-dev:
   pylucy-redis-dev:
-  pylucy-mailhog-dev:
