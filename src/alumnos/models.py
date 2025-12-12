@@ -26,6 +26,11 @@ class Alumno(models.Model):
     fecha_ingreso = models.DateField(null=True, blank=True)
     estado_ingreso = models.CharField(max_length=100, null=True, blank=True)
     modalidad_actual = models.CharField(max_length=1, null=True, blank=True)
+    carreras_data = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Array de carreras tal como viene de la API UTI/SIAL (id_carrera, nombre_carrera, modalidad, comisiones)"
+    )
     teams_password = models.CharField(max_length=255, null=True, blank=True)
     teams_payload = models.JSONField(null=True, blank=True)
     email_payload = models.JSONField(null=True, blank=True)

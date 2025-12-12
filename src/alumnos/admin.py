@@ -30,6 +30,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "fecha_ultima_modificacion",
+        "carreras_data",
         "teams_payload",
         "email_payload",
         "moodle_payload",

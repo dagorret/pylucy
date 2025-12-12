@@ -237,6 +237,7 @@ def _build_defaults(
         "fecha_ingreso": _parse_fecha_inscri(fecha_inscri),
         "estado_ingreso": carrera_primaria.get("estado_ingreso") or None,
         "modalidad_actual": modalidad_normalizada,
+        "carreras_data": carreras if carreras else None,  # Guardar array completo de carreras
         "teams_password": teams_password,
         "teams_payload": teams_payload,
         "email_payload": email_payload,
