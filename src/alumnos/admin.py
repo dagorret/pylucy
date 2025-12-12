@@ -31,7 +31,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "fecha_ultima_modificacion",
-        "carreras_data",
+        "carreras_formatted",
         "teams_payload",
         "email_payload",
         "moodle_payload",
@@ -404,6 +404,51 @@ class AlumnoAdmin(admin.ModelAdmin):
         return ", ".join(carreras_list) if carreras_list else "-"
 
     carreras_display.short_description = "Carreras"
+
+    def carreras_formatted(self, obj):
+        """Muestra las carreras del alumno en formato HTML para el formulario de edición."""
+        if not obj.carreras_data:
+            return "No tiene carreras asignadas"
+
+        from django.utils.html import format_html
+        import json
+
+        html_parts = []
+        for idx, carrera in enumerate(obj.carreras_data, 1):
+            id_carrera = carrera.get("id_carrera", "N/A")
+            nombre_carrera = carrera.get("nombre_carrera", "Sin nombre")
+            modalidad = carrera.get("modalidad", "N/A")
+            modalidad_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
+            fecha_inscri = carrera.get("fecha_inscri", "N/A")
+            comisiones = carrera.get("comisiones", [])
+
+            comisiones_texto = ", ".join([
+                f"{c.get('nombre_comision', '')} (ID: {c.get('id_comision', '')})"
+                for c in comisiones
+            ]) if comisiones else "Sin comisiones"
+
+            html_parts.append(f"""
+                <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                    <h4 style="margin-top: 0; color: #417690;">Carrera {idx}</h4>
+                    <p><strong>ID Carrera (UTI):</strong> {id_carrera}</p>
+                    <p><strong>Nombre:</strong> {nombre_carrera}</p>
+                    <p><strong>Modalidad:</strong> {modalidad_texto} (código: {modalidad})</p>
+                    <p><strong>Fecha Inscripción:</strong> {fecha_inscri}</p>
+                    <p><strong>Comisiones:</strong> {comisiones_texto}</p>
+                </div>
+            """)
+
+        html_final = "".join(html_parts)
+        html_final += f"""
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; color: #417690;">Ver JSON completo</summary>
+                <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{json.dumps(obj.carreras_data, indent=2, ensure_ascii=False)}</pre>
+            </details>
+        """
+
+        return format_html(html_final)
+
+    carreras_formatted.short_description = "Carreras (desde API UTI)"
 
 
 class CarreraListFilter(admin.SimpleListFilter):
