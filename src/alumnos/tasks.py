@@ -286,6 +286,8 @@ def activar_servicios_alumno(alumno_id):
 
     teams_svc = TeamsService()
     email_svc = EmailService()
+    from .services.moodle_service import MoodleService
+    moodle_svc = MoodleService()
 
     teams_success = False
     teams_result = None
@@ -373,9 +375,63 @@ def activar_servicios_alumno(alumno_id):
                 alumno=alumno
             )
 
-    # 3. Resumen final
-    if teams_success and email_sent:
-        logger.info(f"🎉 Servicios completamente activados para alumno {alumno_id}")
+    # 3. Enrollar en Moodle
+    moodle_success = False
+    moodle_result = None
+
+    if alumno.moodle_payload:
+        courses = alumno.moodle_payload.get('acciones', {}).get('enrolar', {}).get('courses', [])
+        if courses:
+            logger.info(f"📚 Enrollando en Moodle: {len(courses)} cursos")
+            try:
+                moodle_result = moodle_svc.enrol_user(alumno, courses)
+
+                if moodle_result.get('success'):
+                    moodle_success = True
+                    enrolled = moodle_result.get('enrolled_courses', [])
+                    failed = moodle_result.get('failed_courses', [])
+
+                    logger.info(f"✅ Moodle: {len(enrolled)} cursos enrollados, {len(failed)} fallidos")
+                    Log.objects.create(
+                        tipo=Log.TipoLog.SUCCESS,
+                        modulo='activar_servicios',
+                        mensaje=f"Enrollamiento en Moodle exitoso",
+                        detalles={
+                            'enrolled_courses': enrolled,
+                            'failed_courses': failed,
+                            'user_id': moodle_result.get('user_id')
+                        },
+                        alumno=alumno
+                    )
+                else:
+                    logger.error(f"❌ Error en enrollamiento Moodle: {moodle_result.get('error')}")
+                    Log.objects.create(
+                        tipo=Log.TipoLog.ERROR,
+                        modulo='activar_servicios',
+                        mensaje=f"Error en enrollamiento Moodle",
+                        detalles={'error': moodle_result.get('error')},
+                        alumno=alumno
+                    )
+
+            except Exception as e:
+                logger.error(f"❌ Excepción en Moodle para alumno {alumno_id}: {e}")
+                Log.objects.create(
+                    tipo=Log.TipoLog.ERROR,
+                    modulo='activar_servicios',
+                    mensaje=f"Excepción al enrollar en Moodle",
+                    detalles={'error': str(e)},
+                    alumno=alumno
+                )
+        else:
+            logger.info(f"ℹ️ No hay cursos para enrollar en Moodle")
+    else:
+        logger.info(f"ℹ️ No hay moodle_payload configurado")
+
+    # 4. Resumen final
+    if teams_success and email_sent and moodle_success:
+        logger.info(f"🎉 Todos los servicios activados para alumno {alumno_id} (Teams + Email + Moodle)")
+    elif teams_success and email_sent:
+        logger.info(f"✅ Teams y Email activados (Moodle: {'OK' if moodle_success else 'falló'})")
     elif teams_success and not email_sent:
         logger.warning(f"⚠️ Usuario Teams creado pero email no enviado para alumno {alumno_id}")
     elif not teams_success and email_sent:
