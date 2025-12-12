@@ -209,9 +209,10 @@ def _build_defaults(
     from alumnos.utils.config import get_moodle_base_url, get_moodle_wstoken
 
     moodle_courses = _resolver_cursos()
+    moodle_base_url = get_moodle_base_url()
     moodle_payload = {
         "auth": {
-            "domain": get_moodle_base_url(),
+            "domain": moodle_base_url,
             "user": "moodle_api_user",
             "password": "moodle_api_pass",
             "token": get_moodle_wstoken() or "MOODLE_TOKEN_PLACEHOLDER",
@@ -226,9 +227,9 @@ def _build_defaults(
             "enviar_correo_enrolamiento": True,
         },
         "api": {
-            "crear_usuario": "https://moodle.eco.unrc.edu.ar/webservice/rest/server.php?wsfunction=core_user_create_users",
-            "enrolar_usuario": "https://moodle.eco.unrc.edu.ar/webservice/rest/server.php?wsfunction=enrol_manual_enrol_users",
-            "enviar_correo_enrolamiento": "https://moodle.eco.unrc.edu.ar/webservice/rest/server.php?wsfunction=local_send_email",
+            "crear_usuario": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=core_user_create_users",
+            "enrolar_usuario": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=enrol_manual_enrol_users",
+            "enviar_correo_enrolamiento": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=local_send_email",
         },
     }
 
