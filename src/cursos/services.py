@@ -1,6 +1,6 @@
 from typing import Iterable, List, Tuple
 
-from .constants import CARRERAS_DICT
+from .constants import CARRERAS_DICT, MODALIDADES_DICT
 from .models import (
     CursoIngreso,
     _normalizar_carreras,
@@ -32,7 +32,11 @@ def resolver_curso(codigo_carrera: str, modalidad: str, comision: str) -> str:
     """
     carrera = (codigo_carrera or "").strip().upper()
     com_list = _normalizar_comisiones(comision)
-    mod = (modalidad or "").strip().upper()
+
+    # Mapear modalidad de UTI (1, 2) a código interno (PRES, DIST)
+    mod_raw = (modalidad or "").strip()
+    mod = MODALIDADES_DICT.get(mod_raw) or MODALIDADES_DICT.get(int(mod_raw)) if mod_raw.isdigit() else mod_raw.upper()
+
     if not carrera:
         raise ValueError("Carrera vacía")
     if not mod:

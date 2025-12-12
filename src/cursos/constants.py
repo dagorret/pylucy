@@ -25,3 +25,15 @@ MODALIDADES_CHOICES = [
     ("PRES", "Presencial"),
     ("DIST", "Distancia"),
 ]
+
+# Mapeo de códigos de modalidad de UTI/SIAL a códigos internos
+MODALIDADES_DICT = {
+    "1": "PRES",  # Presencial
+    "2": "DIST",  # Distancia
+    # Soporta enteros también
+    1: "PRES",
+    2: "DIST",
+    # Soporta códigos internos (idempotente)
+    "PRES": "PRES",
+    "DIST": "DIST",
+}
