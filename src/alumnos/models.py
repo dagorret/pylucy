@@ -318,6 +318,16 @@ class Configuracion(models.Model):
         blank=True,
         help_text="Token de Moodle WebServices. Si está vacío, usa variable de entorno"
     )
+    moodle_email_type = models.CharField(
+        max_length=20,
+        choices=[('institucional', 'Email Institucional'), ('personal', 'Email Personal')],
+        default='institucional',
+        help_text="Tipo de email a usar para enrollment en Moodle"
+    )
+    moodle_student_roleid = models.PositiveIntegerField(
+        default=5,
+        help_text="Role ID de estudiante en Moodle (default: 5, verificar en tu instalación)"
+    )
     email_from = models.EmailField(
         max_length=255,
         blank=True,

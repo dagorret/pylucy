@@ -313,3 +313,47 @@ def get_email_use_tls() -> bool:
         pass
 
     return getattr(settings, 'EMAIL_USE_TLS', False)
+
+
+def get_moodle_email_type() -> str:
+    """
+    Obtiene el tipo de email a usar para enrollment en Moodle.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe)
+    2. Default: 'institucional'
+
+    Returns:
+        str: 'institucional' o 'personal'
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.moodle_email_type:
+            return config.moodle_email_type
+    except Exception:
+        pass
+
+    return 'institucional'
+
+
+def get_moodle_student_roleid() -> int:
+    """
+    Obtiene el Role ID de estudiante en Moodle.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe)
+    2. Default: 5 (estándar de Moodle)
+
+    Returns:
+        int: Role ID de estudiante
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.moodle_student_roleid:
+            return config.moodle_student_roleid
+    except Exception:
+        pass
+
+    return 5

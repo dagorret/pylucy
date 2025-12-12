@@ -792,6 +792,8 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'fields': (
                 'moodle_base_url',
                 'moodle_wstoken',
+                'moodle_email_type',
+                'moodle_student_roleid',
             ),
             'description': 'Credenciales de Moodle. Si están vacías, se usan las variables de entorno.',
             'classes': ('collapse',)

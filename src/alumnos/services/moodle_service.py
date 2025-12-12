@@ -88,29 +88,51 @@ class MoodleService:
         Returns:
             Dict con información del usuario creado o None si falla
         """
+        from ..utils.config import get_moodle_email_type
+
         # Preparar datos del usuario
         username = alumno.email_institucional or alumno.email_personal
         if not username:
             logger.error(f"Alumno {alumno.id} no tiene email")
             return None
 
+        # Determinar qué email usar según configuración
+        email_type = get_moodle_email_type()
+        email_to_use = alumno.email_institucional if email_type == 'institucional' else alumno.email_personal
+        email_to_use = email_to_use or alumno.email_institucional or alumno.email_personal
+
         user_data = {
             'users[0][username]': username,
             'users[0][password]': alumno.teams_password or 'ChangeMe123!',
             'users[0][firstname]': alumno.nombre,
             'users[0][lastname]': alumno.apellido,
-            'users[0][email]': alumno.email,
+            'users[0][email]': email_to_use,
             'users[0][auth]': 'oauth2',  # Autenticación via Microsoft Teams
         }
 
         result = self._call_webservice('core_user_create_users', user_data)
 
         if 'error' in result:
-            logger.error(f"Error creando usuario Moodle para {username}: {result['error']}")
+            error_msg = result['error']
+            errorcode = result.get('errorcode', '')
+
+            # Si el usuario ya existe, intentar buscarlo
+            if 'already exists' in error_msg.lower() or errorcode == 'invalidusername':
+                logger.warning(f"Usuario {username} ya existe en Moodle, buscando...")
+                existing_user = self.get_user_by_username(username)
+                if existing_user:
+                    logger.info(f"Usuario encontrado: {username} (ID: {existing_user['id']})")
+                    return {
+                        'id': existing_user['id'],
+                        'username': username,
+                        'created': False  # Ya existía
+                    }
+
+            logger.error(f"Error creando usuario Moodle para {username}: {error_msg}")
             log_to_db(
                 'ERROR',
                 'moodle_service',
-                f"Error creando usuario en Moodle: {result['error']}",
+                f"Error creando usuario en Moodle: {error_msg}",
                 detalles={'username': username, 'error': result},
                 alumno=alumno
             )
@@ -173,6 +195,8 @@ class MoodleService:
         Returns:
             True si se enrolló exitosamente, False en caso contrario
         """
+        from ..utils.config import get_moodle_student_roleid
+
         # Primero obtener el course_id del shortname
         course = self.get_course_by_shortname(course_shortname)
         if not course:
@@ -188,9 +212,10 @@ class MoodleService:
 
         course_id = course['id']
 
-        # Enrollar con rol de estudiante (roleid=5 es el estándar)
+        # Enrollar con rol de estudiante (usar configuración)
+        student_roleid = get_moodle_student_roleid()
         params = {
-            'enrolments[0][roleid]': 5,  # Student role
+            'enrolments[0][roleid]': student_roleid,
             'enrolments[0][userid]': user_id,
             'enrolments[0][courseid]': course_id,
         }
