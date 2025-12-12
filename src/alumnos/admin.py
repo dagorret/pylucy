@@ -21,11 +21,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         "dni",
         "estado_actual",
         "modalidad_actual",
+        "carreras_display",
         "cohorte",
         "fecha_ingreso",
     )
     list_filter = ("estado_actual", "modalidad_actual", "cohorte")
-    search_fields = ("apellido", "nombre", "dni", "email_personal", "email_institucional")
+    search_fields = ("apellido", "nombre", "dni", "email_personal", "email_institucional", "carreras_data__nombre_carrera")
     readonly_fields = (
         "created_at",
         "updated_at",
@@ -386,6 +387,63 @@ class AlumnoAdmin(admin.ModelAdmin):
             f"📊 Contraseñas: {success_count} reseteadas, {error_count} errores",
             level=messages.INFO
         )
+
+    def carreras_display(self, obj):
+        """Muestra las carreras del alumno en formato legible."""
+        if not obj.carreras_data:
+            return "-"
+
+        carreras_list = []
+        for carrera in obj.carreras_data:
+            nombre = carrera.get("nombre_carrera", "")
+            id_carrera = carrera.get("id_carrera", "")
+            modalidad = carrera.get("modalidad", "")
+            mod_texto = "Presencial" if modalidad == "1" else "Distancia" if modalidad == "2" else modalidad
+            carreras_list.append(f"{nombre} ({mod_texto})")
+
+        return ", ".join(carreras_list) if carreras_list else "-"
+
+    carreras_display.short_description = "Carreras"
+
+
+class CarreraListFilter(admin.SimpleListFilter):
+    """Filtro personalizado para filtrar por nombre de carrera."""
+    title = 'Carrera'
+    parameter_name = 'carrera'
+
+    def lookups(self, request, model_admin):
+        """Obtiene lista única de carreras de todos los alumnos."""
+        from django.db.models import Q
+
+        # Obtener todas las carreras únicas
+        alumnos = Alumno.objects.exclude(carreras_data__isnull=True)
+        carreras_set = set()
+
+        for alumno in alumnos:
+            if alumno.carreras_data:
+                for carrera in alumno.carreras_data:
+                    nombre = carrera.get("nombre_carrera")
+                    id_carrera = carrera.get("id_carrera")
+                    if nombre:
+                        carreras_set.add((str(id_carrera), nombre))
+
+        return sorted(carreras_set, key=lambda x: x[1])
+
+    def queryset(self, request, queryset):
+        """Filtra los alumnos que tienen la carrera seleccionada."""
+        if self.value():
+            # Buscar alumnos donde carreras_data contenga el id_carrera
+            return queryset.filter(carreras_data__contains=[{"id_carrera": int(self.value())}])
+        return queryset
+
+
+# Re-registrar AlumnoAdmin con el filtro personalizado
+admin.site.unregister(Alumno)
+
+@admin.register(Alumno)
+class AlumnoAdminWithFilters(AlumnoAdmin):
+    """AlumnoAdmin con filtros personalizados."""
+    list_filter = ("estado_actual", "modalidad_actual", CarreraListFilter, "cohorte")
 
 
 @admin.register(Log)
