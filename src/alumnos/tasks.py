@@ -1050,6 +1050,31 @@ def enrollar_moodle_task(self, alumno_id, enviar_email=False):
         if moodle_result:
             resultado_moodle['success'] = True
             resultado_moodle['moodle_id'] = moodle_result.get('id')
+            user_id = moodle_result.get('id')
+
+            # Enrollar en cursos desde moodle_payload
+            courses_enrolled = []
+            courses_failed = []
+
+            if alumno.moodle_payload and 'acciones' in alumno.moodle_payload:
+                enrolar_data = alumno.moodle_payload['acciones'].get('enrolar', {})
+                courses = enrolar_data.get('courses', [])
+
+                logger.info(f"[Moodle] Enrollando usuario {user_id} en {len(courses)} cursos")
+
+                for course_shortname in courses:
+                    try:
+                        enrolled = moodle_svc.enrol_user_in_course(user_id, course_shortname, alumno)
+                        if enrolled:
+                            courses_enrolled.append(course_shortname)
+                        else:
+                            courses_failed.append(course_shortname)
+                    except Exception as e:
+                        logger.error(f"[Moodle] Error enrollando en curso {course_shortname}: {e}")
+                        courses_failed.append(course_shortname)
+
+            resultado_moodle['courses_enrolled'] = courses_enrolled
+            resultado_moodle['courses_failed'] = courses_failed
 
             # Marcar como procesado
             alumno.moodle_procesado = True
@@ -1058,8 +1083,13 @@ def enrollar_moodle_task(self, alumno_id, enviar_email=False):
             Log.objects.create(
                 tipo='INFO',
                 modulo='tasks',
-                mensaje=f'Usuario enrollado en Moodle: {alumno.email_institucional}',
-                detalles={'alumno_id': alumno_id, 'moodle_id': moodle_result.get('id')}
+                mensaje=f'Usuario creado y enrollado en Moodle: {alumno.email_institucional}',
+                detalles={
+                    'alumno_id': alumno_id,
+                    'moodle_id': moodle_result.get('id'),
+                    'courses_enrolled': courses_enrolled,
+                    'courses_failed': courses_failed
+                }
             )
         else:
             resultado_moodle['success'] = False

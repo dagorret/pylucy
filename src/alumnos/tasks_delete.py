@@ -19,6 +19,7 @@ def eliminar_solo_teams(self, alumno_id, upn):
         upn: User Principal Name
     """
     from .services.teams_service import TeamsService
+    from .models import Alumno
 
     # Verificación de seguridad
     if not upn.startswith('test-'):
@@ -30,6 +31,16 @@ def eliminar_solo_teams(self, alumno_id, upn):
 
     if result:
         logger.info(f"✅ Usuario Teams eliminado: {upn}")
+
+        # Actualizar flag del alumno
+        try:
+            alumno = Alumno.objects.get(id=alumno_id)
+            alumno.teams_procesado = False
+            alumno.save(update_fields=['teams_procesado'])
+            logger.info(f"Flag teams_procesado actualizado a False para alumno {alumno_id}")
+        except Alumno.DoesNotExist:
+            logger.warning(f"Alumno {alumno_id} no encontrado para actualizar flag")
+
         Log.objects.create(
             tipo=Log.TipoLog.SUCCESS,
             modulo='eliminar_solo_teams',
@@ -58,12 +69,23 @@ def eliminar_solo_moodle(self, alumno_id, username):
         username: Username de Moodle
     """
     from .services.moodle_service import MoodleService
+    from .models import Alumno
 
     moodle_svc = MoodleService()
     result = moodle_svc.delete_user(username)
 
     if result:
         logger.info(f"✅ Usuario Moodle eliminado: {username}")
+
+        # Actualizar flag del alumno
+        try:
+            alumno = Alumno.objects.get(id=alumno_id)
+            alumno.moodle_procesado = False
+            alumno.save(update_fields=['moodle_procesado'])
+            logger.info(f"Flag moodle_procesado actualizado a False para alumno {alumno_id}")
+        except Alumno.DoesNotExist:
+            logger.warning(f"Alumno {alumno_id} no encontrado para actualizar flag")
+
         Log.objects.create(
             tipo=Log.TipoLog.SUCCESS,
             modulo='eliminar_solo_moodle',
