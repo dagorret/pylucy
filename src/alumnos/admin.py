@@ -172,10 +172,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 level=messages.WARNING
             )
 
-    @admin.action(description="🎓 Enrollar en Moodle (con email de bienvenida)")
+    @admin.action(description="🎓 Enrollar en Moodle + Email de Enrollamiento")
     def enrollar_moodle_con_email(self, request, queryset):
         """
-        Enrolla alumnos en Moodle y envía email de bienvenida.
+        Enrolla alumnos en Moodle y envía email de enrollamiento (Ecosistema Virtual).
         """
         from .tasks import enrollar_moodle_task
         from .models import Tarea
@@ -218,7 +218,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         if tareas_programadas > 0:
             self.message_user(
                 request,
-                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (con email).",
+                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (con email de enrollamiento).",
                 level=messages.SUCCESS
             )
 

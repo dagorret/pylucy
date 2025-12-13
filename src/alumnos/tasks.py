@@ -938,9 +938,13 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
             # 4. Enviar email de enrollamiento (si Moodle tuvo éxito)
             if resultados.get('moodle'):
                 logger.info(f"[Workflow-Aspirante] Paso 4/4: Enviando email de enrollamiento Moodle")
-                # TODO: Implementar send_moodle_enrollment_email si existe
-                # Por ahora, marcar como pendiente
-                logger.info(f"[Workflow-Aspirante] ⏸️ Email de enrollamiento Moodle pendiente")
+                email_sent = email_svc.send_enrollment_email(alumno, courses_enrolled)
+                if email_sent:
+                    resultados['email_enrollment'] = True
+                    logger.info(f"[Workflow-Aspirante] ✓ Email de enrollamiento Moodle enviado")
+                else:
+                    resultados['errores'].append("Email enrollamiento: No se pudo enviar")
+                    logger.warning(f"[Workflow-Aspirante] ✗ Email de enrollamiento no enviado")
 
         elif estado in ['ingresante', 'alumno']:
             # INGRESANTES/ALUMNOS: Teams (si no existe) + Moodle + Email enrollamiento
@@ -962,10 +966,10 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
             # 2. Enrolar en Moodle
             logger.info(f"[Workflow-Ingresante] Paso 2/3: Enrolando en Moodle")
             moodle_result = moodle_svc.create_user(alumno)
+            courses_enrolled = []
 
             if moodle_result:
                 user_id = moodle_result.get('id')
-                courses_enrolled = []
 
                 if alumno.moodle_payload and 'acciones' in alumno.moodle_payload:
                     enrolar_data = alumno.moodle_payload['acciones'].get('enrolar', {})
@@ -982,9 +986,16 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
                     alumno.save(update_fields=['moodle_procesado'])
                     logger.info(f"[Workflow-Ingresante] ✓ Enrollado en {len(courses_enrolled)} cursos")
 
-            # 3. Email de enrollamiento
-            logger.info(f"[Workflow-Ingresante] Paso 3/3: Email de enrollamiento pendiente")
-            logger.info(f"[Workflow-Ingresante] ⏸️ Email de enrollamiento Moodle pendiente")
+            # 3. Email de enrollamiento (si Moodle tuvo éxito)
+            if resultados.get('moodle'):
+                logger.info(f"[Workflow-Ingresante] Paso 3/3: Enviando email de enrollamiento Moodle")
+                email_sent = email_svc.send_enrollment_email(alumno, courses_enrolled)
+                if email_sent:
+                    resultados['email_enrollment'] = True
+                    logger.info(f"[Workflow-Ingresante] ✓ Email de enrollamiento Moodle enviado")
+                else:
+                    resultados['errores'].append("Email enrollamiento: No se pudo enviar")
+                    logger.warning(f"[Workflow-Ingresante] ✗ Email de enrollamiento no enviado")
 
         # Workflow completado (aunque email haya fallado, Teams está ok)
         tarea.estado = Tarea.EstadoTarea.COMPLETED
@@ -1120,11 +1131,16 @@ def procesar_lote_alumnos_nuevos(self, alumno_ids, estado):
 @shared_task(bind=True)
 def enrollar_moodle_task(self, alumno_id, enviar_email=False):
     """
-    Enrolla un alumno en Moodle, opcionalmente enviando email de bienvenida.
+    Enrolla un alumno en Moodle, opcionalmente enviando email de enrollamiento.
 
     Args:
         alumno_id: ID del alumno a enrollar
-        enviar_email: Si es True, envía email de bienvenida después del enrollamiento
+        enviar_email: Si es True, envía email de enrollamiento Moodle después del enrollamiento exitoso
+
+    Email de enrollamiento incluye:
+        - URL del Ecosistema Virtual (v.eco.unrc.edu.ar)
+        - Credenciales: UPN + contraseña de Teams
+        - Lista de cursos enrollados
 
     Returns:
         dict: Resultado de la operación
@@ -1213,22 +1229,23 @@ def enrollar_moodle_task(self, alumno_id, enviar_email=False):
             detalles={'alumno_id': alumno_id, 'error': str(e)}
         )
 
-    # Enviar email si se solicita y el enrollamiento fue exitoso
+    # Enviar email de enrollamiento si se solicita y el enrollamiento fue exitoso
     resultado_email = {}
     if enviar_email and resultado_moodle.get('success'):
         try:
             email_svc = EmailService()
-            logger.info(f"[Moodle] Enviando email de bienvenida a: {alumno.email}")
+            courses_enrolled = resultado_moodle.get('courses_enrolled', [])
+            logger.info(f"[Moodle] Enviando email de enrollamiento a: {alumno.email}")
 
-            email_result = email_svc.send_welcome_email(alumno)
+            email_result = email_svc.send_enrollment_email(alumno, courses_enrolled)
 
             if email_result:
                 resultado_email['success'] = True
                 Log.objects.create(
                     tipo='INFO',
                     modulo='tasks',
-                    mensaje=f'Email de bienvenida enviado a: {alumno.email}',
-                    detalles={'alumno_id': alumno_id}
+                    mensaje=f'Email de enrollamiento Moodle enviado a: {alumno.email}',
+                    detalles={'alumno_id': alumno_id, 'courses': courses_enrolled}
                 )
             else:
                 resultado_email['success'] = False
