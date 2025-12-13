@@ -224,6 +224,29 @@ def _build_defaults(
 
     moodle_courses = _resolver_cursos()
     moodle_base_url = get_moodle_base_url()
+
+    # Construir datos de carreras para moodle_payload
+    carreras_info = []
+    for carrera in carreras:
+        import re
+        comisiones_list = carrera.get("comisiones") or []
+        comision_nombre = comisiones_list[0].get("nombre_comision", "") if comisiones_list else ""
+
+        # Extraer número de comisión
+        comision_numero = None
+        if comision_nombre:
+            match = re.search(r'COMISI[OÓ]N\s+(\d+)', comision_nombre, re.IGNORECASE)
+            if match:
+                comision_numero = match.group(1)
+
+        carreras_info.append({
+            "id_carrera": carrera.get("id_carrera"),
+            "modalidad": carrera.get("modalidad"),
+            "comision": comision_numero,
+            "comision_nombre": comision_nombre,
+            "nombre_carrera": carrera.get("nombre_carrera"),
+        })
+
     moodle_payload = {
         "auth": {
             "domain": moodle_base_url,
@@ -236,6 +259,7 @@ def _build_defaults(
             "email": email_inst or personal.get("email") or "",
             "login_via": "microsoft_teams",
         },
+        "carreras": carreras_info,  # Datos completos de carrera/modalidad/comisión
         "acciones": {
             "enrolar": {"courses": moodle_courses},
             "enviar_correo_enrolamiento": True,
