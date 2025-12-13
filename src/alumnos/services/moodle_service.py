@@ -88,7 +88,7 @@ class MoodleService:
         Returns:
             Dict con información del usuario creado o None si falla
         """
-        from ..utils.config import get_moodle_email_type
+        from ..utils.config import get_moodle_email_type, get_moodle_auth_method
 
         # Preparar datos del usuario
         username = alumno.email_institucional or alumno.email_personal
@@ -101,13 +101,16 @@ class MoodleService:
         email_to_use = alumno.email_institucional if email_type == 'institucional' else alumno.email_personal
         email_to_use = email_to_use or alumno.email_institucional or alumno.email_personal
 
+        # Determinar método de autenticación según configuración
+        auth_method = get_moodle_auth_method()
+
         user_data = {
             'users[0][username]': username,
             'users[0][password]': alumno.teams_password or 'ChangeMe123!',
             'users[0][firstname]': alumno.nombre,
             'users[0][lastname]': alumno.apellido,
             'users[0][email]': email_to_use,
-            'users[0][auth]': 'oauth2',  # Autenticación via Microsoft Teams
+            'users[0][auth]': auth_method,
         }
 
         result = self._call_webservice('core_user_create_users', user_data)
@@ -317,3 +320,35 @@ class MoodleService:
             'enrolled_courses': enrolled,
             'failed_courses': failed,
         }
+
+    def delete_user(self, username: str) -> bool:
+        """
+        Elimina un usuario de Moodle.
+
+        Args:
+            username: Username del usuario a eliminar
+
+        Returns:
+            True si se eliminó exitosamente, False en caso contrario
+        """
+        # Primero buscar el usuario
+        user = self.get_user_by_username(username)
+        if not user:
+            logger.warning(f"Usuario {username} no encontrado en Moodle, no se puede eliminar")
+            return False
+
+        user_id = user['id']
+
+        # Eliminar usuario
+        params = {
+            'userids[0]': user_id
+        }
+
+        result = self._call_webservice('core_user_delete_users', params)
+
+        if 'error' in result:
+            logger.error(f"Error eliminando usuario {username} de Moodle: {result['error']}")
+            return False
+
+        logger.info(f"Usuario {username} (ID: {user_id}) eliminado de Moodle")
+        return True

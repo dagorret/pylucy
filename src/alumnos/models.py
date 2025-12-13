@@ -351,6 +351,27 @@ class Configuracion(models.Model):
         default=5,
         help_text="Role ID de estudiante en Moodle (default: 5, verificar en tu instalación)"
     )
+    moodle_auth_method = models.CharField(
+        max_length=20,
+        choices=[('manual', 'Manual'), ('oauth2', 'OAuth2 (Microsoft)')],
+        default='oauth2',
+        help_text="Método de autenticación en Moodle: 'manual' o 'oauth2' (Microsoft Teams)"
+    )
+
+    # Plantillas de emails
+    email_plantilla_bienvenida = models.TextField(
+        blank=True,
+        help_text="Plantilla HTML para email de bienvenida (preinscriptos/aspirantes). Variables: {nombre}, {apellido}, {dni}, {email}"
+    )
+    email_plantilla_credenciales = models.TextField(
+        blank=True,
+        help_text="Plantilla HTML para email con credenciales Teams. Variables: {nombre}, {apellido}, {upn}, {password}"
+    )
+    email_plantilla_password = models.TextField(
+        blank=True,
+        help_text="Plantilla HTML para email de reseteo de password. Variables: {nombre}, {apellido}, {upn}, {password}"
+    )
+
     email_from = models.EmailField(
         max_length=255,
         blank=True,

@@ -130,6 +130,12 @@ def _build_defaults(
     fecha_inscri = carrera_primaria.get("fecha_inscri")
     modalidad_normalizada = (modalidad or "").strip() or None
 
+    # Auto-calcular cohorte desde fecha_ingreso si no viene
+    if not cohorte and fecha_inscri:
+        fecha_parsed = _parse_fecha_inscri(fecha_inscri)
+        if fecha_parsed:
+            cohorte = fecha_parsed.year
+
     def _gen_password(length: int = 16) -> str:
         alphabet = string.ascii_letters + string.digits
         return "".join(secrets.choice(alphabet) for _ in range(length))

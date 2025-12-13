@@ -414,3 +414,25 @@ def get_moodle_student_roleid() -> int:
         pass
 
     return 5
+
+
+def get_moodle_auth_method() -> str:
+    """
+    Obtiene el método de autenticación de Moodle.
+
+    Orden de prioridad:
+    1. Configuración en base de datos (si existe)
+    2. Default: 'oauth2' (Microsoft Teams)
+
+    Returns:
+        str: 'manual' o 'oauth2'
+    """
+    try:
+        from alumnos.models import Configuracion
+        config = Configuracion.objects.first()
+        if config and config.moodle_auth_method:
+            return config.moodle_auth_method
+    except Exception:
+        pass
+
+    return 'oauth2'
