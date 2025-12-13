@@ -8,41 +8,41 @@
 
 ## 📋 Tabla Comparativa Completa
 
-| Variable | Desarrollo (Testing) | Producción |
-|----------|---------------------|------------|
-| **ENVIRONMENT_MODE** | `testing` | `production` |
-| **DJANGO_DEBUG** | `True` | `False` |
-| **DJANGO_ENV** | `development` | `production` |
-| **ALLOWED_HOSTS** | `*` | `v.eco.unrc.edu.ar` |
-| | | |
-| **🔐 Base de Datos** | | |
-| DB_ENGINE | `django.db.backends.postgresql` | `django.db.backends.postgresql` |
-| DB_NAME | `pylucy` | `pylucy_prod` |
-| DB_USER | `pylucy` | `pylucy_prod` |
-| DB_PASSWORD | `pylucy` | `[SECRETO]` |
-| DB_HOST | `db` (Docker) | `db` (Docker) o IP servidor |
-| DB_PORT | `5432` | `5432` |
-| | | |
-| **📧 Email** | | |
-| EMAIL_HOST | `mailhog` | `smtp.eco.unrc.edu.ar` |
-| EMAIL_PORT | `1025` | `587` |
-| EMAIL_HOST_USER | *(vacío)* | `noreply@eco.unrc.edu.ar` |
-| EMAIL_HOST_PASSWORD | *(vacío)* | `[SECRETO]` |
-| EMAIL_USE_TLS | `False` | `True` |
-| | | |
-| **🎓 Moodle** | | |
-| MOODLE_BASE_URL | `https://sandbox.moodledemo.net` | `https://moodle.eco.unrc.edu.ar` |
-| MOODLE_WSTOKEN | *(vacío o token sandbox)* | `[SECRETO]` |
-| | | |
-| **👥 Microsoft Teams** | | |
-| TEAMS_TENANT | `eco.unrc.edu.ar` | `eco.unrc.edu.ar` |
-| TEAMS_CLIENT_ID | *(testing app)* | `[SECRETO]` |
-| TEAMS_CLIENT_SECRET | *(testing app)* | `[SECRETO]` |
-| | | |
-| **🔧 SIAL/UTI Mock** | | |
-| SIAL_BASE_URL | `http://host.docker.internal:8088` | `https://api.sial.unrc.edu.ar` (si existe API real) |
-| SIAL_BASIC_USER | `usuario` | `[SECRETO]` |
-| SIAL_BASIC_PASS | `contrasena` | `[SECRETO]` |
+| Variable               | Desarrollo (Testing)               | Producción                                          |
+| ---------------------- | ---------------------------------- | --------------------------------------------------- |
+| **ENVIRONMENT_MODE**   | `testing`                          | `production`                                        |
+| **DJANGO_DEBUG**       | `True`                             | `False`                                             |
+| **DJANGO_ENV**         | `development`                      | `production`                                        |
+| **ALLOWED_HOSTS**      | `*`                                | `v.eco.unrc.edu.ar`                                 |
+|                        |                                    |                                                     |
+| **🔐 Base de Datos**   |                                    |                                                     |
+| DB_ENGINE              | `django.db.backends.postgresql`    | `django.db.backends.postgresql`                     |
+| DB_NAME                | `pylucy`                           | `pylucy_prod`                                       |
+| DB_USER                | `pylucy`                           | `pylucy_prod`                                       |
+| DB_PASSWORD            | `pylucy`                           | `[SECRETO]`                                         |
+| DB_HOST                | `db` (Docker)                      | `db` (Docker) o IP servidor                         |
+| DB_PORT                | `5432`                             | `5432`                                              |
+|                        |                                    |                                                     |
+| **📧 Email**           |                                    |                                                     |
+| EMAIL_HOST             | `mailhog`                          | `smtp.eco.unrc.edu.ar`                              |
+| EMAIL_PORT             | `1025`                             | `587`                                               |
+| EMAIL_HOST_USER        | *(vacío)*                          | `noreply@eco.unrc.edu.ar`                           |
+| EMAIL_HOST_PASSWORD    | *(vacío)*                          | `[SECRETO]`                                         |
+| EMAIL_USE_TLS          | `False`                            | `True`                                              |
+|                        |                                    |                                                     |
+| **🎓 Moodle**          |                                    |                                                     |
+| MOODLE_BASE_URL        | `https://sandbox.moodledemo.net`   | `https://moodle.eco.unrc.edu.ar`                    |
+| MOODLE_WSTOKEN         | *(vacío o token sandbox)*          | `[SECRETO]`                                         |
+|                        |                                    |                                                     |
+| **👥 Microsoft Teams** |                                    |                                                     |
+| TEAMS_TENANT           | `eco.unrc.edu.ar`                  | `eco.unrc.edu.ar`                                   |
+| TEAMS_CLIENT_ID        | *(testing app)*                    | `[SECRETO]`                                         |
+| TEAMS_CLIENT_SECRET    | *(testing app)*                    | `[SECRETO]`                                         |
+|                        |                                    |                                                     |
+| **🔧 SIAL/UTI Mock**   |                                    |                                                     |
+| SIAL_BASE_URL          | `http://host.docker.internal:8088` | `https://api.sial.unrc.edu.ar` (si existe API real) |
+| SIAL_BASIC_USER        | `usuario`                          | `[SECRETO]`                                         |
+| SIAL_BASIC_PASS        | `contrasena`                       | `[SECRETO]`                                         |
 
 ---
 
@@ -282,6 +282,7 @@ SIAL_BASIC_PASS=contraseña_produccion
 ## 🚀 Comandos para Ejecutar
 
 ### Desarrollo (Testing)
+
 ```bash
 # Levantar servicios
 docker compose -f docker-compose.dev.yml up -d
@@ -300,6 +301,7 @@ docker exec pylucy-web-dev python manage.py check_environment
 ```
 
 ### Producción
+
 ```bash
 # Cargar variables de entorno
 export $(cat .env.prod | xargs)
@@ -374,21 +376,22 @@ docker exec pylucy-web-dev python manage.py check_environment
 
 ## 📊 Resumen de Diferencias Clave
 
-| Aspecto | Desarrollo | Producción |
-|---------|-----------|------------|
-| **Prefijo UPN** | `test-a` | `a` |
-| **Debug** | ✅ Activo | ❌ Desactivado |
-| **Email** | MailHog (fake) | SMTP Real |
-| **Moodle** | Sandbox (reset cada hora) | Producción |
-| **Teams** | App Testing | App Producción |
-| **Secretos** | Hardcoded | `.env.prod` |
-| **Datos** | Temporal/Testing | Persistente/Real |
+| Aspecto         | Desarrollo                | Producción       |
+| --------------- | ------------------------- | ---------------- |
+| **Prefijo UPN** | `test-a`                  | `a`              |
+| **Debug**       | ✅ Activo                  | ❌ Desactivado    |
+| **Email**       | MailHog (fake)            | SMTP Real        |
+| **Moodle**      | Sandbox (reset cada hora) | Producción       |
+| **Teams**       | App Testing               | App Producción   |
+| **Secretos**    | Hardcoded                 | `.env.prod`      |
+| **Datos**       | Temporal/Testing          | Persistente/Real |
 
 ---
 
 ## 🔐 Seguridad
 
 ### Archivos que NO deben ir al repositorio:
+
 ```
 .env.prod
 .env.production
@@ -397,6 +400,7 @@ docker exec pylucy-web-dev python manage.py check_environment
 ```
 
 ### Verificar .gitignore:
+
 ```bash
 # Ver si .env.prod está ignorado
 git check-ignore .env.prod
