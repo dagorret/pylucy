@@ -191,6 +191,7 @@ def _build_defaults(
 
     def _resolver_cursos() -> List[str]:
         from cursos.constants import CARRERAS_DICT
+        import re
 
         shortnames: List[str] = []
         for carrera in carreras:
@@ -198,8 +199,14 @@ def _build_defaults(
             comisiones = carrera.get("comisiones") or []
             modalidad_carrera = (carrera.get("modalidad") or "").strip()
             comision = None
+
+            # Extraer número de comisión desde nombre_comision (ej: "COMISION 1" -> "1")
             if comisiones:
-                comision = str(comisiones[0].get("id_comision") or "").strip() or None
+                nombre_comision = comisiones[0].get("nombre_comision", "")
+                # Buscar patrón "COMISION X" o "COMISIÓN X" y extraer el número
+                match = re.search(r'COMISI[OÓ]N\s+(\d+)', nombre_comision, re.IGNORECASE)
+                if match:
+                    comision = match.group(1)  # Extrae "1", "2", "3", etc.
 
             # Mapear id_carrera de UTI a código interno (ej: 3 -> CP)
             codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
