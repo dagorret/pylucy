@@ -802,11 +802,22 @@ def resetear_password_y_enviar_email(self, alumno_id):
 @shared_task(bind=True)
 def procesar_alumno_nuevo_completo(self, alumno_id, estado):
     """
-    Workflow completo para alumno nuevo:
-    1. Crear cuenta en Teams
-    2. Asignar licencia
-    3. Enrolar en Moodle (TODO)
-    4. Enviar email de bienvenida
+    Workflow completo para alumno nuevo según su estado:
+
+    PREINSCRIPTO:
+        - Solo enviar email de bienvenida (sin Teams, sin Moodle)
+
+    ASPIRANTE:
+        1. Crear cuenta en Teams
+        2. Asignar licencia
+        3. Enviar email con credenciales Teams
+        4. Enrolar en Moodle
+        5. Enviar email de enrollamiento Moodle
+
+    INGRESANTE:
+        1. Crear cuenta en Teams (si no existe)
+        2. Enrolar en Moodle
+        3. Enviar email de enrollamiento Moodle
 
     Args:
         alumno_id: ID del alumno
@@ -842,43 +853,138 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
     }
 
     try:
-        # 1. Crear usuario en Teams
-        logger.info(f"[Workflow] Paso 1/3: Creando usuario Teams para {alumno}")
         teams_svc = TeamsService()
-        teams_result = teams_svc.create_user(alumno)
-
-        if teams_result and teams_result.get('created'):
-            resultados['teams'] = True
-            logger.info(f"[Workflow] ✓ Teams creado: {teams_result.get('upn')}")
-        else:
-            error_msg = teams_result.get('error', 'Error desconocido')
-            resultados['errores'].append(f"Teams: {error_msg}")
-            logger.warning(f"[Workflow] ✗ Teams falló: {error_msg}")
-
-            # Si no podemos crear Teams, abortar workflow
-            raise Exception(f"No se pudo crear cuenta Teams: {error_msg}")
-
-        # 2. Enrolar en Moodle
-        logger.info(f"[Workflow] Paso 2/3: Enrolando en Moodle para {alumno}")
-        # TODO: Implementar cuando MoodleService esté listo
-        # moodle_svc = MoodleService()
-        # moodle_result = moodle_svc.enroll_user(alumno, cursos_segun_estado(estado))
-        # if moodle_result:
-        #     resultados['moodle'] = True
-        logger.info(f"[Workflow] ⏸️  Moodle pendiente de implementar")
-        resultados['moodle'] = 'pending'
-
-        # 3. Enviar email de bienvenida
-        logger.info(f"[Workflow] Paso 3/3: Enviando email para {alumno}")
         email_svc = EmailService()
-        email_sent = email_svc.send_credentials_email(alumno, teams_result)
+        from .services.moodle_service import MoodleService
+        moodle_svc = MoodleService()
 
-        if email_sent:
-            resultados['email'] = True
-            logger.info(f"[Workflow] ✓ Email enviado a {alumno.email}")
-        else:
-            resultados['errores'].append("Email: No se pudo enviar")
-            logger.warning(f"[Workflow] ✗ Email no enviado")
+        teams_result = None
+
+        # WORKFLOW SEGÚN ESTADO
+        if estado == 'preinscripto':
+            # PREINSCRIPTOS: Solo email de bienvenida
+            logger.info(f"[Workflow-Preinscripto] Enviando email de bienvenida para {alumno}")
+            email_sent = email_svc.send_welcome_email(alumno)
+
+            if email_sent:
+                resultados['email'] = True
+                logger.info(f"[Workflow-Preinscripto] ✓ Email de bienvenida enviado")
+            else:
+                resultados['errores'].append("Email: No se pudo enviar")
+                logger.warning(f"[Workflow-Preinscripto] ✗ Email no enviado")
+
+        elif estado == 'aspirante':
+            # ASPIRANTES: Teams + Email credenciales + Moodle + Email enrollamiento
+            # 1. Crear usuario en Teams
+            logger.info(f"[Workflow-Aspirante] Paso 1/4: Creando usuario Teams para {alumno}")
+            teams_result = teams_svc.create_user(alumno)
+
+            if teams_result and teams_result.get('created'):
+                resultados['teams'] = True
+                alumno.teams_procesado = True
+                alumno.save(update_fields=['teams_procesado'])
+                logger.info(f"[Workflow-Aspirante] ✓ Teams creado: {teams_result.get('upn')}")
+            else:
+                error_msg = teams_result.get('error', 'Error desconocido') if teams_result else 'Error desconocido'
+                resultados['errores'].append(f"Teams: {error_msg}")
+                logger.warning(f"[Workflow-Aspirante] ✗ Teams falló: {error_msg}")
+                # Si falla Teams, abortar workflow
+                raise Exception(f"No se pudo crear cuenta Teams: {error_msg}")
+
+            # 2. Enviar email con credenciales Teams
+            logger.info(f"[Workflow-Aspirante] Paso 2/4: Enviando email con credenciales Teams")
+            email_sent = email_svc.send_credentials_email(alumno, teams_result)
+
+            if email_sent:
+                resultados['email_credentials'] = True
+                logger.info(f"[Workflow-Aspirante] ✓ Email de credenciales enviado")
+            else:
+                resultados['errores'].append("Email credenciales: No se pudo enviar")
+                logger.warning(f"[Workflow-Aspirante] ✗ Email de credenciales no enviado")
+
+            # 3. Enrolar en Moodle
+            logger.info(f"[Workflow-Aspirante] Paso 3/4: Enrolando en Moodle")
+            moodle_result = moodle_svc.create_user(alumno)
+
+            if moodle_result:
+                user_id = moodle_result.get('id')
+                # Enrolar en cursos desde moodle_payload
+                courses_enrolled = []
+                courses_failed = []
+
+                if alumno.moodle_payload and 'acciones' in alumno.moodle_payload:
+                    enrolar_data = alumno.moodle_payload['acciones'].get('enrolar', {})
+                    courses = enrolar_data.get('courses', [])
+
+                    for course_shortname in courses:
+                        enrolled = moodle_svc.enrol_user_in_course(user_id, course_shortname, alumno)
+                        if enrolled:
+                            courses_enrolled.append(course_shortname)
+                        else:
+                            courses_failed.append(course_shortname)
+
+                if courses_enrolled:
+                    resultados['moodle'] = True
+                    alumno.moodle_procesado = True
+                    alumno.save(update_fields=['moodle_procesado'])
+                    logger.info(f"[Workflow-Aspirante] ✓ Moodle: usuario creado y enrollado en {len(courses_enrolled)} cursos")
+                else:
+                    resultados['errores'].append(f"Moodle: Usuario creado pero sin cursos enrollados")
+                    logger.warning(f"[Workflow-Aspirante] ⚠️ Usuario Moodle creado pero sin enrollamientos")
+            else:
+                resultados['errores'].append("Moodle: No se pudo crear usuario")
+                logger.warning(f"[Workflow-Aspirante] ✗ Moodle falló")
+
+            # 4. Enviar email de enrollamiento (si Moodle tuvo éxito)
+            if resultados.get('moodle'):
+                logger.info(f"[Workflow-Aspirante] Paso 4/4: Enviando email de enrollamiento Moodle")
+                # TODO: Implementar send_moodle_enrollment_email si existe
+                # Por ahora, marcar como pendiente
+                logger.info(f"[Workflow-Aspirante] ⏸️ Email de enrollamiento Moodle pendiente")
+
+        elif estado in ['ingresante', 'alumno']:
+            # INGRESANTES/ALUMNOS: Teams (si no existe) + Moodle + Email enrollamiento
+            # 1. Verificar/Crear Teams
+            logger.info(f"[Workflow-Ingresante] Paso 1/3: Verificando/Creando usuario Teams")
+            if not alumno.teams_procesado:
+                teams_result = teams_svc.create_user(alumno)
+                if teams_result and teams_result.get('created'):
+                    resultados['teams'] = True
+                    alumno.teams_procesado = True
+                    alumno.save(update_fields=['teams_procesado'])
+                    logger.info(f"[Workflow-Ingresante] ✓ Teams creado")
+                else:
+                    logger.info(f"[Workflow-Ingresante] ⚠️ Teams ya existe o falló")
+            else:
+                resultados['teams'] = 'skipped'
+                logger.info(f"[Workflow-Ingresante] ↷ Teams ya procesado, saltando")
+
+            # 2. Enrolar en Moodle
+            logger.info(f"[Workflow-Ingresante] Paso 2/3: Enrolando en Moodle")
+            moodle_result = moodle_svc.create_user(alumno)
+
+            if moodle_result:
+                user_id = moodle_result.get('id')
+                courses_enrolled = []
+
+                if alumno.moodle_payload and 'acciones' in alumno.moodle_payload:
+                    enrolar_data = alumno.moodle_payload['acciones'].get('enrolar', {})
+                    courses = enrolar_data.get('courses', [])
+
+                    for course_shortname in courses:
+                        enrolled = moodle_svc.enrol_user_in_course(user_id, course_shortname, alumno)
+                        if enrolled:
+                            courses_enrolled.append(course_shortname)
+
+                if courses_enrolled:
+                    resultados['moodle'] = True
+                    alumno.moodle_procesado = True
+                    alumno.save(update_fields=['moodle_procesado'])
+                    logger.info(f"[Workflow-Ingresante] ✓ Enrollado en {len(courses_enrolled)} cursos")
+
+            # 3. Email de enrollamiento
+            logger.info(f"[Workflow-Ingresante] Paso 3/3: Email de enrollamiento pendiente")
+            logger.info(f"[Workflow-Ingresante] ⏸️ Email de enrollamiento Moodle pendiente")
 
         # Workflow completado (aunque email haya fallado, Teams está ok)
         tarea.estado = Tarea.EstadoTarea.COMPLETED

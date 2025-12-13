@@ -1,0 +1,234 @@
+{
+  "description": "Configuración de Tareas Periódicas Celery Beat para PyLucy",
+  "comment": "Este JSON documenta la configuración de tareas periódicas. Para activarlas, usar el admin de Django en /admin/django_celery_beat/",
+
+  "periodic_tasks": [
+    {
+      "name": "Ingesta Preinscriptos (cada 30 minutos)",
+      "task": "alumnos.tasks.ingestar_preinscriptos",
+      "schedule": {
+        "type": "crontab",
+        "minute": "*/30",
+        "hour": "*",
+        "day_of_week": "*",
+        "day_of_month": "*",
+        "month_of_year": "*"
+      },
+      "enabled": true,
+      "description": "Consulta UTI cada 30 minutos para obtener nuevos preinscriptos. Los nuevos alumnos reciben automáticamente email de bienvenida (sin Teams, sin Moodle).",
+      "workflow": "PREINSCRIPTO: Solo email de bienvenida"
+    },
+    {
+      "name": "Ingesta Aspirantes (cada hora)",
+      "task": "alumnos.tasks.ingestar_aspirantes",
+      "schedule": {
+        "type": "crontab",
+        "minute": "0",
+        "hour": "*",
+        "day_of_week": "*",
+        "day_of_month": "*",
+        "month_of_year": "*"
+      },
+      "enabled": true,
+      "description": "Consulta UTI cada hora para obtener nuevos aspirantes. Los nuevos alumnos reciben: 1) Cuenta Teams, 2) Email con credenciales Teams, 3) Enrollamiento Moodle, 4) Email de enrollamiento Moodle.",
+      "workflow": "ASPIRANTE: Teams + Email credenciales + Moodle + Email enrollamiento"
+    },
+    {
+      "name": "Ingesta Ingresantes (cada 2 horas)",
+      "task": "alumnos.tasks.ingestar_ingresantes",
+      "schedule": {
+        "type": "crontab",
+        "minute": "0",
+        "hour": "*/2",
+        "day_of_week": "*",
+        "day_of_month": "*",
+        "month_of_year": "*"
+      },
+      "enabled": true,
+      "description": "Consulta UTI cada 2 horas para obtener nuevos ingresantes. Los nuevos alumnos reciben: 1) Teams (si no existe), 2) Enrollamiento Moodle, 3) Email de enrollamiento.",
+      "workflow": "INGRESANTE: Teams (si no existe) + Moodle + Email enrollamiento"
+    }
+  ],
+
+  "configuracion_db": {
+    "description": "Configuración en el modelo Configuracion (base de datos) para controlar las ingestas",
+    "fields": {
+      "preinscriptos_dia_inicio": {
+        "type": "DateTimeField",
+        "description": "Fecha de inicio para ingesta de preinscriptos (formato: YYYY-MM-DD HH:MM:SS)",
+        "example": "2025-01-15 00:00:00",
+        "required": true,
+        "note": "Si está vacío, la ingesta está deshabilitada"
+      },
+      "preinscriptos_dia_fin": {
+        "type": "DateTimeField",
+        "description": "Fecha de fin para ingesta de preinscriptos (opcional)",
+        "example": "2025-03-31 23:59:59",
+        "required": false
+      },
+      "aspirantes_dia_inicio": {
+        "type": "DateTimeField",
+        "description": "Fecha de inicio para ingesta de aspirantes",
+        "example": "2025-04-01 00:00:00",
+        "required": true
+      },
+      "aspirantes_dia_fin": {
+        "type": "DateTimeField",
+        "description": "Fecha de fin para ingesta de aspirantes (opcional)",
+        "example": "2025-06-30 23:59:59",
+        "required": false
+      },
+      "ingresantes_dia_inicio": {
+        "type": "DateTimeField",
+        "description": "Fecha de inicio para ingesta de ingresantes",
+        "example": "2025-07-01 00:00:00",
+        "required": true
+      },
+      "ingresantes_dia_fin": {
+        "type": "DateTimeField",
+        "description": "Fecha de fin para ingesta de ingresantes (opcional)",
+        "example": "2025-08-31 23:59:59",
+        "required": false
+      },
+      "batch_size": {
+        "type": "IntegerField",
+        "description": "Cantidad de alumnos a procesar por lote",
+        "default": 20,
+        "note": "Evita sobrecargar los servicios externos"
+      },
+      "rate_limit_teams": {
+        "type": "IntegerField",
+        "description": "Límite de requests a Teams por minuto",
+        "default": 10,
+        "note": "Microsoft Graph API tiene límites de rate"
+      },
+      "rate_limit_moodle": {
+        "type": "IntegerField",
+        "description": "Límite de requests a Moodle por minuto",
+        "default": 30,
+        "note": "Ajustar según capacidad del servidor Moodle"
+      }
+    }
+  },
+
+  "workflows_por_estado": {
+    "preinscripto": {
+      "steps": [
+        "1. Email de bienvenida (sin credenciales)"
+      ],
+      "servicios": ["Email"],
+      "no_crea": ["Teams", "Moodle"]
+    },
+    "aspirante": {
+      "steps": [
+        "1. Crear cuenta Teams",
+        "2. Asignar licencia Teams",
+        "3. Enviar email con credenciales Teams (usuario + contraseña)",
+        "4. Crear usuario Moodle",
+        "5. Enrolar en cursos Moodle según carrera",
+        "6. Enviar email de enrollamiento Moodle"
+      ],
+      "servicios": ["Teams", "Moodle", "Email"],
+      "flags_actualizados": ["teams_procesado", "moodle_procesado"]
+    },
+    "ingresante": {
+      "steps": [
+        "1. Crear cuenta Teams (solo si no existe)",
+        "2. Crear usuario Moodle",
+        "3. Enrolar en cursos Moodle según carrera",
+        "4. Enviar email de enrollamiento Moodle"
+      ],
+      "servicios": ["Teams (condicional)", "Moodle", "Email"],
+      "flags_actualizados": ["moodle_procesado", "teams_procesado (si se creó)"]
+    },
+    "alumno": {
+      "steps": "Mismo workflow que ingresante",
+      "servicios": ["Teams (condicional)", "Moodle", "Email"]
+    }
+  },
+
+  "instrucciones_activacion": {
+    "paso_1": "Importar configuración base de datos",
+    "comando_1": "docker compose -f docker-compose.testing.yml exec web python manage.py config import --file /app/configuracion_real.json",
+
+    "paso_2": "Configurar fechas de ingesta en admin Django",
+    "url_2": "http://IP_SERVIDOR/admin/alumnos/configuracion/",
+    "acciones_2": [
+      "Establecer preinscriptos_dia_inicio (ej: 2025-01-15 00:00:00)",
+      "Establecer aspirantes_dia_inicio (ej: 2025-04-01 00:00:00)",
+      "Establecer ingresantes_dia_inicio (ej: 2025-07-01 00:00:00)",
+      "Ajustar batch_size, rate_limit_teams, rate_limit_moodle si es necesario"
+    ],
+
+    "paso_3": "Configurar tareas periódicas en Celery Beat",
+    "url_3": "http://IP_SERVIDOR/admin/django_celery_beat/periodictask/",
+    "acciones_3": [
+      "Crear tarea: Ingesta Preinscriptos",
+      "  - Name: Ingesta Preinscriptos (cada 30 min)",
+      "  - Task: alumnos.tasks.ingestar_preinscriptos",
+      "  - Crontab schedule: */30 * * * * (cada 30 minutos)",
+      "  - Enabled: ✓",
+      "",
+      "Crear tarea: Ingesta Aspirantes",
+      "  - Name: Ingesta Aspirantes (cada hora)",
+      "  - Task: alumnos.tasks.ingestar_aspirantes",
+      "  - Crontab schedule: 0 * * * * (cada hora en punto)",
+      "  - Enabled: ✓",
+      "",
+      "Crear tarea: Ingesta Ingresantes",
+      "  - Name: Ingesta Ingresantes (cada 2 horas)",
+      "  - Task: alumnos.tasks.ingestar_ingresantes",
+      "  - Crontab schedule: 0 */2 * * * (cada 2 horas)",
+      "  - Enabled: ✓"
+    ],
+
+    "paso_4": "Verificar que Celery Beat está corriendo",
+    "comando_4": "docker compose -f docker-compose.testing.yml logs -f celery-beat",
+
+    "paso_5": "Monitorear logs de procesamiento",
+    "comando_5": "docker compose -f docker-compose.testing.yml logs -f celery"
+  },
+
+  "ejemplo_crontab_schedules": {
+    "cada_30_minutos": "*/30 * * * *",
+    "cada_hora": "0 * * * *",
+    "cada_2_horas": "0 */2 * * *",
+    "cada_6_horas": "0 */6 * * *",
+    "cada_dia_a_las_3am": "0 3 * * *",
+    "cada_lunes_a_las_9am": "0 9 * * 1",
+    "formato": "minuto hora dia_mes mes dia_semana"
+  },
+
+  "monitoreo": {
+    "ver_tareas_ejecutadas": "http://IP_SERVIDOR/admin/alumnos/tarea/",
+    "ver_logs": "http://IP_SERVIDOR/admin/alumnos/log/",
+    "ver_alumnos_procesados": "http://IP_SERVIDOR/admin/alumnos/alumno/",
+    "filtros_utiles": [
+      "Tareas por estado (RUNNING, COMPLETED, FAILED)",
+      "Tareas por tipo (INGESTA_PREINSCRIPTOS, INGESTA_ASPIRANTES, etc)",
+      "Alumnos por estado_actual (preinscripto, aspirante, ingresante)",
+      "Alumnos por teams_procesado / moodle_procesado"
+    ]
+  },
+
+  "troubleshooting": {
+    "tareas_no_se_ejecutan": [
+      "Verificar que celery-beat está corriendo: docker compose ps",
+      "Verificar logs: docker compose logs celery-beat",
+      "Verificar que las tareas están enabled en /admin/django_celery_beat/periodictask/",
+      "Verificar que las fechas dia_inicio están configuradas en /admin/alumnos/configuracion/"
+    ],
+    "alumnos_no_se_procesan": [
+      "Verificar logs de celery: docker compose logs celery",
+      "Verificar que batch_size > 0",
+      "Verificar rate_limit_teams y rate_limit_moodle",
+      "Verificar credenciales de Teams/Moodle en Configuracion"
+    ],
+    "emails_no_se_envian": [
+      "Verificar configuración SMTP en .env.testing.real",
+      "Verificar plantillas de email en Configuracion",
+      "Verificar que alumnos tienen email_personal o email_institucional",
+      "Ver MailHog en http://localhost:8025 (testing)"
+    ]
+  }
+}
