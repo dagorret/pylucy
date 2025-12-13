@@ -98,6 +98,50 @@ git pull
 ./deploy.sh update
 ```
 
+## ⚠️ MIGRACIÓN ESPECIAL: Configuración Inicial (Solo Primera Vez)
+
+**IMPORTANTE**: La migración `0016_populate_configuracion` carga la configuración inicial del sistema con credenciales reales. **Solo se ejecuta UNA VEZ**.
+
+### Aplicar en Testing
+
+```bash
+docker compose -f docker-compose.testing.yml exec web python manage.py migrate alumnos 0016
+```
+
+### Aplicar en Producción
+
+```bash
+docker compose -f docker-compose.prod.yml exec web python manage.py migrate alumnos 0016
+```
+
+**¿Qué configura esta migración?**
+- Credenciales Azure/Teams (tenant, client_id, client_secret)
+- Credenciales Moodle (URL: v.eco.unrc.edu.ar, token, auth method: oauth2)
+- API SIAL/UTI (URL, usuario, contraseña)
+- Plantillas HTML de emails (bienvenida, credenciales, password)
+- Configuración SMTP (MailHog para testing)
+- Rate limits y batch size
+
+**Verificar que se aplicó correctamente:**
+
+```bash
+docker compose -f docker-compose.testing.yml exec web python manage.py shell -c "from alumnos.models import Configuracion; c = Configuracion.load(); print(f'Teams Tenant: {c.teams_tenant_id}'); print(f'Moodle URL: {c.moodle_base_url}'); print(f'Moodle Token: {c.moodle_wstoken[:20]}...')"
+```
+
+**Si necesitas exportar/modificar la configuración:**
+
+```bash
+# Exportar a JSON
+docker compose -f docker-compose.testing.yml exec web python manage.py config export --file /app/config.json
+docker cp pylucy-web-testing:/app/config.json ./configuracion.json
+
+# Editar configuracion.json manualmente
+
+# Importar desde JSON
+docker cp ./configuracion.json pylucy-web-testing:/app/config.json
+docker compose -f docker-compose.testing.yml exec web python manage.py config import --file /app/config.json
+```
+
 ## Si algo falla
 
 ```bash
