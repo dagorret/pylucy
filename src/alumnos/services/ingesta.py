@@ -270,6 +270,7 @@ def ingerir_desde_sial(
     seed: Optional[int] = None,
     client: Optional[SIALClient] = None,
     retornar_nuevos: bool = False,
+    enviar_email: bool = False,
 ) -> Tuple[int, int, List[str], Optional[List[int]]]:
     """
     Consume listas SIAL y persiste en Alumno.
@@ -277,6 +278,7 @@ def ingerir_desde_sial(
     Args:
         tipo: Tipo de ingesta (preinscriptos, aspirantes, ingresantes)
         retornar_nuevos: Si es True, retorna lista de IDs de alumnos creados
+        enviar_email: Si es True, envía email de bienvenida a alumnos nuevos
 
     Returns:
         (creados, actualizados, errores, [nuevos_ids] si retornar_nuevos=True)
@@ -321,6 +323,20 @@ def ingerir_desde_sial(
             # Si es nuevo y se solicitan IDs, agregarlo a la lista
             if is_created and retornar_nuevos:
                 nuevos_ids.append(obj.id)
+
+            # Si es nuevo y se solicita envío de email, enviar
+            if is_created and enviar_email:
+                if obj.email_personal or obj.email_institucional:
+                    try:
+                        from .email_service import EmailService
+                        email_svc = EmailService()
+                        email_result = email_svc.send_welcome_email(obj)
+                        if not email_result:
+                            errors.append(f"{tipodoc} {nrodoc}: error enviando email de bienvenida")
+                    except Exception as email_exc:
+                        errors.append(f"{tipodoc} {nrodoc}: error enviando email ({email_exc})")
+                else:
+                    errors.append(f"{tipodoc} {nrodoc}: sin email, no se pudo enviar bienvenida")
 
         except Exception as exc:
             errors.append(f"{tipodoc} {nrodoc}: error al guardar ({exc})")
