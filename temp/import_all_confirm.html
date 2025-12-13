@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 20px auto;">
+    <h1>{{ title }}</h1>
+    
+    <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
+        <h3>📥 Importar datos a Django</h3>
+        <p>Esta acción importará <strong>todas las tablas</strong> desde los archivos NDJSON a la base de datos de Django.</p>
+        
+        <h4>Tablas a importar ({{ tables|length }}):</h4>
+        <ul style="columns: 2;">
+            {% for table in tables %}
+            <li>{{ table }}</li>
+            {% endfor %}
+        </ul>
+        
+        <p><strong>Origen:</strong> Archivos en <code>/code/data/exports/*.ndjson</code></p>
+    </div>
+    
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
+        
+        <div style="background-color: #f8d7da; border: 1px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" name="clear" style="margin-right: 10px; width: 20px; height: 20px;">
+                <span><strong>🗑️ Limpiar datos existentes antes de importar</strong><br>
+                <small>Esta opción eliminará todos los registros actuales antes de importar los nuevos datos.</small></span>
+            </label>
+        </div>
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <strong>⚠️ Advertencia:</strong> Esta operación puede tardar varios minutos dependiendo de la cantidad de registros.
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                ✓ Confirmar e Importar
+            </button>
+            
+            <a href="{% url 'admin:moodledata_importlog_changelist' %}" class="button" style="background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; text-decoration: none; display: inline-block; font-size: 16px;">
+                ✗ Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -78,4 +78,4 @@ yarn-error.log
 *.tmp
 *.swp
 *.swo
-temp/
+# temp/ - Permitido porque el repo es privado

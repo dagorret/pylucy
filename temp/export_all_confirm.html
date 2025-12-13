@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 20px auto;">
+    <h1>{{ title }}</h1>
+    
+    <div style="background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0;">
+        <h3>📤 Exportar datos desde Moodle MySQL</h3>
+        <p>Esta acción exportará <strong>todas las tablas</strong> desde la base de datos de Moodle a archivos NDJSON.</p>
+        
+        <h4>Tablas a exportar ({{ tables|length }}):</h4>
+        <ul style="columns: 2;">
+            {% for table in tables %}
+            <li>{{ table }}</li>
+            {% endfor %}
+        </ul>
+        
+        <p><strong>Nota:</strong> Los archivos se guardarán en <code>/code/data/exports/*.ndjson</code></p>
+    </div>
+    
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <strong>⚠️ Advertencia:</strong> Esta operación puede tardar varios minutos dependiendo del tamaño de la base de datos.
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                ✓ Confirmar y Exportar
+            </button>
+            
+            <a href="{% url 'admin:moodledata_importlog_changelist' %}" class="button" style="background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; text-decoration: none; display: inline-block; font-size: 16px;">
+                ✗ Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

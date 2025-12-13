@@ -1,0 +1,85 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block content %}
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <h2 style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 24px;">🚀 Acciones Rápidas</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <button onclick="exportarTodo()" style="background-color: #28a745; color: white; padding: 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 24px;">📤</span>
+            <span>Exportar desde Moodle</span>
+        </button>
+        
+        <button onclick="importarTodo()" style="background-color: #007bff; color: white; padding: 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 24px;">📥</span>
+            <span>Importar a Django</span>
+        </button>
+    </div>
+    
+    <div style="padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: white;">
+        <p style="margin: 0; font-size: 14px;">
+            <strong>📤 Exportar:</strong> Extrae datos desde Moodle MySQL → archivos NDJSON<br>
+            <strong>📥 Importar:</strong> Carga archivos NDJSON → base de datos Django
+        </p>
+    </div>
+</div>
+
+<div id="comandos" style="display: none; background-color: #f8f9fa; border: 2px solid #007bff; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+    <h3 style="margin-top: 0; color: #007bff;">📋 Comandos a Ejecutar en Terminal</h3>
+    <div style="background-color: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; margin-bottom: 15px;">
+        <div id="comando-texto" style="margin-bottom: 10px;"></div>
+        <button onclick="copiarComando()" style="background-color: #28a745; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">
+            📋 Copiar Comando
+        </button>
+    </div>
+    <button onclick="cerrarComandos()" style="background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+        Cerrar
+    </button>
+</div>
+
+<script>
+let comandoActual = '';
+
+function exportarTodo() {
+    comandoActual = 'docker exec -it moodle_stats_web python manage.py export_moodle --tables all';
+    document.getElementById('comando-texto').innerHTML = `
+        <div style="margin-bottom: 10px; color: #4ec9b0;">## Exportar todas las tablas desde Moodle</div>
+        <div style="color: #dcdcdc;">${comandoActual}</div>
+    `;
+    document.getElementById('comandos').style.display = 'block';
+    document.getElementById('comandos').scrollIntoView({ behavior: 'smooth' });
+}
+
+function importarTodo() {
+    const limpiar = confirm('¿Deseas limpiar los datos existentes antes de importar?\n\nSÍ = Borra datos actuales y los reemplaza\nNO = Agrega a los datos existentes');
+    
+    if (limpiar) {
+        comandoActual = 'docker exec -it moodle_stats_web python manage.py import_moodle --tables all --clear';
+    } else {
+        comandoActual = 'docker exec -it moodle_stats_web python manage.py import_moodle --tables all';
+    }
+    
+    document.getElementById('comando-texto').innerHTML = `
+        <div style="margin-bottom: 10px; color: #4ec9b0;">## Importar todas las tablas a Django</div>
+        <div style="color: #dcdcdc;">${comandoActual}</div>
+    `;
+    document.getElementById('comandos').style.display = 'block';
+    document.getElementById('comandos').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copiarComando() {
+    navigator.clipboard.writeText(comandoActual).then(function() {
+        alert('✓ Comando copiado al portapapeles.\n\nPega el comando en tu terminal SSH.');
+    }, function(err) {
+        alert('Error al copiar: ' + err);
+    });
+}
+
+function cerrarComandos() {
+    document.getElementById('comandos').style.display = 'none';
+}
+</script>
+
+{{ block.super }}
+{% endblock %}
