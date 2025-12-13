@@ -66,6 +66,10 @@ class MoodleService:
             response.raise_for_status()
             result = response.json()
 
+            # Moodle puede retornar null para operaciones exitosas sin respuesta
+            if result is None:
+                return {}  # Retornar dict vacío en lugar de None
+
             # Moodle retorna errores como {"exception": "...", "errorcode": "..."}
             if isinstance(result, dict) and 'exception' in result:
                 error_msg = result.get('message', result.get('exception', 'Error desconocido'))
@@ -224,6 +228,17 @@ class MoodleService:
         }
 
         result = self._call_webservice('enrol_manual_enrol_users', params)
+
+        if result is None:
+            logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: No response from Moodle")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Error enrollando en curso {course_shortname}: No response from Moodle",
+                detalles={'user_id': user_id, 'course_id': course_id},
+                alumno=alumno
+            )
+            return False
 
         if 'error' in result:
             logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: {result['error']}")
