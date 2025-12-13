@@ -1009,3 +1009,107 @@ def procesar_lote_alumnos_nuevos(self, alumno_ids, estado):
             detalles={'estado': estado, 'error': str(e)}
         )
         raise
+
+
+@shared_task(bind=True)
+def enrollar_moodle_task(self, alumno_id, enviar_email=False):
+    """
+    Enrolla un alumno en Moodle, opcionalmente enviando email de bienvenida.
+
+    Args:
+        alumno_id: ID del alumno a enrollar
+        enviar_email: Si es True, envía email de bienvenida después del enrollamiento
+
+    Returns:
+        dict: Resultado de la operación
+    """
+    from .services.moodle_service import MoodleService
+    from .services.email_service import EmailService
+
+    logger.info(f"[Moodle] Iniciando enrollamiento para alumno_id={alumno_id}, enviar_email={enviar_email}")
+
+    try:
+        alumno = Alumno.objects.get(id=alumno_id)
+    except Alumno.DoesNotExist:
+        logger.error(f"[Moodle] Alumno {alumno_id} no encontrado")
+        return {'success': False, 'error': 'Alumno no encontrado'}
+
+    # Validar que tenga email institucional
+    if not alumno.email_institucional:
+        logger.error(f"[Moodle] Alumno {alumno_id} sin email institucional")
+        return {'success': False, 'error': 'Email institucional no configurado'}
+
+    # Enrollar en Moodle
+    moodle_svc = MoodleService()
+    resultado_moodle = {}
+
+    try:
+        logger.info(f"[Moodle] Creando usuario en Moodle: {alumno.email_institucional}")
+        moodle_result = moodle_svc.create_user(alumno)
+
+        if moodle_result:
+            resultado_moodle['success'] = True
+            resultado_moodle['moodle_id'] = moodle_result.get('id')
+
+            # Marcar como procesado
+            alumno.moodle_procesado = True
+            alumno.save()
+
+            Log.objects.create(
+                tipo='INFO',
+                modulo='tasks',
+                mensaje=f'Usuario enrollado en Moodle: {alumno.email_institucional}',
+                detalles={'alumno_id': alumno_id, 'moodle_id': moodle_result.get('id')}
+            )
+        else:
+            resultado_moodle['success'] = False
+            resultado_moodle['error'] = 'Error creando usuario en Moodle'
+
+    except Exception as e:
+        logger.error(f"[Moodle] Error enrollando alumno {alumno_id}: {e}")
+        resultado_moodle['success'] = False
+        resultado_moodle['error'] = str(e)
+
+        Log.objects.create(
+            tipo='ERROR',
+            modulo='tasks',
+            mensaje=f'Error enrollando en Moodle: {alumno.email_institucional}',
+            detalles={'alumno_id': alumno_id, 'error': str(e)}
+        )
+
+    # Enviar email si se solicita y el enrollamiento fue exitoso
+    resultado_email = {}
+    if enviar_email and resultado_moodle.get('success'):
+        try:
+            email_svc = EmailService()
+            logger.info(f"[Moodle] Enviando email de bienvenida a: {alumno.email}")
+
+            email_result = email_svc.send_welcome_email(alumno)
+
+            if email_result:
+                resultado_email['success'] = True
+                Log.objects.create(
+                    tipo='INFO',
+                    modulo='tasks',
+                    mensaje=f'Email de bienvenida enviado a: {alumno.email}',
+                    detalles={'alumno_id': alumno_id}
+                )
+            else:
+                resultado_email['success'] = False
+                resultado_email['error'] = 'Error enviando email'
+
+        except Exception as e:
+            logger.error(f"[Moodle] Error enviando email: {e}")
+            resultado_email['success'] = False
+            resultado_email['error'] = str(e)
+
+    # Retornar resultado completo
+    resultado_final = {
+        'success': resultado_moodle.get('success', False),
+        'moodle': resultado_moodle
+    }
+
+    if enviar_email:
+        resultado_final['email'] = resultado_email
+
+    return resultado_final

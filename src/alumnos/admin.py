@@ -44,7 +44,8 @@ class AlumnoAdmin(admin.ModelAdmin):
         'resetear_y_enviar_email',
         'crear_usuario_teams',
         'resetear_password_teams',
-        'forzar_enrollamiento_servicios',
+        'enrollar_moodle_con_email',
+        'enrollar_moodle_sin_email',
         'enviar_email_bienvenida_masivo',
         'borrar_solo_de_teams',
         'borrar_solo_de_moodle',
@@ -168,13 +169,12 @@ class AlumnoAdmin(admin.ModelAdmin):
                 level=messages.WARNING
             )
 
-    @admin.action(description="🚀 Forzar enrollamiento en servicios (Teams + Moodle)")
-    def forzar_enrollamiento_servicios(self, request, queryset):
+    @admin.action(description="🎓 Enrollar en Moodle (con email de bienvenida)")
+    def enrollar_moodle_con_email(self, request, queryset):
         """
-        Fuerza el enrollamiento en Teams y Moodle para alumnos que no están procesados.
-        Útil para activar servicios de forma masiva.
+        Enrolla alumnos en Moodle y envía email de bienvenida.
         """
-        from .tasks import activar_servicios_alumno
+        from .tasks import enrollar_moodle_task
         from .models import Tarea
 
         tareas_programadas = 0
@@ -192,17 +192,17 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped_count += 1
                 continue
 
-            # Verificar si ya está procesado
-            if alumno.teams_procesado and alumno.moodle_procesado:
+            # Verificar si ya está procesado en Moodle
+            if alumno.moodle_procesado:
                 already_processed += 1
                 continue
 
-            # Programar tarea asíncrona
-            task = activar_servicios_alumno.delay(alumno.id)
+            # Programar tarea asíncrona con envío de email
+            task = enrollar_moodle_task.delay(alumno.id, enviar_email=True)
 
             # Crear registro de tarea
             Tarea.objects.create(
-                tipo=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
                 estado=Tarea.EstadoTarea.PENDING,
                 celery_task_id=task.id,
                 alumno=alumno,
@@ -215,14 +215,14 @@ class AlumnoAdmin(admin.ModelAdmin):
         if tareas_programadas > 0:
             self.message_user(
                 request,
-                f"📋 {tareas_programadas} tareas programadas para enrollamiento forzado.",
+                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (con email).",
                 level=messages.SUCCESS
             )
 
         if already_processed > 0:
             self.message_user(
                 request,
-                f"✅ {already_processed} alumnos ya procesados (omitidos)",
+                f"✅ {already_processed} alumnos ya enrollados en Moodle (omitidos)",
                 level=messages.INFO
             )
 
@@ -230,6 +230,70 @@ class AlumnoAdmin(admin.ModelAdmin):
             self.message_user(
                 request,
                 f"⚠️ {skipped_count} alumnos omitidos por falta de email",
+                level=messages.WARNING
+            )
+
+    @admin.action(description="🎓 Enrollar en Moodle (sin email)")
+    def enrollar_moodle_sin_email(self, request, queryset):
+        """
+        Enrolla alumnos en Moodle SIN enviar email de bienvenida.
+        """
+        from .tasks import enrollar_moodle_task
+        from .models import Tarea
+
+        tareas_programadas = 0
+        already_processed = 0
+        skipped_count = 0
+
+        for alumno in queryset:
+            # Validar que tenga email institucional
+            if not alumno.email_institucional:
+                self.message_user(
+                    request,
+                    f"⚠️ {alumno.apellido}, {alumno.nombre} no tiene email institucional",
+                    level=messages.WARNING
+                )
+                skipped_count += 1
+                continue
+
+            # Verificar si ya está procesado en Moodle
+            if alumno.moodle_procesado:
+                already_processed += 1
+                continue
+
+            # Programar tarea asíncrona SIN envío de email
+            task = enrollar_moodle_task.delay(alumno.id, enviar_email=False)
+
+            # Crear registro de tarea
+            Tarea.objects.create(
+                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
+                estado=Tarea.EstadoTarea.PENDING,
+                celery_task_id=task.id,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tareas_programadas += 1
+
+        # Resumen final
+        if tareas_programadas > 0:
+            self.message_user(
+                request,
+                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (sin email).",
+                level=messages.SUCCESS
+            )
+
+        if already_processed > 0:
+            self.message_user(
+                request,
+                f"✅ {already_processed} alumnos ya enrollados en Moodle (omitidos)",
+                level=messages.INFO
+            )
+
+        if skipped_count > 0:
+            self.message_user(
+                request,
+                f"⚠️ {skipped_count} alumnos omitidos por falta de email institucional",
                 level=messages.WARNING
             )
 
