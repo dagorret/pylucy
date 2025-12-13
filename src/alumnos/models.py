@@ -135,6 +135,7 @@ class Tarea(models.Model):
         ACTIVAR_SERVICIOS = "activar_servicios", "Activar Servicios (Teams+Email)"
         CREAR_USUARIO_TEAMS = "crear_usuario_teams", "Crear Usuario en Teams"
         RESETEAR_PASSWORD = "resetear_password", "Resetear Contraseña"
+        MOODLE_ENROLL = "moodle_enroll", "Enrollar en Moodle"
 
     class EstadoTarea(models.TextChoices):
         PENDING = "pending", "Pendiente"
