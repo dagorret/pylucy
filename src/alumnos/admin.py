@@ -45,6 +45,9 @@ class AlumnoAdmin(admin.ModelAdmin):
         'crear_usuario_teams',
         'resetear_password_teams',
         'forzar_enrollamiento_servicios',
+        'enviar_email_bienvenida_masivo',
+        'borrar_solo_de_teams',
+        'borrar_solo_de_moodle',
     ]
 
     def get_urls(self):
@@ -227,6 +230,115 @@ class AlumnoAdmin(admin.ModelAdmin):
             self.message_user(
                 request,
                 f"⚠️ {skipped_count} alumnos omitidos por falta de email",
+                level=messages.WARNING
+            )
+
+    @admin.action(description="📧 Enviar email de bienvenida masivo")
+    def enviar_email_bienvenida_masivo(self, request, queryset):
+        """
+        Envía email de bienvenida a los alumnos seleccionados.
+        Usa la plantilla configurada en Configuracion.email_plantilla_bienvenida.
+        """
+        from .services.email_service import EmailService
+
+        email_svc = EmailService()
+        enviados = 0
+        fallidos = 0
+
+        for alumno in queryset:
+            if not alumno.email:
+                fallidos += 1
+                continue
+
+            try:
+                result = email_svc.send_welcome_email(alumno)
+                if result:
+                    enviados += 1
+                else:
+                    fallidos += 1
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"❌ Error enviando email a {alumno.apellido}, {alumno.nombre}: {e}",
+                    level=messages.ERROR
+                )
+                fallidos += 1
+
+        self.message_user(
+            request,
+            f"📧 {enviados} emails enviados, {fallidos} fallidos",
+            level=messages.SUCCESS if enviados > 0 else messages.WARNING
+        )
+
+    @admin.action(description="🗑️ Borrar solo de Teams")
+    def borrar_solo_de_teams(self, request, queryset):
+        """
+        Elimina usuarios solo de Teams (no de Moodle).
+        """
+        from .tasks_delete import eliminar_solo_teams
+
+        programadas = 0
+        skipped = 0
+
+        for alumno in queryset:
+            if not alumno.email_institucional:
+                skipped += 1
+                continue
+
+            if not alumno.teams_procesado:
+                skipped += 1
+                continue
+
+            # Programar tarea asíncrona
+            eliminar_solo_teams.delay(alumno.id, alumno.email_institucional)
+            programadas += 1
+
+        self.message_user(
+            request,
+            f"🗑️ {programadas} tareas de borrado de Teams programadas",
+            level=messages.SUCCESS
+        )
+
+        if skipped > 0:
+            self.message_user(
+                request,
+                f"⚠️ {skipped} alumnos omitidos (sin email o no procesados en Teams)",
+                level=messages.WARNING
+            )
+
+    @admin.action(description="🗑️ Borrar solo de Moodle")
+    def borrar_solo_de_moodle(self, request, queryset):
+        """
+        Elimina usuarios solo de Moodle (no de Teams).
+        """
+        from .tasks_delete import eliminar_solo_moodle
+
+        programadas = 0
+        skipped = 0
+
+        for alumno in queryset:
+            if not alumno.email_institucional:
+                skipped += 1
+                continue
+
+            if not alumno.moodle_procesado:
+                skipped += 1
+                continue
+
+            # Programar tarea asíncrona
+            eliminar_solo_moodle.delay(alumno.id, alumno.email_institucional)
+            programadas += 1
+
+        self.message_user(
+            request,
+            f"🗑️ {programadas} tareas de borrado de Moodle programadas",
+            level=messages.SUCCESS
+        )
+
+        if skipped > 0:
+            self.message_user(
+                request,
+                f"⚠️ {skipped} alumnos omitidos (sin email o no procesados en Moodle)",
                 level=messages.WARNING
             )
 
@@ -891,11 +1003,12 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'moodle_wstoken',
                 'moodle_email_type',
                 'moodle_student_roleid',
+                'moodle_auth_method',
             ),
-            'description': 'Credenciales de Moodle. Si están vacías, se usan las variables de entorno.',
+            'description': 'Credenciales de Moodle. Auth method: oauth2 (Microsoft) o manual.',
             'classes': ('collapse',)
         }),
-        ('📧 Configuración de Email', {
+        ('📧 Configuración de Email SMTP', {
             'fields': (
                 'email_from',
                 'email_host',
@@ -903,6 +1016,15 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'email_use_tls',
             ),
             'description': 'Configuración SMTP para envío de emails. Si están vacíos, se usan las variables de entorno (DEFAULT_FROM_EMAIL, EMAIL_HOST, etc.).',
+            'classes': ('collapse',)
+        }),
+        ('✉️ Plantillas de Emails', {
+            'fields': (
+                'email_plantilla_bienvenida',
+                'email_plantilla_credenciales',
+                'email_plantilla_password',
+            ),
+            'description': 'Plantillas HTML para emails. Variables disponibles: {nombre}, {apellido}, {dni}, {email}, {upn}, {password}',
             'classes': ('collapse',)
         }),
         ('ℹ️ Metadatos', {
