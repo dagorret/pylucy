@@ -1,0 +1,29 @@
+ Necesitas agregar estas funciones al webservice en Moodle:
+
+  core_user_create_users
+  core_user_get_users_by_field
+  enrol_manual_enrol_users
+  core_course_get_courses_by_field
+
+  🔧 Cómo hacerlo en Moodle:
+
+  1. Site administration → Server → Web services → External services
+  2. Buscar el servicio que usa el token 45fba879dcddc17a16436ac156cb880e
+  3. Hacer clic en "Functions"
+  4. Agregar las funciones necesarias:
+    - core_user_create_users - Para crear usuarios
+    - core_user_get_users_by_field - Para buscar usuarios
+    - enrol_manual_enrol_users - Para enrollar en cursos
+    - core_course_get_courses_by_field - Para buscar cursos
+
+  O puedes crear un nuevo servicio con todas las funciones:
+
+  1. Site administration → Server → Web services → Add
+  2. Nombre: "PyLucy API"
+  3. Short name: "pylucy_api"
+  4. Enabled: Yes
+  5. Authorized users only: No (o agregar el usuario api_user)
+  6. Guardar
+  7. En Functions, agregar todas las funciones necesarias
+  8. Generar un nuevo token para este servicio
+

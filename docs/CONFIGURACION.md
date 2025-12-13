@@ -52,7 +52,7 @@ El archivo `configuracion_real.json` contiene:
   "moodle_wstoken": "45fba879dcddc17a16436ac156cb880e",
   "moodle_email_type": "institucional",
   "moodle_student_roleid": 5,
-  "moodle_auth_method": "oauth2",
+  "moodle_auth_method": "oidc",
 
   "email_plantilla_bienvenida": "<!DOCTYPE html>...",
   "email_plantilla_credenciales": "<!DOCTYPE html>...",
@@ -84,7 +84,11 @@ El archivo `configuracion_real.json` contiene:
 - **Token**: `45fba879dcddc17a16436ac156cb880e`
 - **Email Type**: `institucional`
 - **Student Role ID**: `5`
-- **Auth Method**: `oauth2` (Microsoft Teams)
+- **Auth Method**: `oidc` (OpenID Connect)
+  - Opciones disponibles:
+    - `manual` - Autenticación manual (usuario/contraseña)
+    - `oauth2` - OAuth2 (Microsoft Teams)
+    - `oidc` - OpenID Connect (recomendado)
 
 ### Email (MailHog para testing)
 - **Host**: `mailhog`

@@ -354,9 +354,13 @@ class Configuracion(models.Model):
     )
     moodle_auth_method = models.CharField(
         max_length=20,
-        choices=[('manual', 'Manual'), ('oauth2', 'OAuth2 (Microsoft)')],
-        default='oauth2',
-        help_text="Método de autenticación en Moodle: 'manual' o 'oauth2' (Microsoft Teams)"
+        choices=[
+            ('manual', 'Manual'),
+            ('oauth2', 'OAuth2 (Microsoft)'),
+            ('oidc', 'OpenID Connect')
+        ],
+        default='oidc',
+        help_text="Método de autenticación en Moodle: 'manual', 'oauth2' (Microsoft Teams), o 'oidc' (OpenID Connect)"
     )
 
     # Plantillas de emails
