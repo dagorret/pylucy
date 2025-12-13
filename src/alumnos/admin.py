@@ -24,6 +24,8 @@ class AlumnoAdmin(admin.ModelAdmin):
         "carreras_display",  # Muestra solo la primera carrera
         "cohorte",
         "fecha_ingreso",
+        "teams_status",
+        "moodle_status",
     )
     list_filter = ("estado_actual", "modalidad_actual", "cohorte")
     search_fields = ("apellido", "nombre", "dni", "email_personal", "email_institucional", "carreras_data__nombre_carrera")
@@ -42,6 +44,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         'resetear_y_enviar_email',
         'crear_usuario_teams',
         'resetear_password_teams',
+        'forzar_enrollamiento_servicios',
     ]
 
     def get_urls(self):
@@ -154,6 +157,71 @@ class AlumnoAdmin(admin.ModelAdmin):
             f"Revisa la tabla de Tareas Asíncronas para ver el progreso.",
             level=messages.SUCCESS
         )
+
+        if skipped_count > 0:
+            self.message_user(
+                request,
+                f"⚠️ {skipped_count} alumnos omitidos por falta de email",
+                level=messages.WARNING
+            )
+
+    @admin.action(description="🚀 Forzar enrollamiento en servicios (Teams + Moodle)")
+    def forzar_enrollamiento_servicios(self, request, queryset):
+        """
+        Fuerza el enrollamiento en Teams y Moodle para alumnos que no están procesados.
+        Útil para activar servicios de forma masiva.
+        """
+        from .tasks import activar_servicios_alumno
+        from .models import Tarea
+
+        tareas_programadas = 0
+        already_processed = 0
+        skipped_count = 0
+
+        for alumno in queryset:
+            # Validar que tenga email
+            if not alumno.email:
+                self.message_user(
+                    request,
+                    f"⚠️ {alumno.apellido}, {alumno.nombre} no tiene email configurado",
+                    level=messages.WARNING
+                )
+                skipped_count += 1
+                continue
+
+            # Verificar si ya está procesado
+            if alumno.teams_procesado and alumno.moodle_procesado:
+                already_processed += 1
+                continue
+
+            # Programar tarea asíncrona
+            task = activar_servicios_alumno.delay(alumno.id)
+
+            # Crear registro de tarea
+            Tarea.objects.create(
+                tipo=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+                estado=Tarea.EstadoTarea.PENDING,
+                celery_task_id=task.id,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tareas_programadas += 1
+
+        # Resumen final
+        if tareas_programadas > 0:
+            self.message_user(
+                request,
+                f"📋 {tareas_programadas} tareas programadas para enrollamiento forzado.",
+                level=messages.SUCCESS
+            )
+
+        if already_processed > 0:
+            self.message_user(
+                request,
+                f"✅ {already_processed} alumnos ya procesados (omitidos)",
+                level=messages.INFO
+            )
 
         if skipped_count > 0:
             self.message_user(
@@ -407,6 +475,26 @@ class AlumnoAdmin(admin.ModelAdmin):
         return f"{nombre} ({mod_texto})"
 
     carreras_display.short_description = "Carrera"
+
+    def teams_status(self, obj):
+        """Muestra estado de Teams con emoticono."""
+        from django.utils.safestring import mark_safe
+        if obj.teams_procesado:
+            return mark_safe('<span style="font-size: 20px;">😊</span>')
+        else:
+            return mark_safe('<span style="font-size: 20px;">😡</span>')
+
+    teams_status.short_description = "Teams"
+
+    def moodle_status(self, obj):
+        """Muestra estado de Moodle con emoticono."""
+        from django.utils.safestring import mark_safe
+        if obj.moodle_procesado:
+            return mark_safe('<span style="font-size: 20px;">😊</span>')
+        else:
+            return mark_safe('<span style="font-size: 20px;">😡</span>')
+
+    moodle_status.short_description = "Moodle"
 
     def carreras_formatted(self, obj):
         """Muestra la carrera del alumno (primera carrera de la lista)."""

@@ -35,6 +35,14 @@ class Alumno(models.Model):
     teams_payload = models.JSONField(null=True, blank=True)
     email_payload = models.JSONField(null=True, blank=True)
     moodle_payload = models.JSONField(null=True, blank=True)
+    teams_procesado = models.BooleanField(
+        default=False,
+        help_text="Indica si el alumno ya fue procesado en Teams (usuario creado y licencia asignada)"
+    )
+    moodle_procesado = models.BooleanField(
+        default=False,
+        help_text="Indica si el alumno ya fue procesado en Moodle (usuario creado y enrollado en cursos)"
+    )
     fecha_ultima_modificacion = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

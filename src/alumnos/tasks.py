@@ -427,7 +427,17 @@ def activar_servicios_alumno(alumno_id):
     else:
         logger.info(f"ℹ️ No hay moodle_payload configurado")
 
-    # 4. Resumen final
+    # 4. Marcar flags de procesamiento
+    if teams_success:
+        alumno.teams_procesado = True
+    if moodle_success:
+        alumno.moodle_procesado = True
+
+    if teams_success or moodle_success:
+        alumno.save(update_fields=['teams_procesado', 'moodle_procesado'])
+        logger.info(f"✅ Flags actualizados: Teams={alumno.teams_procesado}, Moodle={alumno.moodle_procesado}")
+
+    # 5. Resumen final
     if teams_success and email_sent and moodle_success:
         logger.info(f"🎉 Todos los servicios activados para alumno {alumno_id} (Teams + Email + Moodle)")
     elif teams_success and email_sent:
