@@ -109,8 +109,11 @@ class AlumnoAdmin(admin.ModelAdmin):
             messages.error(request, "Seed invalida.")
             return redirect("..")
 
+        # Leer checkbox de enviar_email
+        enviar_email = request.POST.get("enviar_email") == "1"
+
         created, updated, errors = ingerir_desde_sial(
-            tipo=tipo, n=n_int, fecha=None, desde=desde, hasta=hasta, seed=seed_int
+            tipo=tipo, n=n_int, fecha=None, desde=desde, hasta=hasta, seed=seed_int, enviar_email=enviar_email
         )
         if errors:
             messages.warning(request, f"Errores: {len(errors)}. Primero: {errors[0]}")
