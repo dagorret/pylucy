@@ -48,7 +48,10 @@ def ingestar_preinscriptos(self):
     # Ejecutar ingesta
     try:
         logger.info("[Ingesta Auto-Preinscriptos] Iniciando ingesta automática de preinscriptos")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='preinscriptos', retornar_nuevos=True)
+        # Leer configuración de email
+        enviar_email = config.preinscriptos_enviar_email
+        logger.info(f"[Ingesta Auto-Preinscriptos] Enviar email: {enviar_email}")
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='preinscriptos', retornar_nuevos=True, enviar_email=enviar_email)
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {
@@ -173,7 +176,10 @@ def ingestar_aspirantes(self):
 
     try:
         logger.info("[Ingesta Auto-Aspirantes] Iniciando ingesta automática de aspirantes")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='aspirantes', retornar_nuevos=True)
+        # Leer configuración de email
+        enviar_email = config.aspirantes_enviar_email
+        logger.info(f"[Ingesta Auto-Aspirantes] Enviar email: {enviar_email}")
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='aspirantes', retornar_nuevos=True, enviar_email=enviar_email)
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {
@@ -298,7 +304,10 @@ def ingestar_ingresantes(self):
 
     try:
         logger.info("[Ingesta Auto-Ingresantes] Iniciando ingesta automática de ingresantes")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='ingresantes', retornar_nuevos=True)
+        # Leer configuración de email
+        enviar_email = config.ingresantes_enviar_email
+        logger.info(f"[Ingesta Auto-Ingresantes] Enviar email: {enviar_email}")
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='ingresantes', retornar_nuevos=True, enviar_email=enviar_email)
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {

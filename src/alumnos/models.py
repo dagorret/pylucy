@@ -253,6 +253,10 @@ class Configuracion(models.Model):
         default=3600,
         help_text="Frecuencia de ingesta de preinscriptos en segundos (default: 3600 = 1 hora)"
     )
+    preinscriptos_enviar_email = models.BooleanField(
+        default=True,
+        help_text="✉️ Enviar email de bienvenida a preinscriptos durante ingesta automática"
+    )
 
     # Ingesta automática de Aspirantes
     aspirantes_dia_inicio = models.DateTimeField(
@@ -269,6 +273,10 @@ class Configuracion(models.Model):
         default=3600,
         help_text="Frecuencia de ingesta de aspirantes en segundos (default: 3600 = 1 hora)"
     )
+    aspirantes_enviar_email = models.BooleanField(
+        default=True,
+        help_text="✉️ Enviar emails a aspirantes durante ingesta automática (bienvenida + credenciales + enrollamiento)"
+    )
 
     # Ingesta automática de Ingresantes
     ingresantes_dia_inicio = models.DateTimeField(
@@ -284,6 +292,10 @@ class Configuracion(models.Model):
     ingresantes_frecuencia_segundos = models.PositiveIntegerField(
         default=3600,
         help_text="Frecuencia de ingesta de ingresantes en segundos (default: 3600 = 1 hora)"
+    )
+    ingresantes_enviar_email = models.BooleanField(
+        default=True,
+        help_text="✉️ Enviar email de enrollamiento a ingresantes durante ingesta automática"
     )
 
     # Configuración de procesamiento en lotes

@@ -48,12 +48,15 @@ class Command(BaseCommand):
             'preinscriptos_dia_inicio': config.preinscriptos_dia_inicio.isoformat() if config.preinscriptos_dia_inicio else None,
             'preinscriptos_dia_fin': config.preinscriptos_dia_fin.isoformat() if config.preinscriptos_dia_fin else None,
             'preinscriptos_frecuencia_segundos': config.preinscriptos_frecuencia_segundos,
+            'preinscriptos_enviar_email': config.preinscriptos_enviar_email,
             'aspirantes_dia_inicio': config.aspirantes_dia_inicio.isoformat() if config.aspirantes_dia_inicio else None,
             'aspirantes_dia_fin': config.aspirantes_dia_fin.isoformat() if config.aspirantes_dia_fin else None,
             'aspirantes_frecuencia_segundos': config.aspirantes_frecuencia_segundos,
+            'aspirantes_enviar_email': config.aspirantes_enviar_email,
             'ingresantes_dia_inicio': config.ingresantes_dia_inicio.isoformat() if config.ingresantes_dia_inicio else None,
             'ingresantes_dia_fin': config.ingresantes_dia_fin.isoformat() if config.ingresantes_dia_fin else None,
             'ingresantes_frecuencia_segundos': config.ingresantes_frecuencia_segundos,
+            'ingresantes_enviar_email': config.ingresantes_enviar_email,
 
             # Teams/Azure AD
             'teams_tenant_id': config.teams_tenant_id,
@@ -119,18 +122,21 @@ class Command(BaseCommand):
         if data.get('preinscriptos_dia_fin'):
             config.preinscriptos_dia_fin = datetime.fromisoformat(data['preinscriptos_dia_fin'])
         config.preinscriptos_frecuencia_segundos = data.get('preinscriptos_frecuencia_segundos', config.preinscriptos_frecuencia_segundos)
+        config.preinscriptos_enviar_email = data.get('preinscriptos_enviar_email', config.preinscriptos_enviar_email)
 
         if data.get('aspirantes_dia_inicio'):
             config.aspirantes_dia_inicio = datetime.fromisoformat(data['aspirantes_dia_inicio'])
         if data.get('aspirantes_dia_fin'):
             config.aspirantes_dia_fin = datetime.fromisoformat(data['aspirantes_dia_fin'])
         config.aspirantes_frecuencia_segundos = data.get('aspirantes_frecuencia_segundos', config.aspirantes_frecuencia_segundos)
+        config.aspirantes_enviar_email = data.get('aspirantes_enviar_email', config.aspirantes_enviar_email)
 
         if data.get('ingresantes_dia_inicio'):
             config.ingresantes_dia_inicio = datetime.fromisoformat(data['ingresantes_dia_inicio'])
         if data.get('ingresantes_dia_fin'):
             config.ingresantes_dia_fin = datetime.fromisoformat(data['ingresantes_dia_fin'])
         config.ingresantes_frecuencia_segundos = data.get('ingresantes_frecuencia_segundos', config.ingresantes_frecuencia_segundos)
+        config.ingresantes_enviar_email = data.get('ingresantes_enviar_email', config.ingresantes_enviar_email)
 
         # Teams
         config.teams_tenant_id = data.get('teams_tenant_id', config.teams_tenant_id)

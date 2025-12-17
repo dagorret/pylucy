@@ -1075,24 +1075,27 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'preinscriptos_dia_inicio',
                 'preinscriptos_dia_fin',
                 'preinscriptos_frecuencia_segundos',
+                'preinscriptos_enviar_email',
             ),
-            'description': 'Configuración de ingesta automática de preinscriptos. Dejar vacío para no ejecutar.'
+            'description': '✉️ Configuración de ingesta automática de preinscriptos. El checkbox "enviar email" controla si se envían emails de bienvenida.'
         }),
         ('📥 Ingesta Automática - Aspirantes', {
             'fields': (
                 'aspirantes_dia_inicio',
                 'aspirantes_dia_fin',
                 'aspirantes_frecuencia_segundos',
+                'aspirantes_enviar_email',
             ),
-            'description': 'Configuración de ingesta automática de aspirantes. Dejar vacío para no ejecutar.'
+            'description': '✉️ Configuración de ingesta automática de aspirantes. El checkbox "enviar email" controla si se envían emails (bienvenida + credenciales + enrollamiento).'
         }),
         ('📥 Ingesta Automática - Ingresantes', {
             'fields': (
                 'ingresantes_dia_inicio',
                 'ingresantes_dia_fin',
                 'ingresantes_frecuencia_segundos',
+                'ingresantes_enviar_email',
             ),
-            'description': 'Configuración de ingesta automática de ingresantes. Dejar vacío para no ejecutar.'
+            'description': '✉️ Configuración de ingesta automática de ingresantes. El checkbox "enviar email" controla si se envían emails de enrollamiento.'
         }),
         ('🔐 Credenciales Teams/Azure AD', {
             'fields': (
