@@ -1049,7 +1049,9 @@ class TareaAdmin(admin.ModelAdmin):
         from django.utils.html import format_html
         duracion = obj.duracion
         if duracion is not None:
-            return format_html('{:.2f} seg', duracion)
+            # format_html no soporta format specs, formatear primero
+            duracion_str = f'{duracion:.2f}'
+            return format_html('{} seg', duracion_str)
         elif obj.estado == 'running':
             return format_html('<span style="color: #3498db;">En progreso...</span>')
         return '-'
