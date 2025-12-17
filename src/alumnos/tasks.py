@@ -997,6 +997,8 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
 
             if email_sent:
                 resultados['email'] = True
+                alumno.email_procesado = True
+                alumno.save(update_fields=['email_procesado'])
                 logger.info(f"[Workflow-Preinscripto] ✓ Email de bienvenida enviado")
             else:
                 resultados['errores'].append("Email: No se pudo enviar")
@@ -1026,6 +1028,8 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
 
             if email_sent:
                 resultados['email_credentials'] = True
+                alumno.email_procesado = True
+                alumno.save(update_fields=['email_procesado'])
                 logger.info(f"[Workflow-Aspirante] ✓ Email de credenciales enviado")
             else:
                 resultados['errores'].append("Email credenciales: No se pudo enviar")
@@ -1070,6 +1074,10 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
                 email_sent = email_svc.send_enrollment_email(alumno, courses_enrolled)
                 if email_sent:
                     resultados['email_enrollment'] = True
+                    # Solo marcar email_procesado si no se marcó antes (en credenciales)
+                    if not alumno.email_procesado:
+                        alumno.email_procesado = True
+                        alumno.save(update_fields=['email_procesado'])
                     logger.info(f"[Workflow-Aspirante] ✓ Email de enrollamiento Moodle enviado")
                 else:
                     resultados['errores'].append("Email enrollamiento: No se pudo enviar")
@@ -1121,6 +1129,8 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
                 email_sent = email_svc.send_enrollment_email(alumno, courses_enrolled)
                 if email_sent:
                     resultados['email_enrollment'] = True
+                    alumno.email_procesado = True
+                    alumno.save(update_fields=['email_procesado'])
                     logger.info(f"[Workflow-Ingresante] ✓ Email de enrollamiento Moodle enviado")
                 else:
                     resultados['errores'].append("Email enrollamiento: No se pudo enviar")

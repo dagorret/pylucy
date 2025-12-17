@@ -26,6 +26,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         "fecha_ingreso",
         "teams_status",
         "moodle_status",
+        "email_status",
     )
     list_filter = ("estado_actual", "modalidad_actual", "cohorte")
     search_fields = ("apellido", "nombre", "dni", "email_personal", "email_institucional", "carreras_data__nombre_carrera")
@@ -711,6 +712,16 @@ class AlumnoAdmin(admin.ModelAdmin):
             return mark_safe('<span style="font-size: 20px;">😡</span>')
 
     moodle_status.short_description = "Moodle"
+
+    def email_status(self, obj):
+        """Muestra estado de Email con emoticono."""
+        from django.utils.safestring import mark_safe
+        if obj.email_procesado:
+            return mark_safe('<span style="font-size: 20px;">😊</span>')
+        else:
+            return mark_safe('<span style="font-size: 20px;">😡</span>')
+
+    email_status.short_description = "Email"
 
     def carreras_formatted(self, obj):
         """Muestra la carrera del alumno (primera carrera de la lista)."""

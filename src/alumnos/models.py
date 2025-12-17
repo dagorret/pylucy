@@ -43,6 +43,10 @@ class Alumno(models.Model):
         default=False,
         help_text="Indica si el alumno ya fue procesado en Moodle (usuario creado y enrollado en cursos)"
     )
+    email_procesado = models.BooleanField(
+        default=False,
+        help_text="Indica si se envió email de bienvenida/credenciales al alumno exitosamente"
+    )
     fecha_ultima_modificacion = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
