@@ -66,6 +66,8 @@ class AlumnoAdmin(admin.ModelAdmin):
         """
         Endpoint interno para disparar ingestas o borrar alumnos desde la UI del admin.
         Usa POST con `action` para diferenciar.
+
+        IMPORTANTE: La ingesta ahora se ejecuta en la cola de Celery (asíncrona).
         """
         if request.method != "POST":
             return redirect("..")
@@ -112,12 +114,47 @@ class AlumnoAdmin(admin.ModelAdmin):
         # Leer checkbox de enviar_email
         enviar_email = request.POST.get("enviar_email") == "1"
 
-        created, updated, errors = ingerir_desde_sial(
-            tipo=tipo, n=n_int, fecha=None, desde=desde, hasta=hasta, seed=seed_int, enviar_email=enviar_email
+        # 🔧 REPARACIÓN: Enviar a cola de Celery en lugar de ejecutar síncronamente
+        from .tasks import ingesta_manual_task
+
+        task = ingesta_manual_task.delay(
+            tipo=tipo,
+            n=n_int,
+            seed=seed_int,
+            desde=desde,
+            hasta=hasta,
+            enviar_email=enviar_email,
+            usuario=request.user.username if request.user.is_authenticated else None
         )
-        if errors:
-            messages.warning(request, f"Errores: {len(errors)}. Primero: {errors[0]}")
-        messages.success(request, f"Ingesta {tipo}: creados {created}, actualizados {updated}")
+
+        # Crear registro de tarea para tracking
+        tipo_tarea_map = {
+            'preinscriptos': Tarea.TipoTarea.INGESTA_PREINSCRIPTOS,
+            'aspirantes': Tarea.TipoTarea.INGESTA_ASPIRANTES,
+            'ingresantes': Tarea.TipoTarea.INGESTA_INGRESANTES,
+        }
+
+        Tarea.objects.create(
+            tipo=tipo_tarea_map.get(tipo, Tarea.TipoTarea.INGESTA_PREINSCRIPTOS),
+            estado=Tarea.EstadoTarea.PENDING,
+            celery_task_id=task.id,
+            usuario=request.user.username if request.user.is_authenticated else None,
+            detalles={
+                'tipo': tipo,
+                'n': n_int,
+                'seed': seed_int,
+                'desde': desde,
+                'hasta': hasta,
+                'enviar_email': enviar_email,
+                'origen': 'admin_manual'
+            }
+        )
+
+        messages.success(
+            request,
+            f"✅ Ingesta de {tipo} programada en cola de Celery. "
+            f"Revisa la tabla de Tareas Asíncronas para ver el progreso (ID: {task.id[:8]}...)"
+        )
         return redirect("..")
 
     @admin.action(description="🚀 Activar Teams + Enviar Email con credenciales")
@@ -1018,8 +1055,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'batch_size',
                 'rate_limit_teams',
                 'rate_limit_moodle',
+                'rate_limit_uti',
             ),
-            'description': 'Configuración de workflows automáticos. BATCH_SIZE: alumnos por lote. RATE_LIMIT: tareas máximas por minuto.'
+            'description': '🔧 Configuración de workflows automáticos. BATCH_SIZE: alumnos por lote. RATE_LIMIT: tareas/llamadas máximas por minuto para cada servicio (Teams, Moodle, UTI).'
         }),
         ('📥 Ingesta Automática - Preinscriptos', {
             'fields': (

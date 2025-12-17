@@ -42,6 +42,7 @@ class Command(BaseCommand):
             'batch_size': config.batch_size,
             'rate_limit_teams': config.rate_limit_teams,
             'rate_limit_moodle': config.rate_limit_moodle,
+            'rate_limit_uti': config.rate_limit_uti,
 
             # Ingesta automática
             'preinscriptos_dia_inicio': config.preinscriptos_dia_inicio.isoformat() if config.preinscriptos_dia_inicio else None,
@@ -110,6 +111,7 @@ class Command(BaseCommand):
         config.batch_size = data.get('batch_size', config.batch_size)
         config.rate_limit_teams = data.get('rate_limit_teams', config.rate_limit_teams)
         config.rate_limit_moodle = data.get('rate_limit_moodle', config.rate_limit_moodle)
+        config.rate_limit_uti = data.get('rate_limit_uti', config.rate_limit_uti)
 
         # Ingesta automática
         if data.get('preinscriptos_dia_inicio'):

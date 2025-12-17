@@ -47,8 +47,29 @@ def ingestar_preinscriptos(self):
 
     # Ejecutar ingesta
     try:
-        logger.info("Iniciando ingesta automática de preinscriptos")
+        logger.info("[Ingesta Auto-Preinscriptos] Iniciando ingesta automática de preinscriptos")
         created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='preinscriptos', retornar_nuevos=True)
+
+        # 🔧 CATEGORIZACIÓN DE ERRORES
+        errores_categorizados = {
+            'uti_api': [],
+            'datos_invalidos': [],
+            'correo': [],
+            'guardado': [],
+            'otros': []
+        }
+
+        for error in errors:
+            if 'Error al consultar listas' in error or 'error datospersonales' in error:
+                errores_categorizados['uti_api'].append(error)
+            elif 'sin nrodoc' in error or 'Registro sin' in error:
+                errores_categorizados['datos_invalidos'].append(error)
+            elif 'email' in error.lower():
+                errores_categorizados['correo'].append(error)
+            elif 'error al guardar' in error:
+                errores_categorizados['guardado'].append(error)
+            else:
+                errores_categorizados['otros'].append(error)
 
         # Actualizar tarea
         tarea.estado = Tarea.EstadoTarea.COMPLETED
@@ -57,19 +78,41 @@ def ingestar_preinscriptos(self):
         tarea.detalles = {
             'created': created,
             'updated': updated,
-            'errors': len(errors),
-            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0
+            'total_errors': len(errors),
+            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0,
+            # 🔧 ERRORES CATEGORIZADOS
+            'errores_uti_api': errores_categorizados['uti_api'],
+            'errores_datos_invalidos': errores_categorizados['datos_invalidos'],
+            'errores_correo': errores_categorizados['correo'],
+            'errores_guardado': errores_categorizados['guardado'],
+            'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
 
         Log.objects.create(
-            tipo='SUCCESS',
+            tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
             modulo='tasks',
-            mensaje=f'Ingesta automática de preinscriptos: {created} creados, {updated} actualizados',
-            detalles={'created': created, 'updated': updated, 'errors': len(errors)}
+            mensaje=f'Ingesta automática de preinscriptos: {created} creados, {updated} actualizados, {len(errors)} errores',
+            detalles={
+                'created': created,
+                'updated': updated,
+                'errores_categorizados': errores_categorizados
+            }
         )
 
-        logger.info(f"Ingesta completada: {created} creados, {updated} actualizados, {len(errors)} errores")
+        # 🔧 LOGS MEJORADOS: Fin con detalles de errores categorizados
+        logger.info(f"[Ingesta Auto-Preinscriptos] ✅ Finalizada: {created} creados, {updated} actualizados")
+        logger.info(f"[Ingesta Auto-Preinscriptos] Errores: {len(errors)} total")
+        if errores_categorizados['uti_api']:
+            logger.error(f"[Ingesta Auto-Preinscriptos] ❌ Errores UTI/API: {len(errores_categorizados['uti_api'])}")
+            for err in errores_categorizados['uti_api'][:3]:
+                logger.error(f"  - {err}")
+        if errores_categorizados['datos_invalidos']:
+            logger.warning(f"[Ingesta Auto-Preinscriptos] ⚠️ Datos inválidos: {len(errores_categorizados['datos_invalidos'])}")
+        if errores_categorizados['correo']:
+            logger.warning(f"[Ingesta Auto-Preinscriptos] ⚠️ Errores de correo: {len(errores_categorizados['correo'])}")
+        if errores_categorizados['guardado']:
+            logger.error(f"[Ingesta Auto-Preinscriptos] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
         # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
         if nuevos_ids and len(nuevos_ids) > 0:
@@ -129,8 +172,29 @@ def ingestar_aspirantes(self):
     )
 
     try:
-        logger.info("Iniciando ingesta automática de aspirantes")
+        logger.info("[Ingesta Auto-Aspirantes] Iniciando ingesta automática de aspirantes")
         created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='aspirantes', retornar_nuevos=True)
+
+        # 🔧 CATEGORIZACIÓN DE ERRORES
+        errores_categorizados = {
+            'uti_api': [],
+            'datos_invalidos': [],
+            'correo': [],
+            'guardado': [],
+            'otros': []
+        }
+
+        for error in errors:
+            if 'Error al consultar listas' in error or 'error datospersonales' in error:
+                errores_categorizados['uti_api'].append(error)
+            elif 'sin nrodoc' in error or 'Registro sin' in error:
+                errores_categorizados['datos_invalidos'].append(error)
+            elif 'email' in error.lower():
+                errores_categorizados['correo'].append(error)
+            elif 'error al guardar' in error:
+                errores_categorizados['guardado'].append(error)
+            else:
+                errores_categorizados['otros'].append(error)
 
         # Actualizar tarea
         tarea.estado = Tarea.EstadoTarea.COMPLETED
@@ -139,19 +203,41 @@ def ingestar_aspirantes(self):
         tarea.detalles = {
             'created': created,
             'updated': updated,
-            'errors': len(errors),
-            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0
+            'total_errors': len(errors),
+            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0,
+            # 🔧 ERRORES CATEGORIZADOS
+            'errores_uti_api': errores_categorizados['uti_api'],
+            'errores_datos_invalidos': errores_categorizados['datos_invalidos'],
+            'errores_correo': errores_categorizados['correo'],
+            'errores_guardado': errores_categorizados['guardado'],
+            'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
 
         Log.objects.create(
-            tipo='SUCCESS',
+            tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
             modulo='tasks',
-            mensaje=f'Ingesta automática de aspirantes: {created} creados, {updated} actualizados',
-            detalles={'created': created, 'updated': updated, 'errors': len(errors)}
+            mensaje=f'Ingesta automática de aspirantes: {created} creados, {updated} actualizados, {len(errors)} errores',
+            detalles={
+                'created': created,
+                'updated': updated,
+                'errores_categorizados': errores_categorizados
+            }
         )
 
-        logger.info(f"Ingesta completada: {created} creados, {updated} actualizados, {len(errors)} errores")
+        # 🔧 LOGS MEJORADOS: Fin con detalles de errores categorizados
+        logger.info(f"[Ingesta Auto-Aspirantes] ✅ Finalizada: {created} creados, {updated} actualizados")
+        logger.info(f"[Ingesta Auto-Aspirantes] Errores: {len(errors)} total")
+        if errores_categorizados['uti_api']:
+            logger.error(f"[Ingesta Auto-Aspirantes] ❌ Errores UTI/API: {len(errores_categorizados['uti_api'])}")
+            for err in errores_categorizados['uti_api'][:3]:
+                logger.error(f"  - {err}")
+        if errores_categorizados['datos_invalidos']:
+            logger.warning(f"[Ingesta Auto-Aspirantes] ⚠️ Datos inválidos: {len(errores_categorizados['datos_invalidos'])}")
+        if errores_categorizados['correo']:
+            logger.warning(f"[Ingesta Auto-Aspirantes] ⚠️ Errores de correo: {len(errores_categorizados['correo'])}")
+        if errores_categorizados['guardado']:
+            logger.error(f"[Ingesta Auto-Aspirantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
         # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
         if nuevos_ids and len(nuevos_ids) > 0:
@@ -211,8 +297,29 @@ def ingestar_ingresantes(self):
     )
 
     try:
-        logger.info("Iniciando ingesta automática de ingresantes")
+        logger.info("[Ingesta Auto-Ingresantes] Iniciando ingesta automática de ingresantes")
         created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='ingresantes', retornar_nuevos=True)
+
+        # 🔧 CATEGORIZACIÓN DE ERRORES
+        errores_categorizados = {
+            'uti_api': [],
+            'datos_invalidos': [],
+            'correo': [],
+            'guardado': [],
+            'otros': []
+        }
+
+        for error in errors:
+            if 'Error al consultar listas' in error or 'error datospersonales' in error:
+                errores_categorizados['uti_api'].append(error)
+            elif 'sin nrodoc' in error or 'Registro sin' in error:
+                errores_categorizados['datos_invalidos'].append(error)
+            elif 'email' in error.lower():
+                errores_categorizados['correo'].append(error)
+            elif 'error al guardar' in error:
+                errores_categorizados['guardado'].append(error)
+            else:
+                errores_categorizados['otros'].append(error)
 
         # Actualizar tarea
         tarea.estado = Tarea.EstadoTarea.COMPLETED
@@ -221,19 +328,41 @@ def ingestar_ingresantes(self):
         tarea.detalles = {
             'created': created,
             'updated': updated,
-            'errors': len(errors),
-            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0
+            'total_errors': len(errors),
+            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0,
+            # 🔧 ERRORES CATEGORIZADOS
+            'errores_uti_api': errores_categorizados['uti_api'],
+            'errores_datos_invalidos': errores_categorizados['datos_invalidos'],
+            'errores_correo': errores_categorizados['correo'],
+            'errores_guardado': errores_categorizados['guardado'],
+            'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
 
         Log.objects.create(
-            tipo='SUCCESS',
+            tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
             modulo='tasks',
-            mensaje=f'Ingesta automática de ingresantes: {created} creados, {updated} actualizados',
-            detalles={'created': created, 'updated': updated, 'errors': len(errors)}
+            mensaje=f'Ingesta automática de ingresantes: {created} creados, {updated} actualizados, {len(errors)} errores',
+            detalles={
+                'created': created,
+                'updated': updated,
+                'errores_categorizados': errores_categorizados
+            }
         )
 
-        logger.info(f"Ingesta completada: {created} creados, {updated} actualizados, {len(errors)} errores")
+        # 🔧 LOGS MEJORADOS: Fin con detalles de errores categorizados
+        logger.info(f"[Ingesta Auto-Ingresantes] ✅ Finalizada: {created} creados, {updated} actualizados")
+        logger.info(f"[Ingesta Auto-Ingresantes] Errores: {len(errors)} total")
+        if errores_categorizados['uti_api']:
+            logger.error(f"[Ingesta Auto-Ingresantes] ❌ Errores UTI/API: {len(errores_categorizados['uti_api'])}")
+            for err in errores_categorizados['uti_api'][:3]:
+                logger.error(f"  - {err}")
+        if errores_categorizados['datos_invalidos']:
+            logger.warning(f"[Ingesta Auto-Ingresantes] ⚠️ Datos inválidos: {len(errores_categorizados['datos_invalidos'])}")
+        if errores_categorizados['correo']:
+            logger.warning(f"[Ingesta Auto-Ingresantes] ⚠️ Errores de correo: {len(errores_categorizados['correo'])}")
+        if errores_categorizados['guardado']:
+            logger.error(f"[Ingesta Auto-Ingresantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
         # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
         if nuevos_ids and len(nuevos_ids) > 0:
@@ -1266,3 +1395,187 @@ def enrollar_moodle_task(self, alumno_id, enviar_email=False):
         resultado_final['email'] = resultado_email
 
     return resultado_final
+
+
+@shared_task(bind=True)
+def ingesta_manual_task(self, tipo, n=None, seed=None, desde=None, hasta=None, enviar_email=False, usuario=None):
+    """
+    Tarea asíncrona para ingesta manual desde el admin.
+
+    🔧 REPARACIÓN: Esta tarea permite que la ingesta manual del admin vaya a la cola
+    en lugar de ejecutarse síncronamente (que causaba que el botón "piense").
+
+    Args:
+        tipo: Tipo de ingesta (preinscriptos, aspirantes, ingresantes)
+        n: Cantidad de registros (opcional)
+        seed: Semilla para aleatorización (opcional)
+        desde: Fecha desde (opcional)
+        hasta: Fecha hasta (opcional)
+        enviar_email: Si es True, envía emails de bienvenida
+        usuario: Usuario que disparó la ingesta
+
+    Returns:
+        dict: Resultado de la ingesta con errores categorizados
+    """
+    # Mapeo de tipos de tarea
+    tipo_tarea_map = {
+        'preinscriptos': Tarea.TipoTarea.INGESTA_PREINSCRIPTOS,
+        'aspirantes': Tarea.TipoTarea.INGESTA_ASPIRANTES,
+        'ingresantes': Tarea.TipoTarea.INGESTA_INGRESANTES,
+    }
+
+    # Buscar tarea existente o crear una nueva
+    tarea = Tarea.objects.filter(celery_task_id=self.request.id).first()
+    if not tarea:
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea_map.get(tipo, Tarea.TipoTarea.INGESTA_PREINSCRIPTOS),
+            estado=Tarea.EstadoTarea.RUNNING,
+            celery_task_id=self.request.id,
+            hora_inicio=timezone.now(),
+            usuario=usuario,
+            detalles={
+                'tipo': tipo,
+                'n': n,
+                'seed': seed,
+                'desde': desde,
+                'hasta': hasta,
+                'enviar_email': enviar_email,
+                'origen': 'admin_manual'
+            }
+        )
+    else:
+        tarea.estado = Tarea.EstadoTarea.RUNNING
+        tarea.hora_inicio = timezone.now()
+        tarea.save()
+
+    try:
+        logger.info(f"[Ingesta Manual] Iniciando ingesta de {tipo} (usuario: {usuario})")
+        logger.info(f"[Ingesta Manual] Parámetros: n={n}, seed={seed}, desde={desde}, hasta={hasta}, enviar_email={enviar_email}")
+
+        # Ejecutar ingesta
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(
+            tipo=tipo,
+            n=n,
+            fecha=None,
+            desde=desde,
+            hasta=hasta,
+            seed=seed,
+            retornar_nuevos=True,
+            enviar_email=False  # ❌ NO enviar email síncronamente, se procesa en cola después
+        )
+
+        # 🔧 CATEGORIZACIÓN DE ERRORES
+        errores_categorizados = {
+            'uti_api': [],
+            'datos_invalidos': [],
+            'correo': [],
+            'guardado': [],
+            'otros': []
+        }
+
+        for error in errors:
+            if 'Error al consultar listas' in error or 'error datospersonales' in error:
+                errores_categorizados['uti_api'].append(error)
+            elif 'sin nrodoc' in error or 'Registro sin' in error:
+                errores_categorizados['datos_invalidos'].append(error)
+            elif 'email' in error.lower():
+                errores_categorizados['correo'].append(error)
+            elif 'error al guardar' in error:
+                errores_categorizados['guardado'].append(error)
+            else:
+                errores_categorizados['otros'].append(error)
+
+        # Actualizar tarea con resultados
+        tarea.estado = Tarea.EstadoTarea.COMPLETED
+        tarea.cantidad_entidades = created + updated
+        tarea.hora_fin = timezone.now()
+        tarea.detalles = {
+            'tipo': tipo,
+            'n': n,
+            'seed': seed,
+            'desde': desde,
+            'hasta': hasta,
+            'enviar_email': enviar_email,
+            'origen': 'admin_manual',
+            'created': created,
+            'updated': updated,
+            'total_errors': len(errors),
+            'nuevos_procesados': len(nuevos_ids) if nuevos_ids else 0,
+            # 🔧 ERRORES CATEGORIZADOS
+            'errores_uti_api': errores_categorizados['uti_api'],
+            'errores_datos_invalidos': errores_categorizados['datos_invalidos'],
+            'errores_correo': errores_categorizados['correo'],
+            'errores_guardado': errores_categorizados['guardado'],
+            'errores_otros': errores_categorizados['otros'],
+        }
+        tarea.save()
+
+        # Log detallado de fin
+        logger.info(f"[Ingesta Manual] ✅ Finalizada: {created} creados, {updated} actualizados")
+        logger.info(f"[Ingesta Manual] Errores: {len(errors)} total")
+        if errores_categorizados['uti_api']:
+            logger.error(f"[Ingesta Manual] ❌ Errores UTI/API: {len(errores_categorizados['uti_api'])}")
+            for err in errores_categorizados['uti_api'][:3]:  # Primeros 3
+                logger.error(f"  - {err}")
+        if errores_categorizados['datos_invalidos']:
+            logger.warning(f"[Ingesta Manual] ⚠️ Datos inválidos: {len(errores_categorizados['datos_invalidos'])}")
+        if errores_categorizados['correo']:
+            logger.warning(f"[Ingesta Manual] ⚠️ Errores de correo: {len(errores_categorizados['correo'])}")
+        if errores_categorizados['guardado']:
+            logger.error(f"[Ingesta Manual] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
+
+        Log.objects.create(
+            tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
+            modulo='tasks',
+            mensaje=f'Ingesta manual de {tipo}: {created} creados, {updated} actualizados, {len(errors)} errores',
+            detalles={
+                'created': created,
+                'updated': updated,
+                'errores_categorizados': errores_categorizados,
+                'usuario': usuario
+            }
+        )
+
+        # 🔧 PROCESAR NUEVOS ALUMNOS EN LOTES (Teams + Moodle + Email)
+        if nuevos_ids and len(nuevos_ids) > 0:
+            config = Configuracion.load()
+            batch_size = config.batch_size
+            logger.info(f"[Ingesta Manual] Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
+
+            # Determinar estado para workflow
+            estado_workflow = {
+                'preinscriptos': 'preinscripto',
+                'aspirantes': 'aspirante',
+                'ingresantes': 'ingresante',
+            }.get(tipo, 'preinscripto')
+
+            # Dividir en lotes
+            for i in range(0, len(nuevos_ids), batch_size):
+                lote = nuevos_ids[i:i + batch_size]
+                logger.info(f"[Ingesta Manual] Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
+                procesar_lote_alumnos_nuevos.delay(lote, estado_workflow)
+
+        return {
+            'success': True,
+            'created': created,
+            'updated': updated,
+            'errors': len(errors),
+            'nuevos': len(nuevos_ids) if nuevos_ids else 0,
+            'errores_categorizados': errores_categorizados
+        }
+
+    except Exception as e:
+        logger.error(f"[Ingesta Manual] ❌ Error fatal en ingesta de {tipo}: {e}")
+
+        tarea.estado = Tarea.EstadoTarea.FAILED
+        tarea.mensaje_error = str(e)
+        tarea.hora_fin = timezone.now()
+        tarea.save()
+
+        Log.objects.create(
+            tipo='ERROR',
+            modulo='tasks',
+            mensaje=f'Error fatal en ingesta manual de {tipo}',
+            detalles={'error': str(e), 'usuario': usuario}
+        )
+        raise

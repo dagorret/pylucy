@@ -48,6 +48,8 @@ class EmailService:
         """
         Envía email con credenciales de acceso a Teams.
 
+        🔧 REPARACIÓN: Usa plantilla desde Configuracion.email_plantilla_credenciales (BD > .env)
+
         Args:
             alumno: Instancia del modelo Alumno
             teams_data: Dict con datos de Teams (upn, password)
@@ -55,6 +57,9 @@ class EmailService:
         Returns:
             True si se envió exitosamente, False en caso contrario
         """
+        from ..models import Configuracion
+        config = Configuracion.load()
+
         upn = teams_data.get('upn')
         password = teams_data.get('password')
 
@@ -64,8 +69,21 @@ class EmailService:
 
         subject = "Credenciales de acceso - UNRC"
 
-        # Mensaje en texto plano
-        message = f"""
+        # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
+        plantilla = config.email_plantilla_credenciales
+        if plantilla:
+            # Reemplazar variables en la plantilla
+            message = plantilla.format(
+                nombre=alumno.nombre,
+                apellido=alumno.apellido,
+                dni=alumno.dni,
+                email=alumno.email_personal or alumno.email_institucional or '',
+                upn=upn,
+                password=password,
+            )
+        else:
+            # Fallback si no hay plantilla configurada
+            message = f"""
 Hola {alumno.nombre} {alumno.apellido},
 
 Te damos la bienvenida a la Universidad Nacional de Río Cuarto.
@@ -188,15 +206,32 @@ Este es un mensaje automático, por favor no responder.
         """
         Envía email de bienvenida a aspirantes (sin credenciales aún).
 
+        🔧 REPARACIÓN: Usa plantilla desde Configuracion.email_plantilla_bienvenida (BD > .env)
+
         Args:
             alumno: Instancia del modelo Alumno
 
         Returns:
             True si se envió exitosamente, False en caso contrario
         """
+        from ..models import Configuracion
+        config = Configuracion.load()
+
         subject = "Bienvenido/a a la UNRC"
 
-        message = f"""
+        # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
+        plantilla = config.email_plantilla_bienvenida
+        if plantilla:
+            # Reemplazar variables en la plantilla
+            message = plantilla.format(
+                nombre=alumno.nombre,
+                apellido=alumno.apellido,
+                dni=alumno.dni,
+                email=alumno.email_personal or alumno.email_institucional or '',
+            )
+        else:
+            # Fallback si no hay plantilla configurada
+            message = f"""
 Hola {alumno.nombre} {alumno.apellido},
 
 Te damos la bienvenida a la Universidad Nacional de Río Cuarto.

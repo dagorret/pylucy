@@ -295,6 +295,10 @@ class Configuracion(models.Model):
         default=30,
         help_text="Máximo de tareas Moodle por minuto (recomendado: 20-50)"
     )
+    rate_limit_uti = models.PositiveIntegerField(
+        default=60,
+        help_text="🔧 Máximo de llamadas a API UTI/SIAL por minuto (recomendado: 30-100)"
+    )
 
     # Tokens y credenciales (pueden anular variables de entorno)
     teams_tenant_id = models.CharField(
