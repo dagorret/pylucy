@@ -223,6 +223,7 @@ Universidad Nacional de Río Cuarto
                 message=message,
                 from_email=self.from_email,
                 recipient_list=[alumno.email],
+                html_message=html_message,  # Agregar HTML
                 fail_silently=False
             )
 

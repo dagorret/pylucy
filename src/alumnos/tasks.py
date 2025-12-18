@@ -1153,7 +1153,7 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
             'estado': estado,
             'workflow': 'completo',
             'resultados': resultados,
-            'upn': teams_result.get('upn')
+            'upn': teams_result.get('upn') if teams_result else None
         }
         tarea.save()
 
