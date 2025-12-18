@@ -67,21 +67,37 @@ class EmailService:
             logger.error(f"Datos incompletos para enviar credenciales a {alumno.email}")
             return False
 
-        subject = "Credenciales de acceso - UNRC"
+        # 🔧 ASUNTO DINÁMICO DESDE BD
+        subject = config.email_asunto_credenciales or "Credenciales de acceso - UNRC"
+        try:
+            subject = subject.format(
+                nombre=alumno.nombre,
+                apellido=alumno.apellido,
+                upn=upn
+            )
+        except KeyError:
+            pass  # Si hay error en el formato, usar el subject sin formatear
 
         # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
         plantilla = config.email_plantilla_credenciales
         if plantilla:
             # Reemplazar variables en la plantilla
-            message = plantilla.format(
-                nombre=alumno.nombre,
-                apellido=alumno.apellido,
-                dni=alumno.dni,
-                email=alumno.email_personal or alumno.email_institucional or '',
-                upn=upn,
-                password=password,
-            )
-        else:
+            try:
+                message = plantilla.format(
+                    nombre=alumno.nombre,
+                    apellido=alumno.apellido,
+                    dni=alumno.dni,
+                    email=alumno.email_personal or alumno.email_institucional or '',
+                    upn=upn,
+                    password=password,
+                )
+                # Si la plantilla es HTML, usarla como html_message
+                html_message = message if '<html' in plantilla.lower() else None
+            except KeyError as e:
+                logger.error(f"Error en variables de plantilla: {e}")
+                plantilla = None
+
+        if not plantilla:
             # Fallback si no hay plantilla configurada
             message = f"""
 Hola {alumno.nombre} {alumno.apellido},
@@ -108,70 +124,9 @@ Universidad Nacional de Río Cuarto
 Este es un mensaje automático, por favor no responder.
 """
 
-        # Mensaje HTML (opcional, más visual)
-        html_message = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #003366; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background-color: #f9f9f9; }}
-        .credentials {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #003366; margin: 20px 0; }}
-        .credentials strong {{ color: #003366; }}
-        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #666; }}
-        .button {{ display: inline-block; padding: 12px 24px; background-color: #003366; color: white; text-decoration: none; border-radius: 4px; margin: 10px 0; }}
-        .warning {{ background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Bienvenido/a a la UNRC</h1>
-        </div>
-
-        <div class="content">
-            <h2>Hola {alumno.nombre} {alumno.apellido},</h2>
-
-            <p>Te damos la bienvenida a la <strong>Universidad Nacional de Río Cuarto</strong>.</p>
-
-            <p>Tus credenciales de acceso a Microsoft Teams y servicios institucionales son:</p>
-
-            <div class="credentials">
-                <p><strong>Usuario:</strong> {upn}</p>
-                <p><strong>Contraseña temporal:</strong> {password}</p>
-            </div>
-
-            <div class="warning">
-                <strong>⚠️ IMPORTANTE:</strong>
-                <ul>
-                    <li>La primera vez que ingreses, se te pedirá cambiar la contraseña</li>
-                    <li>Guarda tu nueva contraseña en un lugar seguro</li>
-                    <li>Si olvidaste tu contraseña, contacta a soporte técnico</li>
-                </ul>
-            </div>
-
-            <p style="text-align: center;">
-                <a href="https://teams.microsoft.com" class="button">Acceder a Teams</a>
-            </p>
-
-            <p>Si tienes alguna consulta, no dudes en contactarte con soporte técnico.</p>
-
-            <p>Saludos,<br>
-            <strong>Sistema Lucy AMS</strong><br>
-            Universidad Nacional de Río Cuarto</p>
-        </div>
-
-        <div class="footer">
-            Este es un mensaje automático, por favor no responder.<br>
-            Universidad Nacional de Río Cuarto - Río Cuarto, Argentina
-        </div>
-    </div>
-</body>
-</html>
-"""
+        # Si no hay plantilla personalizada, no enviar html_message (solo texto plano)
+        if not html_message:
+            html_message = None
 
         try:
             logger.info(f"Enviando credenciales a {alumno.email} (UPN: {upn})")
@@ -217,19 +172,36 @@ Este es un mensaje automático, por favor no responder.
         from ..models import Configuracion
         config = Configuracion.load()
 
-        subject = "Bienvenido/a a la UNRC"
+        # 🔧 ASUNTO DINÁMICO DESDE BD
+        subject = config.email_asunto_bienvenida or "Bienvenido/a a la UNRC"
+        try:
+            subject = subject.format(
+                nombre=alumno.nombre,
+                apellido=alumno.apellido,
+                dni=alumno.dni
+            )
+        except KeyError:
+            pass
 
         # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
         plantilla = config.email_plantilla_bienvenida
+        html_message = None
         if plantilla:
             # Reemplazar variables en la plantilla
-            message = plantilla.format(
-                nombre=alumno.nombre,
-                apellido=alumno.apellido,
-                dni=alumno.dni,
-                email=alumno.email_personal or alumno.email_institucional or '',
-            )
-        else:
+            try:
+                message = plantilla.format(
+                    nombre=alumno.nombre,
+                    apellido=alumno.apellido,
+                    dni=alumno.dni,
+                    email=alumno.email_personal or alumno.email_institucional or '',
+                )
+                # Si la plantilla es HTML, usarla como html_message
+                html_message = message if '<html' in plantilla.lower() else None
+            except KeyError as e:
+                logger.error(f"Error en variables de plantilla: {e}")
+                plantilla = None
+
+        if not plantilla:
             # Fallback si no hay plantilla configurada
             message = f"""
 Hola {alumno.nombre} {alumno.apellido},
@@ -294,10 +266,38 @@ Universidad Nacional de Río Cuarto
             cursos_html = "<p><em>Serás notificado cuando los cursos estén disponibles.</em></p>"
             cursos_texto = "Serás notificado cuando los cursos estén disponibles."
 
-        subject = "Acceso al Ecosistema Virtual - UNRC"
+        # 🔧 ASUNTO DINÁMICO DESDE BD
+        subject = config.email_asunto_enrollamiento or "Acceso al Ecosistema Virtual - UNRC"
+        try:
+            subject = subject.format(
+                nombre=alumno.nombre,
+                apellido=alumno.apellido
+            )
+        except KeyError:
+            pass
 
-        # Mensaje en texto plano
-        message = f"""
+        # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
+        plantilla = config.email_plantilla_enrollamiento
+        html_message = None
+        if plantilla:
+            try:
+                message = plantilla.format(
+                    nombre=alumno.nombre,
+                    apellido=alumno.apellido,
+                    upn=upn,
+                    moodle_url=moodle_url,
+                    cursos_html=cursos_html,
+                    cursos_texto=cursos_texto
+                )
+                # Si la plantilla es HTML, usarla como html_message
+                html_message = message if '<html' in plantilla.lower() else None
+            except KeyError as e:
+                logger.error(f"Error en variables de plantilla de enrollamiento: {e}")
+                plantilla = None
+
+        if not plantilla:
+            # Mensaje en texto plano (fallback)
+            message = f"""
 Hola {alumno.nombre} {alumno.apellido},
 
 ¡Bienvenido/a al Ecosistema Virtual de la Facultad de Ciencias Económicas!
@@ -329,85 +329,8 @@ Universidad Nacional de Río Cuarto
 ---
 Este es un mensaje automático, por favor no responder.
 """
-
-        # Mensaje HTML
-        html_message = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #003366; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background-color: #f9f9f9; }}
-        .info-box {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #003366; margin: 20px 0; }}
-        .credentials {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }}
-        .credentials strong {{ color: #003366; }}
-        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #666; }}
-        .button {{ display: inline-block; padding: 12px 24px; background-color: #003366; color: white; text-decoration: none; border-radius: 4px; margin: 10px 0; }}
-        .warning {{ background-color: #d1ecf1; padding: 10px; border-left: 4px solid #0c5460; margin: 15px 0; }}
-        ul {{ padding-left: 20px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎓 Ecosistema Virtual UNRC</h1>
-        </div>
-
-        <div class="content">
-            <h2>Hola {alumno.nombre} {alumno.apellido},</h2>
-
-            <p>¡Bienvenido/a al <strong>Ecosistema Virtual</strong> de la Facultad de Ciencias Económicas!</p>
-
-            <p>Has sido enrollado/a en nuestro campus virtual Moodle.</p>
-
-            <div class="info-box">
-                <h3>🌐 ACCESO AL ECOSISTEMA VIRTUAL:</h3>
-                <p><strong>URL:</strong> <a href="{moodle_url}">{moodle_url}</a></p>
-            </div>
-
-            <div class="credentials">
-                <h3>🔑 CREDENCIALES DE ACCESO:</h3>
-                <p><strong>Usuario:</strong> {upn}</p>
-                <p><strong>Contraseña:</strong> La misma que usas para Microsoft Teams</p>
-            </div>
-
-            <div class="warning">
-                <strong>⚠️ IMPORTANTE:</strong>
-                <ul>
-                    <li>Usa las mismas credenciales que recibiste para Teams</li>
-                    <li>Si cambiaste tu contraseña de Teams, usa la nueva contraseña</li>
-                    <li>El acceso es mediante autenticación de Microsoft (OpenID Connect)</li>
-                </ul>
-            </div>
-
-            <div class="info-box">
-                <h3>📚 CURSOS ENROLLADOS:</h3>
-                {cursos_html}
-            </div>
-
-            <p style="text-align: center;">
-                <a href="{moodle_url}" class="button">Acceder al Ecosistema Virtual</a>
-            </p>
-
-            <p>Si tienes alguna consulta o problema para acceder, no dudes en contactar con soporte técnico.</p>
-
-            <p>Saludos,<br>
-            <strong>Sistema Lucy AMS</strong><br>
-            Facultad de Ciencias Económicas<br>
-            Universidad Nacional de Río Cuarto</p>
-        </div>
-
-        <div class="footer">
-            Este es un mensaje automático, por favor no responder.<br>
-            Universidad Nacional de Río Cuarto - Río Cuarto, Argentina
-        </div>
-    </div>
-</body>
-</html>
-"""
+            # Si no hay plantilla personalizada, no enviar HTML
+            html_message = None
 
         try:
             email_to = alumno.email_personal or alumno.email_institucional

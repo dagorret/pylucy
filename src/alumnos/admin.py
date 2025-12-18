@@ -1141,11 +1141,16 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         }),
         ('✉️ Plantillas de Emails', {
             'fields': (
+                'email_asunto_bienvenida',
                 'email_plantilla_bienvenida',
+                'email_asunto_credenciales',
                 'email_plantilla_credenciales',
+                'email_asunto_password',
                 'email_plantilla_password',
+                'email_asunto_enrollamiento',
+                'email_plantilla_enrollamiento',
             ),
-            'description': 'Plantillas HTML para emails. Variables disponibles: {nombre}, {apellido}, {dni}, {email}, {upn}, {password}',
+            'description': 'Plantillas HTML para emails. Pegar HTML completo en cada campo. Variables disponibles: {nombre}, {apellido}, {dni}, {email}, {upn}, {password}, {moodle_url}, {cursos_html}. IMPORTANTE: En CSS usar {{{{ y }}}} para escapar llaves.',
             'classes': ('collapse',)
         }),
         ('ℹ️ Metadatos', {

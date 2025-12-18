@@ -384,17 +384,45 @@ class Configuracion(models.Model):
     )
 
     # Plantillas de emails
+    email_asunto_bienvenida = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Bienvenido/a a la UNRC",
+        help_text="Asunto del email de bienvenida. Variables: {nombre}, {apellido}, {dni}"
+    )
     email_plantilla_bienvenida = models.TextField(
         blank=True,
-        help_text="Plantilla HTML para email de bienvenida (preinscriptos/aspirantes). Variables: {nombre}, {apellido}, {dni}, {email}"
+        help_text="Plantilla HTML para email de bienvenida (preinscriptos/aspirantes). Variables: {nombre}, {apellido}, {dni}, {email}. Pegar HTML completo."
+    )
+    email_asunto_credenciales = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Credenciales de acceso - UNRC",
+        help_text="Asunto del email de credenciales. Variables: {nombre}, {apellido}, {upn}"
     )
     email_plantilla_credenciales = models.TextField(
         blank=True,
-        help_text="Plantilla HTML para email con credenciales Teams. Variables: {nombre}, {apellido}, {upn}, {password}"
+        help_text="Plantilla HTML para email con credenciales Teams. Variables: {nombre}, {apellido}, {upn}, {password}. Pegar HTML completo."
+    )
+    email_asunto_password = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Nueva contraseña - UNRC",
+        help_text="Asunto del email de reseteo de password. Variables: {nombre}, {apellido}, {upn}"
     )
     email_plantilla_password = models.TextField(
         blank=True,
-        help_text="Plantilla HTML para email de reseteo de password. Variables: {nombre}, {apellido}, {upn}, {password}"
+        help_text="Plantilla HTML para email de reseteo de password. Variables: {nombre}, {apellido}, {upn}, {password}. Pegar HTML completo."
+    )
+    email_asunto_enrollamiento = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Acceso al Ecosistema Virtual - UNRC",
+        help_text="Asunto del email de enrollamiento Moodle. Variables: {nombre}, {apellido}"
+    )
+    email_plantilla_enrollamiento = models.TextField(
+        blank=True,
+        help_text="Plantilla HTML para email de enrollamiento en Moodle. Variables: {nombre}, {apellido}, {upn}, {moodle_url}, {cursos_html}. Pegar HTML completo."
     )
 
     email_from = models.EmailField(
