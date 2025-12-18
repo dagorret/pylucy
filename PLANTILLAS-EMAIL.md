@@ -69,11 +69,14 @@ Cada tipo de email soporta diferentes variables:
 Ejecuta el management command para cargar las plantillas HTML por defecto:
 
 ```bash
-# Desde el contenedor Docker
+# Testing (contenedores con sufijo -testing)
+docker exec pylucy-web-testing python manage.py cargar_plantillas_email
+
+# Producción (sin sufijo)
 docker exec pylucy-web python manage.py cargar_plantillas_email
 
 # Sobrescribir plantillas existentes
-docker exec pylucy-web python manage.py cargar_plantillas_email --force
+docker exec pylucy-web-testing python manage.py cargar_plantillas_email --force
 
 # Desde el servidor (sin Docker)
 cd src
@@ -94,7 +97,7 @@ Para copiar las plantillas desde el servidor de testing a producción:
 
 ```bash
 # Exportar desde testing
-docker exec pylucy-web python manage.py dumpdata alumnos.Configuracion --indent 2 > configuracion_backup.json
+docker exec pylucy-web-testing python manage.py dumpdata alumnos.Configuracion --indent 2 > configuracion_backup.json
 
 # Importar en producción
 docker exec -i pylucy-web python manage.py loaddata configuracion_backup.json
@@ -105,6 +108,10 @@ docker exec -i pylucy-web python manage.py loaddata configuracion_backup.json
 La migración `0023_add_email_subjects_and_enrollment.py` se ejecuta automáticamente con:
 
 ```bash
+# Testing
+docker exec pylucy-web-testing python manage.py migrate
+
+# Producción
 docker exec pylucy-web python manage.py migrate
 ```
 
