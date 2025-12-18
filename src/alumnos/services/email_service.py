@@ -129,30 +129,36 @@ Este es un mensaje automático, por favor no responder.
             html_message = None
 
         try:
-            logger.info(f"Enviando credenciales a {alumno.email} (UPN: {upn})")
+            # IMPORTANTE: Siempre enviar al email_personal
+            email_destino = alumno.email_personal or alumno.email_institucional
+            if not email_destino:
+                logger.error(f"Alumno {alumno.id} no tiene email personal ni institucional")
+                return False
+
+            logger.info(f"Enviando credenciales a {email_destino} (email personal) (UPN: {upn})")
 
             result = send_mail(
                 subject=subject,
                 message=message,
                 from_email=self.from_email,
-                recipient_list=[alumno.email],
+                recipient_list=[email_destino],
                 html_message=html_message,
                 fail_silently=False
             )
 
             if result == 1:
-                logger.info(f"Email enviado exitosamente a {alumno.email}")
-                log_to_db('SUCCESS', 'email_service', f'Email de credenciales enviado exitosamente a {alumno.email}',
-                         detalles={'email': alumno.email, 'upn': upn}, alumno=alumno)
+                logger.info(f"Email de credenciales enviado exitosamente a {email_destino}")
+                log_to_db('SUCCESS', 'email_service', f'Email de credenciales enviado a email personal: {email_destino}',
+                         detalles={'email_personal': email_destino, 'upn': upn}, alumno=alumno)
                 return True
             else:
-                logger.warning(f"send_mail retornó {result} para {alumno.email}")
-                log_to_db('WARNING', 'email_service', f'send_mail retornó {result} para {alumno.email}',
+                logger.warning(f"send_mail retornó {result} para {email_destino}")
+                log_to_db('WARNING', 'email_service', f'send_mail retornó {result} para {email_destino}',
                          alumno=alumno)
                 return False
 
         except Exception as e:
-            logger.error(f"Error enviando email a {alumno.email}: {e}")
+            logger.error(f"Error enviando email a {email_destino}: {e}")
             log_to_db('ERROR', 'email_service', f'Error enviando email a {alumno.email}',
                      detalles={'error': str(e)}, alumno=alumno)
             return False
@@ -216,19 +222,25 @@ Universidad Nacional de Río Cuarto
 """
 
         try:
-            logger.info(f"Enviando email de bienvenida a {alumno.email}")
+            # IMPORTANTE: Siempre enviar al email_personal
+            email_destino = alumno.email_personal or alumno.email_institucional
+            if not email_destino:
+                logger.error(f"Alumno {alumno.id} no tiene email personal ni institucional")
+                return False
+
+            logger.info(f"Enviando email de bienvenida a {email_destino} (email personal)")
 
             result = send_mail(
                 subject=subject,
                 message=message,
                 from_email=self.from_email,
-                recipient_list=[alumno.email],
+                recipient_list=[email_destino],
                 html_message=html_message,  # Agregar HTML
                 fail_silently=False
             )
 
             if result == 1:
-                logger.info(f"Email de bienvenida enviado a {alumno.email}")
+                logger.info(f"Email de bienvenida enviado a {email_destino}")
                 return True
             else:
                 return False
@@ -393,24 +405,30 @@ Universidad Nacional de Río Cuarto
 """
 
         try:
-            logger.info(f"Enviando confirmación de enrolamiento a {alumno.email}")
+            # IMPORTANTE: Siempre enviar al email_personal
+            email_destino = alumno.email_personal or alumno.email_institucional
+            if not email_destino:
+                logger.error(f"Alumno {alumno.id} no tiene email personal ni institucional")
+                return False
+
+            logger.info(f"Enviando confirmación de enrolamiento a {email_destino} (email personal)")
 
             result = send_mail(
                 subject=subject,
                 message=message,
                 from_email=self.from_email,
-                recipient_list=[alumno.email],
+                recipient_list=[email_destino],
                 fail_silently=False
             )
 
             if result == 1:
-                logger.info(f"Confirmación de enrolamiento enviada a {alumno.email}")
+                logger.info(f"Confirmación de enrolamiento enviada a {email_destino}")
                 return True
             else:
                 return False
 
         except Exception as e:
-            logger.error(f"Error enviando confirmación a {alumno.email}: {e}")
+            logger.error(f"Error enviando confirmación a {email_destino}: {e}")
             return False
 
     def send_status_change_email(self, alumno, old_status: str, new_status: str) -> bool:

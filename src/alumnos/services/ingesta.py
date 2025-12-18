@@ -327,6 +327,13 @@ def ingerir_desde_sial(
     Returns:
         (creados, actualizados, errores, [nuevos_ids] si retornar_nuevos=True)
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # LOG INICIO
+    logger.info(f"[Ingesta {tipo}] 🚀 Iniciando ingesta de {tipo}")
+    logger.info(f"[Ingesta {tipo}] Parámetros: n={n}, fecha={fecha}, desde={desde}, hasta={hasta}, enviar_email={enviar_email}")
+
     client = client or SIALClient()
     created = 0
     updated = 0
@@ -336,8 +343,15 @@ def ingerir_desde_sial(
 
     try:
         listas = client.fetch_listas(tipo, n=n, fecha=fecha, desde=desde, hasta=hasta, seed=seed)
+        logger.info(f"[Ingesta {tipo}] Se obtuvieron {len(listas)} registros de la API")
     except Exception as exc:
-        errors.append(f"Error al consultar listas: {exc}")
+        error_msg = f"Error al consultar listas: {exc}"
+        errors.append(error_msg)
+        logger.error(f"[Ingesta {tipo}] ❌ {error_msg}")
+
+        # LOG FINAL CON ERROR
+        logger.error(f"[Ingesta {tipo}] ❌ Finalizada con error. Creados: 0, Actualizados: 0, Errores: 1")
+
         if retornar_nuevos:
             return created, updated, errors, nuevos_ids
         return created, updated, errors
@@ -384,6 +398,17 @@ def ingerir_desde_sial(
 
         except Exception as exc:
             errors.append(f"{tipodoc} {nrodoc}: error al guardar ({exc})")
+
+    # LOG FINAL
+    if errors:
+        logger.warning(f"[Ingesta {tipo}] ⚠️ Finalizada con errores")
+        logger.warning(f"[Ingesta {tipo}] Resumen: Creados: {created}, Actualizados: {updated}, Errores: {len(errors)}")
+        logger.warning(f"[Ingesta {tipo}] Detalle de errores:")
+        for error in errors:
+            logger.warning(f"[Ingesta {tipo}]   - {error}")
+    else:
+        logger.info(f"[Ingesta {tipo}] ✅ Finalizada exitosamente")
+        logger.info(f"[Ingesta {tipo}] Resumen: Creados: {created}, Actualizados: {updated}, Errores: 0")
 
     if retornar_nuevos:
         return created, updated, errors, nuevos_ids

@@ -50,6 +50,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         'enviar_email_bienvenida_masivo',
         'borrar_solo_de_teams',
         'borrar_solo_de_moodle',
+        'eliminar_alumno_completo',
     ]
 
     def get_urls(self):
@@ -446,6 +447,28 @@ class AlumnoAdmin(admin.ModelAdmin):
                 f"⚠️ {skipped} alumnos omitidos (sin email o no procesados en Moodle)",
                 level=messages.WARNING
             )
+
+    @admin.action(description="🗑️💀 Eliminar alumno completamente (Teams + Moodle + BD)")
+    def eliminar_alumno_completo(self, request, queryset):
+        """
+        Elimina alumnos completamente: Teams + Moodle + Base de datos.
+        PRECAUCIÓN: Esta acción es irreversible.
+        """
+        from .tasks_delete import eliminar_alumno_completo as task_eliminar_completo
+
+        programadas = 0
+
+        for alumno in queryset:
+            # Programar tarea asíncrona
+            task_eliminar_completo.delay(alumno.id)
+            programadas += 1
+
+        self.message_user(
+            request,
+            f"🗑️💀 {programadas} tareas de eliminación completa programadas. "
+            f"Los alumnos serán eliminados de Teams, Moodle y la base de datos.",
+            level=messages.WARNING
+        )
 
     @admin.action(description="🔄 Generar contraseña y enviar correo")
     def resetear_y_enviar_email(self, request, queryset):
