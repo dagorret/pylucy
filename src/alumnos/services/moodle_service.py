@@ -84,13 +84,14 @@ class MoodleService:
 
     def create_user(self, alumno) -> Optional[Dict]:
         """
-        Crea un usuario en Moodle.
+        Busca usuario en Moodle y lo crea solo si no existe.
+        Si ya existe, retorna la información del usuario existente.
 
         Args:
             alumno: Instancia del modelo Alumno
 
         Returns:
-            Dict con información del usuario creado o None si falla
+            Dict con información del usuario (created=True si fue creado, False si ya existía)
         """
         from ..utils.config import get_moodle_email_type, get_moodle_auth_method
 
@@ -99,6 +100,29 @@ class MoodleService:
         if not username:
             logger.error(f"Alumno {alumno.id} no tiene email")
             return None
+
+        # 1. BUSCAR PRIMERO si el usuario ya existe
+        logger.info(f"Buscando usuario existente en Moodle: {username}")
+        existing_user = self.get_user_by_username(username)
+
+        if existing_user:
+            logger.info(f"Usuario ya existe en Moodle: {username} (ID: {existing_user['id']})")
+            log_to_db(
+                'INFO',
+                'moodle_service',
+                f'Usuario ya existe en Moodle: {username}',
+                detalles={'user_id': existing_user['id'], 'username': username},
+                alumno=alumno
+            )
+            return {
+                'id': existing_user['id'],
+                'username': username,
+                'created': False,  # No fue creado ahora
+                'already_exists': True
+            }
+
+        # 2. Si NO existe, crear usuario nuevo
+        logger.info(f"Usuario no existe en Moodle, creando: {username}")
 
         # Determinar qué email usar según configuración
         email_type = get_moodle_email_type()
@@ -190,9 +214,37 @@ class MoodleService:
 
         return None
 
+    def is_user_enrolled_in_course(self, user_id: int, course_id: int) -> bool:
+        """
+        Verifica si un usuario ya está enrollado en un curso.
+
+        Args:
+            user_id: ID del usuario en Moodle
+            course_id: ID del curso en Moodle
+
+        Returns:
+            True si ya está enrollado, False en caso contrario
+        """
+        params = {
+            'courseid': course_id,
+        }
+
+        result = self._call_webservice('core_enrol_get_enrolled_users', params)
+
+        if 'error' in result or not isinstance(result, list):
+            return False
+
+        # Buscar si el user_id está en la lista de enrollados
+        for enrolled_user in result:
+            if enrolled_user.get('id') == user_id:
+                return True
+
+        return False
+
     def enrol_user_in_course(self, user_id: int, course_shortname: str, alumno=None) -> bool:
         """
         Enrolla un usuario en un curso de Moodle.
+        Si ya está enrollado, no hace nada y retorna True.
 
         Args:
             user_id: ID del usuario en Moodle
@@ -200,7 +252,7 @@ class MoodleService:
             alumno: Instancia del modelo Alumno (opcional, para logs)
 
         Returns:
-            True si se enrolló exitosamente, False en caso contrario
+            True si se enrolló exitosamente o ya estaba enrollado, False en caso contrario
         """
         from ..utils.config import get_moodle_student_roleid
 
@@ -219,7 +271,20 @@ class MoodleService:
 
         course_id = course['id']
 
-        # Enrollar con rol de estudiante (usar configuración)
+        # Verificar si ya está enrollado
+        if self.is_user_enrolled_in_course(user_id, course_id):
+            logger.info(f"Usuario {user_id} ya está enrollado en {course_shortname}")
+            log_to_db(
+                'INFO',
+                'moodle_service',
+                f"Usuario ya enrollado en curso {course_shortname}",
+                detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
+                alumno=alumno
+            )
+            return True  # Ya está enrollado, éxito
+
+        # Si no está enrollado, enrollar ahora
+        logger.info(f"Enrollando usuario {user_id} en curso {course_shortname}")
         student_roleid = get_moodle_student_roleid()
         params = {
             'enrolments[0][roleid]': student_roleid,

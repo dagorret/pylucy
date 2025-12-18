@@ -126,17 +126,50 @@ class TeamsService:
 
     def create_user(self, alumno) -> Optional[Dict]:
         """
-        Crea usuario en Azure AD y asigna licencia de estudiante.
+        Busca usuario en Azure AD y lo crea solo si no existe.
+        Si ya existe, retorna la información del usuario existente.
 
         Args:
             alumno: Instancia del modelo Alumno
 
         Returns:
-            Dict con información del usuario creado o None si falla
+            Dict con información del usuario (created=True si fue creado, False si ya existía)
         """
         # Generar UPN con prefijo según ENVIRONMENT_MODE
         prefix = settings.ACCOUNT_PREFIX  # "test-a" o "a"
         upn = f"{prefix}{alumno.dni}@{self.domain}"
+
+        # 1. BUSCAR PRIMERO si el usuario ya existe
+        logger.info(f"Buscando usuario existente: {upn}")
+        existing_user = self.get_user(upn)
+
+        if existing_user:
+            logger.info(f"Usuario ya existe: {upn} (ID: {existing_user['id']})")
+            log_to_db(
+                'INFO',
+                'teams_service',
+                f'Usuario ya existe en Teams: {upn}',
+                detalles={'user_id': existing_user['id'], 'upn': upn},
+                alumno=alumno
+            )
+
+            # Actualizar UPN en BD si no lo tiene
+            if not alumno.email_institucional:
+                alumno.email_institucional = upn
+                alumno.save(update_fields=['email_institucional'])
+
+            # Retornar usuario existente
+            return {
+                'id': existing_user['id'],
+                'upn': upn,
+                'displayName': existing_user.get('displayName'),
+                'password': alumno.teams_password,  # Usar password guardada en BD
+                'created': False,  # No fue creado ahora
+                'already_exists': True
+            }
+
+        # 2. Si NO existe, crear usuario nuevo
+        logger.info(f"Usuario no existe, creando: {upn}")
 
         # Generar contraseña temporal
         password = self._generate_temp_password(alumno.dni)
