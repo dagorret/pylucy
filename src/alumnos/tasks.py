@@ -1015,15 +1015,18 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
 
         elif estado == 'aspirante':
             # ASPIRANTES: Teams + Email credenciales + Moodle + Email enrollamiento
-            # 1. Crear usuario en Teams
-            logger.info(f"[Workflow-Aspirante] Paso 1/4: Creando usuario Teams para {alumno}")
+            # 1. Crear/Buscar usuario en Teams
+            logger.info(f"[Workflow-Aspirante] Paso 1/4: Verificando/Creando usuario Teams para {alumno}")
             teams_result = teams_svc.create_user(alumno)
 
-            if teams_result and teams_result.get('created'):
+            if teams_result and (teams_result.get('created') or teams_result.get('already_exists')):
                 resultados['teams'] = True
                 alumno.teams_procesado = True
                 alumno.save(update_fields=['teams_procesado'])
-                logger.info(f"[Workflow-Aspirante] ✓ Teams creado: {teams_result.get('upn')}")
+                if teams_result.get('created'):
+                    logger.info(f"[Workflow-Aspirante] ✓ Teams creado: {teams_result.get('upn')}")
+                else:
+                    logger.info(f"[Workflow-Aspirante] ✓ Teams ya existe: {teams_result.get('upn')}")
             else:
                 error_msg = teams_result.get('error', 'Error desconocido') if teams_result else 'Error desconocido'
                 resultados['errores'].append(f"Teams: {error_msg}")
@@ -1098,13 +1101,17 @@ def procesar_alumno_nuevo_completo(self, alumno_id, estado):
             logger.info(f"[Workflow-Ingresante] Paso 1/3: Verificando/Creando usuario Teams")
             if not alumno.teams_procesado:
                 teams_result = teams_svc.create_user(alumno)
-                if teams_result and teams_result.get('created'):
+                if teams_result and (teams_result.get('created') or teams_result.get('already_exists')):
                     resultados['teams'] = True
                     alumno.teams_procesado = True
                     alumno.save(update_fields=['teams_procesado'])
-                    logger.info(f"[Workflow-Ingresante] ✓ Teams creado")
+                    if teams_result.get('created'):
+                        logger.info(f"[Workflow-Ingresante] ✓ Teams creado")
+                    else:
+                        logger.info(f"[Workflow-Ingresante] ✓ Teams ya existe")
                 else:
-                    logger.info(f"[Workflow-Ingresante] ⚠️ Teams ya existe o falló")
+                    logger.warning(f"[Workflow-Ingresante] ⚠️ Teams falló")
+                    resultados['errores'].append("Teams: Error al verificar/crear usuario")
             else:
                 resultados['teams'] = 'skipped'
                 logger.info(f"[Workflow-Ingresante] ↷ Teams ya procesado, saltando")
