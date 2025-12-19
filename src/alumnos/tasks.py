@@ -424,7 +424,11 @@ def ingestar_ingresantes(self):
 @shared_task
 def activar_servicios_alumno(alumno_id):
     """
-    Tarea asíncrona para activar Teams + Email para un alumno.
+    Tarea asíncrona para activar servicios según el estado del alumno.
+
+    🔧 LÓGICA POR ESTADO:
+    - PREINSCRIPTO: Solo envía email de bienvenida (sin Teams, sin Moodle)
+    - ASPIRANTE/INGRESANTE: Crea Teams + envía credenciales + enrolla Moodle
 
     Si Teams falla, envía email de bienvenida sin credenciales.
     Los errores se registran en logs y en la tabla Log.
@@ -440,8 +444,41 @@ def activar_servicios_alumno(alumno_id):
         logger.error(f"Alumno {alumno_id} no encontrado")
         return
 
-    teams_svc = TeamsService()
     email_svc = EmailService()
+
+    # 🔧 PREINSCRIPTOS: Solo enviar email de bienvenida
+    if alumno.estado_actual == 'preinscripto':
+        logger.info(f"[Activar Servicios] Alumno {alumno_id} es PREINSCRIPTO - Solo enviando email de bienvenida")
+
+        email_sent = email_svc.send_welcome_email(alumno)
+
+        if email_sent:
+            logger.info(f"✅ Email de bienvenida enviado a preinscripto {alumno.email_personal}")
+            Log.objects.create(
+                tipo=Log.TipoLog.SUCCESS,
+                modulo='activar_servicios',
+                mensaje=f"Email de bienvenida enviado a preinscripto",
+                detalles={'email': alumno.email_personal, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+            alumno.email_procesado = True
+            alumno.save(update_fields=['email_procesado'])
+        else:
+            logger.error(f"❌ Error enviando email de bienvenida a preinscripto {alumno.email_personal}")
+            Log.objects.create(
+                tipo=Log.TipoLog.ERROR,
+                modulo='activar_servicios',
+                mensaje=f"Error enviando email de bienvenida a preinscripto",
+                detalles={'email': alumno.email_personal, 'alumno_id': alumno_id},
+                alumno=alumno
+            )
+
+        return
+
+    # 🔧 ASPIRANTES/INGRESANTES: Activar Teams + Moodle + Email
+    logger.info(f"[Activar Servicios] Alumno {alumno_id} es {alumno.estado_actual.upper()} - Activando Teams + Moodle + Email")
+
+    teams_svc = TeamsService()
     from .services.moodle_service import MoodleService
     moodle_svc = MoodleService()
 
