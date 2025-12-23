@@ -343,13 +343,14 @@ class TeamsService:
             logger.error(f"Error de conexión obteniendo usuario {upn}: {e}")
             return None
 
-    def reset_password(self, upn: str, new_password: Optional[str] = None) -> Optional[str]:
+    def reset_password(self, upn: str, new_password: Optional[str] = None, alumno=None) -> Optional[str]:
         """
         Resetea la contraseña de un usuario.
 
         Args:
             upn: User Principal Name (email)
             new_password: Nueva contraseña (si es None, se genera una automática)
+            alumno: Instancia del modelo Alumno (opcional, para logging)
 
         Returns:
             Nueva contraseña o None si falla
@@ -377,10 +378,23 @@ class TeamsService:
             )
             response.raise_for_status()
             logger.info(f"Contraseña reseteada exitosamente para {upn}")
+            log_to_db('SUCCESS', 'teams_service', f'Contraseña reseteada exitosamente: {upn}', alumno=alumno)
             return new_password
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"Usuario no encontrado para resetear: {upn}")
+                log_to_db('WARNING', 'teams_service', f'Usuario no encontrado: {upn}', alumno=alumno)
+                raise ValueError(f"T-007: Usuario no encontrado en Teams")
+            else:
+                logger.error(f"Error HTTP reseteando contraseña {upn}: {e}")
+                log_to_db('ERROR', 'teams_service', f'Error HTTP reseteando contraseña {upn}',
+                         detalles={'error': str(e), 'status_code': e.response.status_code}, alumno=alumno)
+                raise ValueError(f"T-006: Error al resetear contraseña - {e}")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error reseteando contraseña de {upn}: {e}")
-            return None
+            logger.error(f"Error de conexión reseteando contraseña de {upn}: {e}")
+            log_to_db('ERROR', 'teams_service', f'Error de conexión reseteando contraseña {upn}',
+                     detalles={'error': str(e)}, alumno=alumno)
+            raise ValueError(f"T-009: Error de conexión - {e}")
 
     def list_test_users(self) -> List[Dict]:
         """

@@ -401,12 +401,94 @@ class MoodleService:
             'failed_courses': failed,
         }
 
-    def delete_user(self, username: str) -> bool:
+    def unenrol_user_from_course(self, user_id: int, course_shortname: str, alumno=None) -> bool:
+        """
+        Des-enrolla un usuario de un curso de Moodle.
+
+        Args:
+            user_id: ID del usuario en Moodle
+            course_shortname: Shortname del curso en Moodle
+            alumno: Instancia del modelo Alumno (opcional, para logs)
+
+        Returns:
+            True si se des-enrolló exitosamente o no estaba enrollado, False en caso contrario
+        """
+        # Primero obtener el course_id del shortname
+        course = self.get_course_by_shortname(course_shortname)
+        if not course:
+            logger.error(f"Curso no encontrado en Moodle: {course_shortname}")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Curso no encontrado en Moodle: {course_shortname}",
+                detalles={'shortname': course_shortname},
+                alumno=alumno
+            )
+            raise ValueError(f"M-005: Curso no encontrado - {course_shortname}")
+
+        course_id = course['id']
+
+        # Verificar si está enrollado
+        if not self.is_user_enrolled_in_course(user_id, course_id):
+            logger.info(f"Usuario {user_id} no está enrollado en {course_shortname}")
+            log_to_db(
+                'INFO',
+                'moodle_service',
+                f"Usuario no estaba enrollado en curso {course_shortname}",
+                detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
+                alumno=alumno
+            )
+            return True  # No estaba enrollado, éxito
+
+        # Si está enrollado, des-enrollar ahora
+        logger.info(f"Des-enrollando usuario {user_id} de curso {course_shortname}")
+        params = {
+            'enrolments[0][userid]': user_id,
+            'enrolments[0][courseid]': course_id,
+        }
+
+        result = self._call_webservice('enrol_manual_unenrol_users', params)
+
+        if result is None:
+            logger.error(f"Error des-enrollando usuario {user_id} del curso {course_shortname}: No response from Moodle")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Error des-enrollando de curso {course_shortname}: No response from Moodle",
+                detalles={'user_id': user_id, 'course_id': course_id},
+                alumno=alumno
+            )
+            raise ValueError(f"M-010: Error de conexión con Moodle")
+
+        if 'error' in result:
+            logger.error(f"Error des-enrollando usuario {user_id} del curso {course_shortname}: {result['error']}")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Error des-enrollando de curso {course_shortname}",
+                detalles={'user_id': user_id, 'course_id': course_id, 'error': result},
+                alumno=alumno
+            )
+            raise ValueError(f"M-006: Error al des-enrollar del curso - {result['error']}")
+
+        # Si no hay error, el des-enrollamiento fue exitoso
+        logger.info(f"Usuario {user_id} des-enrollado del curso {course_shortname} (ID: {course_id})")
+        log_to_db(
+            'SUCCESS',
+            'moodle_service',
+            f"Usuario des-enrollado exitosamente de {course_shortname}",
+            detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
+            alumno=alumno
+        )
+        return True
+
+    def delete_user(self, username: str, alumno=None) -> bool:
         """
         Elimina un usuario de Moodle.
 
         Args:
             username: Username del usuario a eliminar
+            alumno: Instancia del modelo Alumno (opcional, para logging)
 
         Returns:
             True si se eliminó exitosamente, False en caso contrario
@@ -415,7 +497,8 @@ class MoodleService:
         user = self.get_user_by_username(username)
         if not user:
             logger.warning(f"Usuario {username} no encontrado en Moodle, no se puede eliminar")
-            return False
+            log_to_db('WARNING', 'moodle_service', f'Usuario no encontrado: {username}', alumno=alumno)
+            raise ValueError(f"M-007: Usuario ya enrollado en curso")  # Reutilizando código existente
 
         user_id = user['id']
 
@@ -428,7 +511,10 @@ class MoodleService:
 
         if 'error' in result:
             logger.error(f"Error eliminando usuario {username} de Moodle: {result['error']}")
-            return False
+            log_to_db('ERROR', 'moodle_service', f'Error eliminando usuario {username}',
+                     detalles={'error': result}, alumno=alumno)
+            raise ValueError(f"M-004: Error al eliminar usuario en Moodle - {result['error']}")
 
         logger.info(f"Usuario {username} (ID: {user_id}) eliminado de Moodle")
+        log_to_db('SUCCESS', 'moodle_service', f'Usuario eliminado exitosamente: {username}', alumno=alumno)
         return True
