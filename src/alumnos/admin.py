@@ -70,30 +70,19 @@ class AlumnoAdmin(admin.ModelAdmin):
     )
     ordering = ("apellido", "nombre")
     actions = [
-        # ===== ACCIONES ATÓMICAS (SÍNCRONAS - SIN COLA) =====
+        # ===== ACCIONES ATÓMICAS (SÍNCRONAS) =====
+        'enviar_email_bienvenida_masivo',
         'activar_teams_con_email_sync',
         'activar_teams_sin_email_sync',
         'resetear_password_teams_con_email_sync',
         'resetear_password_teams_sin_email_sync',
+        'borrar_teams_sync',
         'enrollar_moodle_con_email_sync',
         'enrollar_moodle_sin_email_sync',
         'desenrollar_moodle_con_email_sync',
         'desenrollar_moodle_sin_email_sync',
         'activar_teams_y_moodle_con_email_sync',
         'activar_teams_y_moodle_sin_email_sync',
-        'enviar_email_bienvenida_masivo',
-        'borrar_teams_sync',
-
-        # ===== ACCIONES ASÍNCRONAS (CON COLA CELERY) =====
-        'activar_teams_email',
-        'resetear_y_enviar_email',
-        'crear_usuario_teams',
-        'resetear_password_teams',
-        'enrollar_moodle_con_email',
-        'enrollar_moodle_sin_email',
-        'borrar_solo_de_teams',
-        'borrar_solo_de_moodle',
-        'eliminar_alumno_completo',
     ]
 
     def get_urls(self):

@@ -62,6 +62,10 @@ class MoodleService:
 
         try:
             logger.info(f"Llamando a Moodle: {wsfunction}")
+            # Log parámetros enviados (enmascarando password y token)
+            debug_data = {k: '***' if any(x in k.lower() for x in ['password', 'token']) else v for k, v in data.items()}
+            logger.info(f"Datos enviados: {debug_data}")
+
             response = requests.post(url, data=data, timeout=30)
             response.raise_for_status()
             result = response.json()
@@ -98,8 +102,9 @@ class MoodleService:
         # Preparar datos del usuario
         username = alumno.email_institucional or alumno.email_personal
         if not username:
-            logger.error(f"Alumno {alumno.id} no tiene email")
-            return None
+            error_msg = f"Alumno {alumno.id} no tiene email"
+            logger.error(error_msg)
+            raise ValueError(f"M-001: {error_msg}")
 
         # 1. BUSCAR PRIMERO si el usuario ya existe
         logger.info(f"Buscando usuario existente en Moodle: {username}")
@@ -132,20 +137,48 @@ class MoodleService:
         # Determinar método de autenticación según configuración
         auth_method = get_moodle_auth_method()
 
+        # Validar campos requeridos
+        if not username or not email_to_use:
+            raise ValueError("M-004: Username y email son requeridos")
+        if not alumno.nombre or not alumno.apellido:
+            raise ValueError("M-004: Nombre y apellido son requeridos")
+
+        # Parámetros básicos según documentación Moodle
         user_data = {
             'users[0][username]': username,
-            'users[0][password]': alumno.teams_password or 'ChangeMe123!',
-            'users[0][firstname]': alumno.nombre,
-            'users[0][lastname]': alumno.apellido,
+            'users[0][firstname]': str(alumno.nombre).strip(),
+            'users[0][lastname]': str(alumno.apellido).strip(),
             'users[0][email]': email_to_use,
             'users[0][auth]': auth_method,
+            'users[0][lang]': 'es',  # Idioma español
         }
+
+        # Agregar idnumber solo si existe el DNI
+        if alumno.dni:
+            user_data['users[0][idnumber]'] = str(alumno.dni).strip()
+
+        # Password: requerido por API aunque con oidc no se use para login
+        if auth_method == 'manual':
+            user_data['users[0][password]'] = alumno.teams_password or 'ChangeMe123!'
+        else:
+            # Con oidc, Moodle puede exigir password según políticas
+            user_data['users[0][password]'] = 'TempPass-2025!'
+
+        # Log datos enviados (sin password)
+        logger.info(f"Creando usuario en Moodle con datos: username={username}, firstname={alumno.nombre}, lastname={alumno.apellido}, email={email_to_use}, auth={auth_method}")
+
+        # Log TODOS los parámetros enviados (enmascarando password)
+        debug_data = {k: '***' if 'password' in k.lower() else v for k, v in user_data.items()}
+        logger.info(f"Parámetros completos enviados a Moodle: {debug_data}")
 
         result = self._call_webservice('core_user_create_users', user_data)
 
         if 'error' in result:
             error_msg = result['error']
             errorcode = result.get('errorcode', '')
+
+            # Log completo de la respuesta para debugging
+            logger.error(f"Respuesta completa de Moodle: {result}")
 
             # Si el usuario ya existe, intentar buscarlo
             if 'already exists' in error_msg.lower() or errorcode == 'invalidusername':
@@ -167,7 +200,7 @@ class MoodleService:
                 detalles={'username': username, 'error': result},
                 alumno=alumno
             )
-            return None
+            raise ValueError(f"M-004: Error al crear usuario en Moodle - {error_msg}")
 
         if isinstance(result, list) and len(result) > 0:
             user_id = result[0].get('id')
@@ -185,12 +218,20 @@ class MoodleService:
                 'created': True
             }
 
-        logger.warning(f"Respuesta inesperada al crear usuario Moodle: {result}")
-        return None
+        error_msg = f"Respuesta inesperada al crear usuario Moodle: {result}"
+        logger.error(error_msg)
+        log_to_db(
+            'ERROR',
+            'moodle_service',
+            error_msg,
+            detalles={'username': username, 'result': result},
+            alumno=alumno
+        )
+        raise ValueError(f"M-004: {error_msg}")
 
     def get_user_by_username(self, username: str) -> Optional[Dict]:
         """
-        Busca un usuario en Moodle por username.
+        Busca un usuario en Moodle por username usando core_user_get_users_by_field.
 
         Args:
             username: Username del usuario
@@ -199,18 +240,19 @@ class MoodleService:
             Dict con información del usuario o None si no existe
         """
         params = {
-            'criteria[0][key]': 'username',
-            'criteria[0][value]': username,
+            'field': 'username',
+            'values[0]': username,
         }
 
-        result = self._call_webservice('core_user_get_users', params)
+        result = self._call_webservice('core_user_get_users_by_field', params)
 
         if 'error' in result:
             logger.error(f"Error buscando usuario {username}: {result['error']}")
             return None
 
-        if isinstance(result, dict) and 'users' in result and len(result['users']) > 0:
-            return result['users'][0]
+        # core_user_get_users_by_field retorna array directamente
+        if isinstance(result, list) and len(result) > 0:
+            return result[0]
 
         return None
 
@@ -379,7 +421,9 @@ class MoodleService:
             logger.info(f"Creando usuario en Moodle: {username}")
             created_user = self.create_user(alumno)
             if not created_user:
-                return {'success': False, 'error': 'Error al crear usuario'}
+                error_msg = f"Error al crear usuario {username} en Moodle"
+                logger.error(error_msg)
+                raise ValueError(f"M-004: {error_msg}")
             user_id = created_user['id']
 
         # 2. Enrollar en cursos
@@ -403,8 +447,8 @@ class MoodleService:
 
     def enroll_user_in_courses(self, alumno) -> dict:
         """
-        Enrolla un alumno en los cursos configurados según su estado.
-        Lee los cursos desde Configuracion.moodle_courses_config.
+        Enrolla un alumno en los cursos que le corresponden según su carrera, modalidad y comisión.
+        Filtra cursos desde la tabla cursos_cursoingreso según carreras_data del alumno.
 
         Args:
             alumno: Instancia del modelo Alumno
@@ -412,22 +456,89 @@ class MoodleService:
         Returns:
             Dict con resultado del enrollamiento
         """
-        from ..models import Configuracion
+        from django.db import connection
 
-        # Obtener cursos según estado del alumno
-        config = Configuracion.load()
-        courses_config = config.moodle_courses_config or {}
-        courses = courses_config.get(alumno.estado_actual, [])
-
-        if not courses:
-            logger.warning(f"No hay cursos configurados para estado: {alumno.estado_actual}")
+        # Verificar que el alumno tenga carreras_data
+        if not alumno.carreras_data or not isinstance(alumno.carreras_data, list):
+            logger.warning(f"Alumno {alumno.id} no tiene carreras_data")
             return {
                 'success': False,
-                'error': f'No hay cursos configurados para {alumno.estado_actual}'
+                'error': 'Alumno no tiene información de carrera/modalidad/comisión'
             }
 
-        # Usar el método existente enrol_user
-        result = self.enrol_user(alumno, courses)
+        # Extraer datos del alumno (tomamos la primera carrera)
+        carrera_data = alumno.carreras_data[0]
+        nombre_carrera = carrera_data.get('nombre_carrera', '')
+        modalidad_codigo = carrera_data.get('modalidad', '')
+        comisiones_alumno = [c.get('nombre_comision', '') for c in carrera_data.get('comisiones', [])]
+
+        # Mapeo de nombre de carrera a código
+        carrera_map = {
+            'CONTADOR PÚBLICO': 'CP',
+            'LICENCIATURA EN ECONOMÍA': 'LE',
+            'LICENCIATURA EN ADMINISTRACIÓN': 'LA',
+            'TECNICATURA EN GESTIÓN ADMINISTRATIVA Y CONTABLE': 'TGA',
+            'TECNICATURA EN GESTIÓN DE EMPRESAS': 'TGE',
+        }
+        codigo_carrera = carrera_map.get(nombre_carrera.upper(), None)
+
+        # Mapeo de modalidad
+        modalidad_map = {'1': 'PRES', '2': 'DIST'}
+        modalidad = modalidad_map.get(modalidad_codigo, 'PRES')
+
+        if not codigo_carrera:
+            logger.error(f"No se pudo mapear carrera: {nombre_carrera}")
+            return {
+                'success': False,
+                'error': f'Carrera no reconocida: {nombre_carrera}'
+            }
+
+        logger.info(f"Filtrando cursos para: Carrera={codigo_carrera}, Modalidad={modalidad}, Comisiones={comisiones_alumno}")
+
+        # Consultar todos los cursos activos y filtrar en Python
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT curso_moodle, carreras, modalidades, comisiones
+                FROM cursos_cursoingreso
+                WHERE activo = true
+                ORDER BY curso_moodle
+            """)
+            all_courses = cursor.fetchall()
+
+        # Filtrar cursos que correspondan al alumno
+        import json
+        cursos_filtrados = []
+        for curso_moodle, carreras_json, modalidades_json, comisiones_json in all_courses:
+            carreras = json.loads(carreras_json) if isinstance(carreras_json, str) else carreras_json
+            modalidades = json.loads(modalidades_json) if isinstance(modalidades_json, str) else modalidades_json
+            comisiones = json.loads(comisiones_json) if isinstance(comisiones_json, str) else comisiones_json
+
+            # Verificar si la carrera del alumno está en el curso
+            if codigo_carrera not in carreras:
+                continue
+
+            # Verificar si la modalidad del alumno está en el curso
+            if modalidad not in modalidades:
+                continue
+
+            # Verificar si alguna comisión del alumno está en el curso (o si el curso acepta todas las comisiones)
+            comisiones_match = any(com in comisiones for com in comisiones_alumno)
+            todas_comisiones = len(comisiones) > 6  # Si tiene muchas comisiones, probablemente acepta todas
+
+            if comisiones_match or todas_comisiones:
+                cursos_filtrados.append(curso_moodle)
+
+        if not cursos_filtrados:
+            logger.warning(f"No se encontraron cursos para {codigo_carrera}/{modalidad}/{comisiones_alumno}")
+            return {
+                'success': False,
+                'error': 'No hay cursos que correspondan a la carrera/modalidad/comisión del alumno'
+            }
+
+        logger.info(f"Cursos filtrados para enrollment: {cursos_filtrados}")
+
+        # Enrollar en los cursos filtrados
+        result = self.enrol_user(alumno, cursos_filtrados)
         return result
 
     def unenrol_user_from_course(self, user_id: int, course_shortname: str, alumno=None) -> bool:
