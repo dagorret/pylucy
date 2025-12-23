@@ -11,7 +11,7 @@ import json
 
 # Setup Django environment
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pylucy.settings')
 django.setup()
 
 from alumnos.models import Configuracion
