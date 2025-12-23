@@ -446,6 +446,13 @@ class Configuracion(models.Model):
         help_text="Usar TLS para conexión SMTP. Si es NULL, usa EMAIL_USE_TLS de entorno"
     )
 
+    # Configuración de cursos Moodle
+    moodle_courses_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Configuración de cursos Moodle por estado de alumno. Formato: {"preinscripto": ["curso1"], "aspirante": ["I1", "I2"], "ingresante": ["curso3"]}'
+    )
+
     # Metadatos
     actualizado_en = models.DateTimeField(auto_now=True)
     actualizado_por = models.CharField(max_length=150, blank=True)

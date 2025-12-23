@@ -2856,8 +2856,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'moodle_email_type',
                 'moodle_student_roleid',
                 'moodle_auth_method',
+                'moodle_courses_config',
             ),
-            'description': 'Credenciales de Moodle. Auth method: oauth2 (Microsoft) o manual.',
+            'description': 'Credenciales de Moodle. Auth method: oauth2 (Microsoft) o manual. Courses config: JSON con cursos por estado de alumno.',
             'classes': ('collapse',)
         }),
         ('📧 Configuración de Email SMTP', {

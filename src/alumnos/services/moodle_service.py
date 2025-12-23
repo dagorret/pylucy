@@ -401,6 +401,35 @@ class MoodleService:
             'failed_courses': failed,
         }
 
+    def enroll_user_in_courses(self, alumno) -> dict:
+        """
+        Enrolla un alumno en los cursos configurados según su estado.
+        Lee los cursos desde Configuracion.moodle_courses_config.
+
+        Args:
+            alumno: Instancia del modelo Alumno
+
+        Returns:
+            Dict con resultado del enrollamiento
+        """
+        from ..models import Configuracion
+
+        # Obtener cursos según estado del alumno
+        config = Configuracion.load()
+        courses_config = config.moodle_courses_config or {}
+        courses = courses_config.get(alumno.estado_actual, [])
+
+        if not courses:
+            logger.warning(f"No hay cursos configurados para estado: {alumno.estado_actual}")
+            return {
+                'success': False,
+                'error': f'No hay cursos configurados para {alumno.estado_actual}'
+            }
+
+        # Usar el método existente enrol_user
+        result = self.enrol_user(alumno, courses)
+        return result
+
     def unenrol_user_from_course(self, user_id: int, course_shortname: str, alumno=None) -> bool:
         """
         Des-enrolla un usuario de un curso de Moodle.
