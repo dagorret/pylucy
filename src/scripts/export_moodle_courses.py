@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Script para exportar cursos de Moodle a JSON.
-Uso:
+Uso dentro del contenedor:
     python scripts/export_moodle_courses.py > cursos_moodle.json
 """
 import sys
@@ -10,7 +10,7 @@ import django
 import json
 
 # Setup Django environment
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 

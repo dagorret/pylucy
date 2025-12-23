@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 """
 Script para exportar cursos configurados en PyLucy a JSON.
-Uso:
+Uso dentro del contenedor:
     python scripts/export_pylucy_courses.py
-
-O dentro del contenedor:
-    docker compose -f docker-compose.dev.yml exec web python scripts/export_pylucy_courses.py
 """
 import sys
 import os
@@ -13,7 +10,7 @@ import django
 import json
 
 # Setup Django environment
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
