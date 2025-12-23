@@ -79,10 +79,17 @@ class TeamsService:
             logger.info("Token OAuth2 obtenido exitosamente")
             log_to_db('SUCCESS', 'teams_service', 'Token OAuth2 obtenido exitosamente')
             return self._token
+        except requests.exceptions.HTTPError as e:
+            error_detail = f"{e}"
+            if e.response.status_code == 400:
+                error_detail = "Credenciales inválidas (tenant_id, client_id o client_secret incorrectos)"
+            logger.error(f"Error obteniendo token OAuth2: {error_detail}")
+            log_to_db('ERROR', 'teams_service', f'Error obteniendo token OAuth2: {error_detail}')
+            raise ValueError(f"T-002: {error_detail}") from e
         except requests.exceptions.RequestException as e:
             logger.error(f"Error obteniendo token OAuth2: {e}")
             log_to_db('ERROR', 'teams_service', f'Error obteniendo token OAuth2: {e}')
-            raise
+            raise ValueError(f"T-002: Error de conexión - {e}") from e
 
     def _get_headers(self) -> Dict[str, str]:
         """Retorna headers con autenticación para Graph API"""
@@ -240,7 +247,13 @@ class TeamsService:
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400:
-                error_msg = e.response.json().get('error', {}).get('message', '')
+                # Manejar caso donde 'error' puede ser string o dict
+                error_data = e.response.json().get('error', {})
+                if isinstance(error_data, dict):
+                    error_msg = error_data.get('message', '')
+                else:
+                    error_msg = str(error_data)
+
                 if 'already exists' in error_msg.lower():
                     logger.warning(f"Usuario {upn} ya existe")
                     log_to_db('WARNING', 'teams_service', f'Usuario {upn} ya existe', alumno=alumno)
@@ -398,13 +411,14 @@ class TeamsService:
             logger.error(f"Error listando usuarios test-*: {e}")
             return []
 
-    def delete_user(self, upn: str) -> bool:
+    def delete_user(self, upn: str, alumno=None) -> bool:
         """
         Elimina un usuario de Azure AD.
         PRECAUCIÓN: Solo usar para cuentas test-*
 
         Args:
             upn: User Principal Name (email)
+            alumno: Instancia del modelo Alumno (opcional, para logging)
 
         Returns:
             True si se eliminó exitosamente, False en caso contrario
@@ -412,7 +426,8 @@ class TeamsService:
         # Verificación de seguridad: solo permitir eliminar cuentas test-*
         if not upn.startswith('test-'):
             logger.error(f"SEGURIDAD: Intento de eliminar cuenta no-test: {upn}")
-            return False
+            log_to_db('ERROR', 'teams_service', f'SEGURIDAD: Intento de eliminar cuenta no-test: {upn}', alumno=alumno)
+            raise ValueError(f"T-999: Por seguridad, solo se pueden eliminar cuentas test-*")
 
         url = f"{self.BASE_URL}/users/{upn}"
 
@@ -421,10 +436,23 @@ class TeamsService:
             response = requests.delete(url, headers=self._get_headers(), timeout=10)
             response.raise_for_status()
             logger.info(f"Usuario eliminado exitosamente: {upn}")
+            log_to_db('SUCCESS', 'teams_service', f'Usuario eliminado exitosamente: {upn}', alumno=alumno)
             return True
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"Usuario no encontrado para eliminar: {upn}")
+                log_to_db('WARNING', 'teams_service', f'Usuario no encontrado: {upn}', alumno=alumno)
+                raise ValueError(f"T-007: Usuario no encontrado en Teams")
+            else:
+                logger.error(f"Error HTTP eliminando usuario {upn}: {e}")
+                log_to_db('ERROR', 'teams_service', f'Error HTTP eliminando usuario {upn}',
+                         detalles={'error': str(e), 'status_code': e.response.status_code}, alumno=alumno)
+                raise ValueError(f"T-003: Error al eliminar usuario en Teams - {e}")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error eliminando usuario {upn}: {e}")
-            return False
+            logger.error(f"Error de conexión eliminando usuario {upn}: {e}")
+            log_to_db('ERROR', 'teams_service', f'Error de conexión eliminando usuario {upn}',
+                     detalles={'error': str(e)}, alumno=alumno)
+            raise ValueError(f"T-009: Error de conexión - {e}")
 
     @staticmethod
     def _generate_temp_password(dni: str) -> str:

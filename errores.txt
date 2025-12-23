@@ -1,0 +1,118 @@
+1 # Códigos de Error - PyLucy
+ 2 
+3 ## Códigos de Error para Tareas
+ 4 
+5 ### Teams (T-xxx)
+ 6 
+7 | Código | Descripción | Solución |
+ 8 |--------|-------------|----------|
+ 9 | T-001 | No tiene email configurado | Asignar email_personal o email_institucional al alumno |
+ 10 | T-002 | Error al obtener token OAuth2 | Verificar credenciales en Configuración (tenant_id, client_id, client_secret) |
+ 11 | T-003 | Error al crear usuario en Azure AD | Revisar permisos de la aplicación en Azure Portal |
+ 12 | T-004 | Usuario ya existe en Teams | Normal - el usuario ya fue creado anteriormente |
+ 13 | T-005 | Error al asignar licencia | Verificar que haya licencias disponibles en el tenant |
+ 14 | T-006 | Error al resetear contraseña | Verificar permisos de la aplicación |
+ 15 | T-007 | Usuario no encontrado en Teams | El usuario no existe, debe crearse primero |
+ 16 | T-008 | Rate limit excedido | Esperar y reintentar. Ajustar rate_limit_teams en Configuración |
+ 17 | T-009 | Timeout de conexión | Problemas de red o servicio de Microsoft caído |
+ 18 
+19 ### Moodle (M-xxx)
+ 20 
+21 | Código | Descripción | Solución |
+ 22 |--------|-------------|----------|
+ 23 | M-001 | No tiene email institucional | Crear usuario en Teams primero para generar email institucional |
+ 24 | M-002 | Error de autenticación con Moodle | Verificar moodle_wstoken en Configuración |
+ 25 | M-003 | Usuario ya existe en Moodle | Normal - el usuario ya fue creado anteriormente |
+ 26 | M-004 | Error al crear usuario en Moodle | Revisar permisos del webservice token |
+ 27 | M-005 | Curso no encontrado | Verificar que el curso existe y el ID es correcto |
+ 28 | M-006 | Error al enrollar en curso | Revisar permisos del webservice token |
+ 29 | M-007 | Usuario ya enrollado en curso | Normal - el usuario ya está enrollado |
+ 30 | M-008 | Rol de estudiante no encontrado | Verificar moodle_student_roleid en Configuración |
+ 31 | M-009 | Rate limit excedido | Esperar y reintentar. Ajustar rate_limit_moodle en Configuración |
+ 32 | M-010 | Timeout de conexión | Problemas de red o servicio de Moodle caído |
+ 33 | M-011 | Método de autenticación inválido | Configurar moodle_auth_method (manual/oauth2/oidc) |
+ 34 
+35 ### Email (E-xxx)
+ 36 
+37 | Código | Descripción | Solución |
+ 38 |--------|-------------|----------|
+ 39 | E-001 | No tiene email personal | Asignar email_personal al alumno |
+ 40 | E-002 | Error al enviar email | Verificar configuración SMTP (email_host, email_port) |
+ 41 | E-003 | Plantilla de email no configurada | Configurar plantillas en Configuración |
+ 42 | E-004 | Error en variables de plantilla | Verificar que la plantilla use {nombre}, {apellido}, etc. |
+ 43 | E-005 | Servidor SMTP rechazó el email | Verificar credenciales SMTP |
+ 44 | E-006 | Email bounce/rebote | Email del alumno es inválido o no existe |
+ 45 | E-007 | Timeout de conexión SMTP | Problemas de red o servidor SMTP caído |
+ 46 
+47 ### SIAL/UTI (U-xxx)
+ 48 
+49 | Código | Descripción | Solución |
+ 50 |--------|-------------|----------|
+ 51 | U-001 | Error de autenticación | Verificar sial_basic_user y sial_basic_pass |
+ 52 | U-002 | API no responde | Verificar sial_base_url y conectividad |
+ 53 | U-003 | Datos inválidos en respuesta | Contactar soporte UTI |
+ 54 | U-004 | Alumno no encontrado en SIAL | El alumno no existe en el sistema UTI |
+ 55 | U-005 | Rate limit excedido | Esperar y reintentar. Ajustar rate_limit_uti en Configuración |
+ 56 | U-006 | Timeout de conexión | Problemas de red o servicio UTI caído |
+ 57 
+58 ### General (G-xxx)
+ 59 
+60 | Código | Descripción | Solución |
+ 61 |--------|-------------|----------|
+ 62 | G-001 | Error desconocido | Revisar logs detallados en la tabla Log |
+ 63 | G-002 | Excepción no capturada | Reportar bug con el stacktrace |
+ 64 | G-003 | Validación de datos falló | Verificar que el alumno tenga todos los datos requeridos |
+ 65 | G-004 | Operación cancelada por el usuario | Normal - el usuario canceló la operación |
+ 66 | G-005 | Configuración incompleta | Completar datos en Configuración del Sistema |
+ 67 | G-006 | Base de datos no disponible | Verificar conexión a PostgreSQL |
+ 68 
+69 ## Estados de Tareas
+ 70 
+71 | Estado | Descripción |
+ 72 |--------|-------------|
+ 73 | `pending` | Tarea programada pero no iniciada |
+ 74 | `running` | Tarea en ejecución |
+ 75 | `completed` | Tarea completada exitosamente |
+ 76 | `failed` | Tarea falló con error |
+ 77 
+78 ## Formato de Logs
+ 79 
+80 ### Log de Inicio
+ 81 ```json
+ 82 {
+ 83 "tipo": "INFO",
+ 84 "modulo": "admin_action",
+ 85 "mensaje": "Iniciando procesamiento: [nombre_accion]",
+ 86 "alumno": "Apellido, Nombre (DNI)",
+ 87 "usuario": "admin"
+ 88 }
+ 89 ```
+ 90 
+91 ### Log de Fin (Éxito)
+ 92 ```json
+ 93 {
+ 94 "tipo": "SUCCESS",
+ 95 "modulo": "admin_action",
+ 96 "mensaje": "Procesamiento completado: [nombre_accion]",
+ 97 "alumno": "Apellido, Nombre (DNI)",
+ 98 "detalles": {
+ 99 "duracion_segundos": 2.5,
+ 100 "resultado": "Usuario creado exitosamente"
+ 101 }
+ 102 }
+ 103 ```
+ 104 
+105 ### Log de Fin (Error)
+ 106 ```json
+ 107 {
+ 108 "tipo": "ERROR",
+ 109 "modulo": "admin_action",
+ 110 "mensaje": "Error en procesamiento: [nombre_accion]",
+ 111 "alumno": "Apellido, Nombre (DNI)",
+ 112 "detalles": {
+ 113 "codigo_error": "T-003",
+ 114 "error": "Error al crear usuario en Azure AD",
+ 115 "duracion_segundos": 1.2
+ 116 }
+ 117 }
+ 118 ```

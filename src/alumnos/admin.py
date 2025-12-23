@@ -4,11 +4,40 @@ from django.shortcuts import redirect
 from django.urls import path
 from django.utils import timezone
 from datetime import timedelta
+import logging
 
 from .models import Alumno, Log, Configuracion, Tarea
 from .services import ingerir_desde_sial  # función en services.py (archivo)
 from .services.teams_service import TeamsService  # clase en services/ (directorio)
 from .services.email_service import EmailService  # clase en services/ (directorio)
+
+logger = logging.getLogger(__name__)
+
+
+def extraer_codigo_error(excepcion_msg, codigo_default='G-001'):
+    """
+    Extrae el código de error si viene en el formato "T-XXX: mensaje".
+    Retorna tupla (codigo_error, mensaje_limpio)
+    """
+    error_msg = str(excepcion_msg)
+
+    # Lista de códigos válidos
+    codigos_validos = [
+        'T-001', 'T-002', 'T-003', 'T-004', 'T-005', 'T-006', 'T-007', 'T-008', 'T-009', 'T-999',
+        'M-001', 'M-002', 'M-003', 'M-004', 'M-005', 'M-006', 'M-007', 'M-008', 'M-009', 'M-010', 'M-011',
+        'E-001', 'E-002', 'E-003', 'E-004', 'E-005', 'E-006', 'E-007',
+        'U-001', 'U-002', 'U-003', 'U-004', 'U-005', 'U-006',
+        'G-001', 'G-002', 'G-003', 'G-004', 'G-005', 'G-006'
+    ]
+
+    # Verificar si el mensaje comienza con un código válido
+    if ':' in error_msg:
+        posible_codigo = error_msg.split(':')[0].strip()
+        if posible_codigo in codigos_validos:
+            mensaje_limpio = error_msg.split(':', 1)[1].strip()
+            return (posible_codigo, mensaje_limpio)
+
+    return (codigo_default, error_msg)
 
 
 @admin.register(Alumno)
@@ -41,13 +70,23 @@ class AlumnoAdmin(admin.ModelAdmin):
     )
     ordering = ("apellido", "nombre")
     actions = [
+        # ===== ACCIONES ATÓMICAS (SÍNCRONAS - SIN COLA) =====
+        'activar_teams_con_email_sync',
+        'activar_teams_sin_email_sync',
+        'enrollar_moodle_con_email_sync',
+        'enrollar_moodle_sin_email_sync',
+        'activar_teams_y_moodle_con_email_sync',
+        'activar_teams_y_moodle_sin_email_sync',
+        'enviar_email_bienvenida_masivo',
+        'borrar_teams_sync',
+
+        # ===== ACCIONES ASÍNCRONAS (CON COLA CELERY) =====
         'activar_teams_email',
         'resetear_y_enviar_email',
         'crear_usuario_teams',
         'resetear_password_teams',
         'enrollar_moodle_con_email',
         'enrollar_moodle_sin_email',
-        'enviar_email_bienvenida_masivo',
         'borrar_solo_de_teams',
         'borrar_solo_de_moodle',
         'eliminar_alumno_completo',
@@ -129,28 +168,8 @@ class AlumnoAdmin(admin.ModelAdmin):
             usuario=request.user.username if request.user.is_authenticated else None
         )
 
-        # Crear registro de tarea para tracking
-        tipo_tarea_map = {
-            'preinscriptos': Tarea.TipoTarea.INGESTA_PREINSCRIPTOS,
-            'aspirantes': Tarea.TipoTarea.INGESTA_ASPIRANTES,
-            'ingresantes': Tarea.TipoTarea.INGESTA_INGRESANTES,
-        }
-
-        Tarea.objects.create(
-            tipo=tipo_tarea_map.get(tipo, Tarea.TipoTarea.INGESTA_PREINSCRIPTOS),
-            estado=Tarea.EstadoTarea.PENDING,
-            celery_task_id=task.id,
-            usuario=request.user.username if request.user.is_authenticated else None,
-            detalles={
-                'tipo': tipo,
-                'n': n_int,
-                'seed': seed_int,
-                'desde': desde,
-                'hasta': hasta,
-                'enviar_email': enviar_email,
-                'origen': 'admin_manual'
-            }
-        )
+        # NOTA: La tarea asíncrona crea su propio registro en Tareas Asíncronas
+        # No lo creamos aquí para evitar duplicados (IntegrityError)
 
         messages.success(
             request,
@@ -158,6 +177,867 @@ class AlumnoAdmin(admin.ModelAdmin):
             f"Revisa la tabla de Tareas Asíncronas para ver el progreso (ID: {task.id[:8]}...)"
         )
         return redirect("..")
+
+    # =====================================================
+    # ACCIONES ATÓMICAS (SÍNCRONAS)
+    # =====================================================
+
+    @admin.action(description="⚡ Teams con email (ATÓMICO)")
+    def activar_teams_con_email_sync(self, request, queryset):
+        """
+        Crea usuario en Teams y envía email con credenciales.
+        Ejecución SÍNCRONA (sin cola).
+        """
+        from django.conf import settings
+        from .services.teams_service import TeamsService
+        from .services.email_service import EmailService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        teams_svc = TeamsService()
+        email_svc = EmailService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+            mensaje_error = None
+
+            # Log inicio
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Teams con email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            # Crear tarea
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.CREAR_USUARIO_TEAMS,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'activar_teams_con_email',
+                    'enviar_email': True
+                }
+            )
+
+            try:
+                # Validar email
+                if not alumno.email:
+                    codigo_error = 'T-001'
+                    raise ValueError("No tiene email configurado")
+
+                # Crear usuario en Teams
+                logger.info(f"Llamando teams_svc.create_user para alumno {alumno.id}")
+                result = teams_svc.create_user(alumno)
+                logger.info(f"Resultado de Teams: type={type(result)}, value={result}")
+
+                if not result:
+                    codigo_error = 'T-003'
+                    raise Exception("Error al crear usuario en Teams")
+
+                # Validar que el resultado tenga los campos necesarios
+                if not isinstance(result, dict):
+                    codigo_error = 'T-003'
+                    raise Exception(f"Respuesta inválida de Teams - no es dict: {type(result).__name__}, valor: {str(result)[:100]}")
+
+                if 'upn' not in result:
+                    codigo_error = 'T-003'
+                    raise Exception(f"Respuesta de Teams sin 'upn': {list(result.keys())}")
+
+                # Actualizar alumno
+                alumno.email_institucional = result.get('upn')
+                alumno.teams_password = result.get('password')
+                alumno.teams_procesado = True
+                alumno.teams_payload = result
+                alumno.save(update_fields=[
+                    'email_institucional', 'teams_password',
+                    'teams_procesado', 'teams_payload'
+                ])
+
+                # Enviar email solo si tenemos password
+                email_enviado = False
+                if result.get('password'):
+                    teams_data = {
+                        'upn': result.get('upn'),
+                        'password': result.get('password')
+                    }
+                    email_enviado = email_svc.send_credentials_email(alumno, teams_data)
+                    if email_enviado:
+                        alumno.email_procesado = True
+                        alumno.save(update_fields=['email_procesado'])
+                else:
+                    logger.warning(f"No se pudo enviar email a {alumno}: sin password en resultado de Teams")
+
+                # Actualizar tarea
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['upn'] = result['upn']
+                tarea.detalles['email_enviado'] = email_enviado
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log fin
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Teams con email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'upn': result['upn']
+                    }
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                # Actualizar tarea como fallida
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+
+                # Extraer código de error del mensaje si viene en formato "T-XXX: mensaje"
+                codigo_final, mensaje_limpio = extraer_codigo_error(e, codigo_error)
+
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = mensaje_limpio
+                tarea.detalles['codigo_error'] = codigo_final
+                tarea.detalles['error'] = mensaje_limpio
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log error
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Teams con email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_final,
+                        'error': mensaje_limpio,
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Teams: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="⚡ Teams sin email (ATÓMICO)")
+    def activar_teams_sin_email_sync(self, request, queryset):
+        """
+        Crea usuario en Teams SIN enviar email.
+        Ejecución SÍNCRONA (sin cola).
+        """
+        from django.conf import settings
+        from .services.teams_service import TeamsService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        teams_svc = TeamsService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+
+            # Log inicio
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Teams sin email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            # Crear tarea
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.CREAR_USUARIO_TEAMS,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'activar_teams_sin_email',
+                    'enviar_email': False
+                }
+            )
+
+            try:
+                # Crear usuario en Teams
+                result = teams_svc.create_user(alumno)
+
+                if not result:
+                    codigo_error = 'T-003'
+                    raise Exception("Error al crear usuario en Teams")
+
+                # Validar que el resultado tenga los campos necesarios
+                if not isinstance(result, dict) or 'upn' not in result:
+                    codigo_error = 'T-003'
+                    raise Exception(f"Respuesta inválida de Teams: {type(result)}")
+
+                # Actualizar alumno
+                alumno.email_institucional = result.get('upn')
+                alumno.teams_password = result.get('password')
+                alumno.teams_procesado = True
+                alumno.teams_payload = result
+                alumno.save(update_fields=[
+                    'email_institucional', 'teams_password',
+                    'teams_procesado', 'teams_payload'
+                ])
+
+                # Actualizar tarea
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['upn'] = result['upn']
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log fin
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Teams sin email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'upn': result['upn']
+                    }
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = str(e)
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Teams sin email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Teams: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="⚡ Moodle con email (ATÓMICO)")
+    def enrollar_moodle_con_email_sync(self, request, queryset):
+        """
+        Enrolla en Moodle y envía email de enrollamiento.
+        Ejecución SÍNCRONA (sin cola).
+        """
+        from .services.moodle_service import MoodleService
+        from .services.email_service import EmailService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        moodle_svc = MoodleService()
+        email_svc = EmailService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Moodle con email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'enrollar_moodle_con_email',
+                    'enviar_email': True
+                }
+            )
+
+            try:
+                if not alumno.email_institucional:
+                    codigo_error = 'M-001'
+                    raise ValueError("No tiene email institucional")
+
+                # Crear/buscar usuario en Moodle
+                result = moodle_svc.create_user(alumno)
+                if not result:
+                    codigo_error = 'M-004'
+                    raise Exception('Error al crear usuario en Moodle - Sin respuesta')
+
+                if isinstance(result, dict) and 'error' in result:
+                    codigo_error = 'M-004'
+                    error_msg = result.get('error') if isinstance(result, dict) else str(result)
+                    raise Exception(f'Error al crear usuario en Moodle: {error_msg}')
+
+                # Enrollar en cursos
+                enroll_result = moodle_svc.enroll_user_in_courses(alumno)
+                if not enroll_result:
+                    codigo_error = 'M-006'
+                    raise Exception('Error al enrollar en cursos - Sin respuesta')
+
+                if isinstance(enroll_result, dict) and 'error' in enroll_result:
+                    codigo_error = 'M-006'
+                    error_msg = enroll_result.get('error') if isinstance(enroll_result, dict) else str(enroll_result)
+                    raise Exception(f'Error al enrollar en cursos: {error_msg}')
+
+                # Actualizar alumno
+                alumno.moodle_procesado = True
+                alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+
+                # Enviar email
+                email_enviado = email_svc.send_enrollment_email(alumno)
+                if email_enviado:
+                    alumno.email_procesado = True
+                    alumno.save(update_fields=['email_procesado'])
+
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['email_enviado'] = email_enviado
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Moodle con email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={'duracion_segundos': round(duracion, 2)}
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = str(e)
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Moodle con email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Moodle: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="⚡ Moodle sin email (ATÓMICO)")
+    def enrollar_moodle_sin_email_sync(self, request, queryset):
+        """
+        Enrolla en Moodle SIN enviar email.
+        Ejecución SÍNCRONA (sin cola).
+        """
+        from .services.moodle_service import MoodleService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        moodle_svc = MoodleService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Moodle sin email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'enrollar_moodle_sin_email',
+                    'enviar_email': False
+                }
+            )
+
+            try:
+                if not alumno.email_institucional:
+                    codigo_error = 'M-001'
+                    raise ValueError("No tiene email institucional")
+
+                # Crear/buscar usuario en Moodle
+                result = moodle_svc.create_user(alumno)
+                if not result:
+                    codigo_error = 'M-004'
+                    raise Exception('Error al crear usuario en Moodle - Sin respuesta')
+
+                if isinstance(result, dict) and 'error' in result:
+                    codigo_error = 'M-004'
+                    error_msg = result.get('error') if isinstance(result, dict) else str(result)
+                    raise Exception(f'Error al crear usuario en Moodle: {error_msg}')
+
+                # Enrollar en cursos
+                enroll_result = moodle_svc.enroll_user_in_courses(alumno)
+                if not enroll_result:
+                    codigo_error = 'M-006'
+                    raise Exception('Error al enrollar en cursos - Sin respuesta')
+
+                if isinstance(enroll_result, dict) and 'error' in enroll_result:
+                    codigo_error = 'M-006'
+                    error_msg = enroll_result.get('error') if isinstance(enroll_result, dict) else str(enroll_result)
+                    raise Exception(f'Error al enrollar en cursos: {error_msg}')
+
+                # Actualizar alumno
+                alumno.moodle_procesado = True
+                alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Moodle sin email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={'duracion_segundos': round(duracion, 2)}
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = str(e)
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Moodle sin email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Moodle: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="⚡⚡ Teams + Moodle con email (ATÓMICO)")
+    def activar_teams_y_moodle_con_email_sync(self, request, queryset):
+        """
+        Crea usuario en Teams, enrolla en Moodle y envía emails.
+        Operación ATÓMICA.
+        """
+        from django.conf import settings
+        from .services.teams_service import TeamsService
+        from .services.moodle_service import MoodleService
+        from .services.email_service import EmailService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        teams_svc = TeamsService()
+        moodle_svc = MoodleService()
+        email_svc = EmailService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+            paso = ""
+
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Teams + Moodle con email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'activar_teams_y_moodle_con_email',
+                    'enviar_email': True
+                }
+            )
+
+            try:
+                if not alumno.email:
+                    codigo_error = 'T-001'
+                    raise ValueError("No tiene email configurado")
+
+                # PASO 1: Crear usuario en Teams
+                paso = "Teams"
+                teams_result = teams_svc.create_user(alumno)
+
+                if not teams_result:
+                    codigo_error = 'T-003'
+                    raise Exception("Error al crear usuario en Teams")
+
+                # Validar que el resultado tenga los campos necesarios
+                if not isinstance(teams_result, dict) or 'upn' not in teams_result:
+                    codigo_error = 'T-003'
+                    raise Exception(f"Respuesta inválida de Teams: {type(teams_result)}")
+
+                alumno.email_institucional = teams_result.get('upn')
+                alumno.teams_password = teams_result.get('password')
+                alumno.teams_procesado = True
+                alumno.teams_payload = teams_result
+                alumno.save(update_fields=[
+                    'email_institucional', 'teams_password',
+                    'teams_procesado', 'teams_payload'
+                ])
+
+                # PASO 2: Enviar email con credenciales Teams (solo si tenemos password)
+                if teams_result.get('password'):
+                    teams_data = {
+                        'upn': teams_result.get('upn'),
+                        'password': teams_result.get('password')
+                    }
+                    email_svc.send_credentials_email(alumno, teams_data)
+
+                # PASO 3: Enrollar en Moodle
+                paso = "Moodle"
+                moodle_result = moodle_svc.create_user(alumno)
+                if not moodle_result or 'error' in moodle_result:
+                    codigo_error = 'M-004'
+                    raise Exception(moodle_result.get('error', 'Error al crear usuario en Moodle'))
+
+                enroll_result = moodle_svc.enroll_user_in_courses(alumno)
+                if not enroll_result or 'error' in enroll_result:
+                    codigo_error = 'M-006'
+                    raise Exception(enroll_result.get('error', 'Error al enrollar en cursos'))
+
+                alumno.moodle_procesado = True
+                alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+
+                # PASO 4: Enviar email de enrollamiento
+                email_svc.send_enrollment_email(alumno)
+                alumno.email_procesado = True
+                alumno.save(update_fields=['email_procesado'])
+
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito completo'
+                tarea.detalles['upn'] = teams_result['upn']
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Teams + Moodle con email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'upn': teams_result['upn']
+                    }
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = f"Error en {paso}: {str(e)}"
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['paso_fallido'] = paso
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Teams + Moodle (paso: {paso})',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'paso_fallido': paso,
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Teams + Moodle: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="⚡⚡ Teams + Moodle sin email (ATÓMICO)")
+    def activar_teams_y_moodle_sin_email_sync(self, request, queryset):
+        """
+        Crea usuario en Teams y enrolla en Moodle SIN enviar emails.
+        Operación ATÓMICA.
+        """
+        from django.conf import settings
+        from .services.teams_service import TeamsService
+        from .services.moodle_service import MoodleService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        teams_svc = TeamsService()
+        moodle_svc = MoodleService()
+
+        exitos = 0
+        errores = 0
+
+        for alumno in queryset:
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+            paso = ""
+
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Teams + Moodle sin email',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'activar_teams_y_moodle_sin_email',
+                    'enviar_email': False
+                }
+            )
+
+            try:
+                # PASO 1: Crear usuario en Teams
+                paso = "Teams"
+                teams_result = teams_svc.create_user(alumno)
+
+                if not teams_result:
+                    codigo_error = 'T-003'
+                    raise Exception("Error al crear usuario en Teams")
+
+                # Validar que el resultado tenga los campos necesarios
+                if not isinstance(teams_result, dict) or 'upn' not in teams_result:
+                    codigo_error = 'T-003'
+                    raise Exception(f"Respuesta inválida de Teams: {type(teams_result)}")
+
+                alumno.email_institucional = teams_result.get('upn')
+                alumno.teams_password = teams_result.get('password')
+                alumno.teams_procesado = True
+                alumno.teams_payload = teams_result
+                alumno.save(update_fields=[
+                    'email_institucional', 'teams_password',
+                    'teams_procesado', 'teams_payload'
+                ])
+
+                # PASO 2: Enrollar en Moodle
+                paso = "Moodle"
+                moodle_result = moodle_svc.create_user(alumno)
+                if not moodle_result or 'error' in moodle_result:
+                    codigo_error = 'M-004'
+                    raise Exception(moodle_result.get('error', 'Error al crear usuario en Moodle'))
+
+                enroll_result = moodle_svc.enroll_user_in_courses(alumno)
+                if not enroll_result or 'error' in enroll_result:
+                    codigo_error = 'M-006'
+                    raise Exception(enroll_result.get('error', 'Error al enrollar en cursos'))
+
+                alumno.moodle_procesado = True
+                alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito completo'
+                tarea.detalles['upn'] = teams_result['upn']
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Teams + Moodle sin email',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'upn': teams_result['upn']
+                    }
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = f"Error en {paso}: {str(e)}"
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['paso_fallido'] = paso
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Teams + Moodle (paso: {paso})',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'paso_fallido': paso,
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        self.message_user(
+            request,
+            f"✅ Teams + Moodle: {exitos} éxitos, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    # =====================================================
+    # ACCIONES ASÍNCRONAS (CON COLA CELERY)
+    # =====================================================
 
     @admin.action(description="🚀 Activar Teams + Enviar Email con credenciales")
     def activar_teams_email(self, request, queryset):
@@ -339,41 +1219,263 @@ class AlumnoAdmin(admin.ModelAdmin):
                 level=messages.WARNING
             )
 
-    @admin.action(description="📧 Enviar email de bienvenida masivo")
+    @admin.action(description="📧 Enviar email de bienvenida (ATÓMICO)")
     def enviar_email_bienvenida_masivo(self, request, queryset):
         """
         Envía email de bienvenida a los alumnos seleccionados.
-        Usa la plantilla configurada en Configuracion.email_plantilla_bienvenida.
+        Ejecución SÍNCRONA con registro en Tareas Asíncronas.
         """
         from .services.email_service import EmailService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
 
         email_svc = EmailService()
-        enviados = 0
-        fallidos = 0
+        exitos = 0
+        errores = 0
 
         for alumno in queryset:
-            if not alumno.email:
-                fallidos += 1
-                continue
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+
+            # Log inicio
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Enviar email bienvenida',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            # Crear tarea
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.ENVIAR_EMAIL,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'enviar_email_bienvenida',
+                    'tipo_email': 'bienvenida'
+                }
+            )
 
             try:
+                # Validar que tenga email
+                if not alumno.email:
+                    codigo_error = 'E-001'
+                    raise ValueError("No tiene email personal configurado")
+
+                # Enviar email
                 result = email_svc.send_welcome_email(alumno)
-                if result:
-                    enviados += 1
-                else:
-                    fallidos += 1
-            except Exception as e:
-                self.message_user(
-                    request,
-                    f"❌ Error enviando email a {alumno.apellido}, {alumno.nombre}: {e}",
-                    level=messages.ERROR
+
+                if not result:
+                    codigo_error = 'E-002'
+                    raise Exception("Error al enviar email de bienvenida")
+
+                # Actualizar alumno - MARCAR COMO PROCESADO
+                alumno.email_procesado = True
+                alumno.save(update_fields=['email_procesado'])
+
+                # Actualizar tarea
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['email_enviado_a'] = alumno.email
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log fin
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Enviar email bienvenida',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'email': alumno.email
+                    }
                 )
-                fallidos += 1
+
+                exitos += 1
+
+            except Exception as e:
+                # Actualizar tarea como fallida
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = str(e)
+                tarea.detalles['codigo_error'] = codigo_error or 'G-001'
+                tarea.detalles['error'] = str(e)
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log error
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Enviar email bienvenida',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_error or 'G-001',
+                        'error': str(e),
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
 
         self.message_user(
             request,
-            f"📧 {enviados} emails enviados, {fallidos} fallidos",
-            level=messages.SUCCESS if enviados > 0 else messages.WARNING
+            f"✅ Emails: {exitos} enviados, {errores} errores. Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
+        )
+
+    @admin.action(description="🗑️ Borrar de Teams (ATÓMICO)")
+    def borrar_teams_sync(self, request, queryset):
+        """
+        Elimina usuarios de Teams de forma SÍNCRONA.
+        PRECAUCIÓN: Solo funciona con cuentas test-*
+        """
+        from .services.teams_service import TeamsService
+        from .models import Log, Tarea
+        from django.utils import timezone
+        import time
+
+        teams_svc = TeamsService()
+        exitos = 0
+        errores = 0
+        omitidos = 0
+
+        for alumno in queryset:
+            # Validar que tenga email institucional
+            if not alumno.email_institucional:
+                omitidos += 1
+                continue
+
+            # Validar que esté procesado en Teams
+            if not alumno.teams_procesado:
+                omitidos += 1
+                continue
+
+            inicio = timezone.now()
+            inicio_time = time.time()
+            codigo_error = None
+
+            # Log inicio
+            Log.objects.create(
+                tipo='INFO',
+                modulo='admin_action_sync',
+                mensaje=f'Iniciando: Borrar de Teams',
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None
+            )
+
+            # Crear tarea
+            tarea = Tarea.objects.create(
+                tipo=Tarea.TipoTarea.ELIMINAR_CUENTA,
+                estado=Tarea.EstadoTarea.RUNNING,
+                alumno=alumno,
+                usuario=request.user.username if request.user.is_authenticated else None,
+                hora_inicio=inicio,
+                detalles={
+                    'modulo': 'admin_action_sync',
+                    'accion': 'borrar_teams',
+                    'servicio': 'Teams',
+                    'upn': alumno.email_institucional
+                }
+            )
+
+            try:
+                upn = alumno.email_institucional
+
+                # Eliminar usuario de Teams
+                teams_svc.delete_user(upn, alumno)
+
+                # Limpiar campos del alumno
+                alumno.email_institucional = None
+                alumno.teams_password = None
+                alumno.teams_procesado = False
+                alumno.teams_payload = None
+                alumno.save(update_fields=[
+                    'email_institucional', 'teams_password',
+                    'teams_procesado', 'teams_payload'
+                ])
+
+                # Actualizar tarea
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = fin
+                tarea.cantidad_entidades = 1
+                tarea.detalles['resultado'] = 'Éxito'
+                tarea.detalles['upn_eliminado'] = upn
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log fin
+                Log.objects.create(
+                    tipo='SUCCESS',
+                    modulo='admin_action_sync',
+                    mensaje=f'Completado: Borrar de Teams',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'duracion_segundos': round(duracion, 2),
+                        'upn': upn
+                    }
+                )
+
+                exitos += 1
+
+            except Exception as e:
+                # Actualizar tarea como fallida
+                fin = timezone.now()
+                duracion = time.time() - inicio_time
+
+                # Extraer código de error del mensaje si viene en formato "T-XXX: mensaje"
+                codigo_final, mensaje_limpio = extraer_codigo_error(e, codigo_error)
+
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                tarea.hora_fin = fin
+                tarea.mensaje_error = mensaje_limpio
+                tarea.detalles['codigo_error'] = codigo_final
+                tarea.detalles['error'] = mensaje_limpio
+                tarea.detalles['duracion_segundos'] = round(duracion, 2)
+                tarea.save()
+
+                # Log error
+                Log.objects.create(
+                    tipo='ERROR',
+                    modulo='admin_action_sync',
+                    mensaje=f'Error: Borrar de Teams',
+                    alumno=alumno,
+                    usuario=request.user.username if request.user.is_authenticated else None,
+                    detalles={
+                        'codigo_error': codigo_final,
+                        'error': mensaje_limpio,
+                        'duracion_segundos': round(duracion, 2)
+                    }
+                )
+
+                errores += 1
+
+        mensaje = f"🗑️ Teams: {exitos} eliminados, {errores} errores"
+        if omitidos > 0:
+            mensaje += f", {omitidos} omitidos"
+
+        self.message_user(
+            request,
+            mensaje + ". Ver Tareas Asíncronas para detalles.",
+            level=messages.SUCCESS if exitos > 0 else messages.ERROR
         )
 
     @admin.action(description="🗑️ Borrar solo de Teams")

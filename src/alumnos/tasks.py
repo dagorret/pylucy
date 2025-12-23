@@ -117,16 +117,22 @@ def ingestar_preinscriptos(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Preinscriptos] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
+        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
+        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
+        logger.info(f"[Ingesta Auto-Preinscriptos] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
         if nuevos_ids and len(nuevos_ids) > 0:
-            batch_size = config.batch_size
-            logger.info(f"Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
+            logger.info(f"[Ingesta Auto-Preinscriptos] ℹ️ {len(nuevos_ids)} alumnos nuevos creados (sin procesar)")
 
-            # Dividir en lotes
-            for i in range(0, len(nuevos_ids), batch_size):
-                lote = nuevos_ids[i:i + batch_size]
-                logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
-                procesar_lote_alumnos_nuevos.delay(lote, 'preinscripto')
+        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
+        # if nuevos_ids and len(nuevos_ids) > 0:
+        #     batch_size = config.batch_size
+        #     logger.info(f"Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
+        #
+        #     # Dividir en lotes
+        #     for i in range(0, len(nuevos_ids), batch_size):
+        #         lote = nuevos_ids[i:i + batch_size]
+        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
+        #         procesar_lote_alumnos_nuevos.delay(lote, 'preinscripto')
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 
@@ -245,16 +251,22 @@ def ingestar_aspirantes(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Aspirantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
+        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
+        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
+        logger.info(f"[Ingesta Auto-Aspirantes] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
         if nuevos_ids and len(nuevos_ids) > 0:
-            batch_size = config.batch_size
-            logger.info(f"Detectados {len(nuevos_ids)} aspirantes nuevos, lanzando workflow en lotes de {batch_size}")
+            logger.info(f"[Ingesta Auto-Aspirantes] ℹ️ {len(nuevos_ids)} aspirantes nuevos creados (sin procesar)")
 
-            # Dividir en lotes
-            for i in range(0, len(nuevos_ids), batch_size):
-                lote = nuevos_ids[i:i + batch_size]
-                logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} aspirantes")
-                procesar_lote_alumnos_nuevos.delay(lote, 'aspirante')
+        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
+        # if nuevos_ids and len(nuevos_ids) > 0:
+        #     batch_size = config.batch_size
+        #     logger.info(f"Detectados {len(nuevos_ids)} aspirantes nuevos, lanzando workflow en lotes de {batch_size}")
+        #
+        #     # Dividir en lotes
+        #     for i in range(0, len(nuevos_ids), batch_size):
+        #         lote = nuevos_ids[i:i + batch_size]
+        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} aspirantes")
+        #         procesar_lote_alumnos_nuevos.delay(lote, 'aspirante')
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 
@@ -373,16 +385,22 @@ def ingestar_ingresantes(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Ingresantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # Procesar alumnos nuevos en lotes (Teams + Moodle + Email)
+        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
+        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
+        logger.info(f"[Ingesta Auto-Ingresantes] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
         if nuevos_ids and len(nuevos_ids) > 0:
-            batch_size = config.batch_size
-            logger.info(f"Detectados {len(nuevos_ids)} ingresantes nuevos, lanzando workflow en lotes de {batch_size}")
+            logger.info(f"[Ingesta Auto-Ingresantes] ℹ️ {len(nuevos_ids)} ingresantes nuevos creados (sin procesar)")
 
-            # Dividir en lotes
-            for i in range(0, len(nuevos_ids), batch_size):
-                lote = nuevos_ids[i:i + batch_size]
-                logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} ingresantes")
-                procesar_lote_alumnos_nuevos.delay(lote, 'ingresante')
+        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
+        # if nuevos_ids and len(nuevos_ids) > 0:
+        #     batch_size = config.batch_size
+        #     logger.info(f"Detectados {len(nuevos_ids)} ingresantes nuevos, lanzando workflow en lotes de {batch_size}")
+        #
+        #     # Dividir en lotes
+        #     for i in range(0, len(nuevos_ids), batch_size):
+        #         lote = nuevos_ids[i:i + batch_size]
+        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} ingresantes")
+        #         procesar_lote_alumnos_nuevos.delay(lote, 'ingresante')
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 
@@ -1562,24 +1580,30 @@ def ingesta_manual_task(self, tipo, n=None, seed=None, desde=None, hasta=None, e
             }
         )
 
-        # 🔧 PROCESAR NUEVOS ALUMNOS EN LOTES (Teams + Moodle + Email)
+        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
+        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
+        logger.info(f"[Ingesta Manual] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
         if nuevos_ids and len(nuevos_ids) > 0:
-            config = Configuracion.load()
-            batch_size = config.batch_size
-            logger.info(f"[Ingesta Manual] Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
+            logger.info(f"[Ingesta Manual] ℹ️ {len(nuevos_ids)} alumnos nuevos creados (sin procesar)")
 
-            # Determinar estado para workflow
-            estado_workflow = {
-                'preinscriptos': 'preinscripto',
-                'aspirantes': 'aspirante',
-                'ingresantes': 'ingresante',
-            }.get(tipo, 'preinscripto')
-
-            # Dividir en lotes
-            for i in range(0, len(nuevos_ids), batch_size):
-                lote = nuevos_ids[i:i + batch_size]
-                logger.info(f"[Ingesta Manual] Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
-                procesar_lote_alumnos_nuevos.delay(lote, estado_workflow)
+        # # 🔧 PROCESAR NUEVOS ALUMNOS EN LOTES (Teams + Moodle + Email) - DESHABILITADO
+        # if nuevos_ids and len(nuevos_ids) > 0:
+        #     config = Configuracion.load()
+        #     batch_size = config.batch_size
+        #     logger.info(f"[Ingesta Manual] Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
+        #
+        #     # Determinar estado para workflow
+        #     estado_workflow = {
+        #         'preinscriptos': 'preinscripto',
+        #         'aspirantes': 'aspirante',
+        #         'ingresantes': 'ingresante',
+        #     }.get(tipo, 'preinscripto')
+        #
+        #     # Dividir en lotes
+        #     for i in range(0, len(nuevos_ids), batch_size):
+        #         lote = nuevos_ids[i:i + batch_size]
+        #         logger.info(f"[Ingesta Manual] Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
+        #         procesar_lote_alumnos_nuevos.delay(lote, estado_workflow)
 
         return {
             'success': True,
