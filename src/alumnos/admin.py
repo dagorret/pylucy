@@ -81,6 +81,7 @@ class AlumnoAdmin(admin.ModelAdmin):
         'enrollar_moodle_sin_email_sync',
         'desenrollar_moodle_con_email_sync',
         'desenrollar_moodle_sin_email_sync',
+        'borrar_solo_de_moodle',
         'activar_teams_y_moodle_con_email_sync',
         'activar_teams_y_moodle_sin_email_sync',
         # ===== EXPORTACIÓN/IMPORTACIÓN =====
@@ -2146,7 +2147,7 @@ class AlumnoAdmin(admin.ModelAdmin):
                 level=messages.WARNING
             )
 
-    @admin.action(description="🗑️ Borrar solo de Moodle")
+    @admin.action(description="🗑️ Borrar solo de Moodle (NO Teams)")
     def borrar_solo_de_moodle(self, request, queryset):
         """
         Elimina usuarios solo de Moodle (no de Teams).
