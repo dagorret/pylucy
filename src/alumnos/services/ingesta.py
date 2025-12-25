@@ -143,10 +143,8 @@ def _build_defaults(
     upn = None
     email_inst = None
     teams_password = None
-    teams_payload = None
-    email_payload = None
 
-    # Solo para aspirantes e ingresantes crear cuentas y payloads
+    # Solo para aspirantes e ingresantes crear cuentas
     if estado_normalizado in ("aspirante", "ingresante"):
         def _gen_password(length: int = 16) -> str:
             alphabet = string.ascii_letters + string.digits
@@ -166,38 +164,8 @@ def _build_defaults(
         email_inst = upn or (personal.get("email_institucional") or "").strip() or None
         teams_password = existing.teams_password if existing and existing.teams_password else _gen_password()
 
-        email_host = get_email_host()
-        email_port = get_email_port()
-        email_payload = {
-            "metadata": {"origen": "sial-mock", "tipo": estado_normalizado},
-            "email": {
-                "from": get_email_from(),
-                "server": email_host,
-                "to": email_inst or personal.get("email") or "",
-            },
-            "api": {
-                "enviar": f"{email_host}:{email_port}"
-            },
-        }
-
-        teams_payload = {
-            "auth": {
-                "tenant": get_teams_tenant(),
-                "client_id": get_teams_client_id() or "TEAMS_CLIENT_ID_PLACEHOLDER",
-                "client_secret": get_teams_client_secret() or "TEAMS_CLIENT_SECRET_PLACEHOLDER",
-            },
-            "usuario": {
-                "upn": upn,
-                "display_name": f"{personal.get('apellido', '')}, {personal.get('nombre', '')}".strip(", "),
-                "password": teams_password,
-            },
-            "acciones": ["buscar_usuario", "crear_si_no_existe", "asignar_licencia"],
-            "api": {
-                "buscar_usuario": "https://graph.microsoft.com/v1.0/users/{upn}",
-                "crear_usuario": "https://graph.microsoft.com/v1.0/users",
-                "asignar_licencia": "https://graph.microsoft.com/v1.0/users/{id}/licenseDetails",
-            },
-        }
+        # Configuración eliminada - ya no usamos payloads
+        pass
 
     def _resolver_cursos() -> List[str]:
         from cursos.constants import CARRERAS_DICT
@@ -256,32 +224,7 @@ def _build_defaults(
             "nombre_carrera": carrera.get("nombre_carrera"),
         })
 
-    # Moodle payload solo para aspirantes/ingresantes
-    moodle_payload = None
-    if estado_normalizado in ("aspirante", "ingresante"):
-        moodle_payload = {
-            "auth": {
-                "domain": moodle_base_url,
-                "user": "moodle_api_user",
-                "password": "moodle_api_pass",
-                "token": get_moodle_wstoken() or "MOODLE_TOKEN_PLACEHOLDER",
-            },
-            "usuario": {
-                "username": upn,
-                "email": email_inst or personal.get("email") or "",
-                "login_via": "microsoft_teams",
-            },
-            "carreras": carreras_info,  # Datos completos de carrera/modalidad/comisión
-            "acciones": {
-                "enrolar": {"courses": moodle_courses},
-                "enviar_correo_enrolamiento": True,
-            },
-            "api": {
-                "crear_usuario": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=core_user_create_users",
-                "enrolar_usuario": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=enrol_manual_enrol_users",
-                "enviar_correo_enrolamiento": f"{moodle_base_url}/webservice/rest/server.php?wsfunction=local_send_email",
-            },
-        }
+    # Moodle payload eliminado - ya no se usa
 
     return {
         "nombre": (personal.get("nombre") or "").strip(),
@@ -298,9 +241,6 @@ def _build_defaults(
         "modalidad_actual": modalidad_normalizada,
         "carreras_data": carreras if carreras else None,  # Guardar array completo de carreras
         "teams_password": teams_password,
-        "teams_payload": teams_payload,
-        "email_payload": email_payload,
-        "moodle_payload": moodle_payload,
     }
 
 
