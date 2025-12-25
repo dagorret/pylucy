@@ -3029,9 +3029,15 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         """Exporta la configuración a JSON."""
         from django.http import JsonResponse, HttpResponse
         import json
-        from datetime import datetime
+        from datetime import datetime, time
 
         config = Configuracion.load()
+
+        # Función helper para convertir time a string
+        def time_to_str(t):
+            if isinstance(t, time):
+                return t.strftime('%H:%M:%S')
+            return t
 
         # Crear diccionario con todos los campos excepto id, actualizado_en, actualizado_por
         data = {
@@ -3039,16 +3045,16 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'rate_limit_teams': config.rate_limit_teams,
             'rate_limit_moodle': config.rate_limit_moodle,
             'rate_limit_uti': config.rate_limit_uti,
-            'preinscriptos_dia_inicio': config.preinscriptos_dia_inicio,
-            'preinscriptos_dia_fin': config.preinscriptos_dia_fin,
+            'preinscriptos_dia_inicio': time_to_str(config.preinscriptos_dia_inicio),
+            'preinscriptos_dia_fin': time_to_str(config.preinscriptos_dia_fin),
             'preinscriptos_frecuencia_segundos': config.preinscriptos_frecuencia_segundos,
             'preinscriptos_enviar_email': config.preinscriptos_enviar_email,
-            'aspirantes_dia_inicio': config.aspirantes_dia_inicio,
-            'aspirantes_dia_fin': config.aspirantes_dia_fin,
+            'aspirantes_dia_inicio': time_to_str(config.aspirantes_dia_inicio),
+            'aspirantes_dia_fin': time_to_str(config.aspirantes_dia_fin),
             'aspirantes_frecuencia_segundos': config.aspirantes_frecuencia_segundos,
             'aspirantes_enviar_email': config.aspirantes_enviar_email,
-            'ingresantes_dia_inicio': config.ingresantes_dia_inicio,
-            'ingresantes_dia_fin': config.ingresantes_dia_fin,
+            'ingresantes_dia_inicio': time_to_str(config.ingresantes_dia_inicio),
+            'ingresantes_dia_fin': time_to_str(config.ingresantes_dia_fin),
             'ingresantes_frecuencia_segundos': config.ingresantes_frecuencia_segundos,
             'ingresantes_enviar_email': config.ingresantes_enviar_email,
             'teams_tenant_id': config.teams_tenant_id,
@@ -3093,6 +3099,7 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         """Importa la configuración desde JSON."""
         from django.shortcuts import redirect
         from django.urls import reverse
+        from datetime import datetime
         import json
 
         if request.method != 'POST':
@@ -3109,9 +3116,19 @@ class ConfiguracionAdmin(admin.ModelAdmin):
 
             config = Configuracion.load()
 
+            # Campos que son de tipo time y necesitan conversión
+            time_fields = [
+                'preinscriptos_dia_inicio', 'preinscriptos_dia_fin',
+                'aspirantes_dia_inicio', 'aspirantes_dia_fin',
+                'ingresantes_dia_inicio', 'ingresantes_dia_fin'
+            ]
+
             # Actualizar todos los campos
             for field, value in data.items():
                 if hasattr(config, field):
+                    # Convertir strings de tiempo a objetos time
+                    if field in time_fields and isinstance(value, str):
+                        value = datetime.strptime(value, '%H:%M:%S').time()
                     setattr(config, field, value)
 
             config.actualizado_por = request.user.username
