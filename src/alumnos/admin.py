@@ -3035,8 +3035,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'email_host',
                 'email_port',
                 'email_use_tls',
+                'deshabilitar_fallback_email_personal',
             ),
-            'description': 'Configuración SMTP para envío de emails. Si están vacíos, se usan las variables de entorno (DEFAULT_FROM_EMAIL, EMAIL_HOST, etc.).',
+            'description': 'Configuración SMTP para envío de emails. Si están vacíos, se usan las variables de entorno (DEFAULT_FROM_EMAIL, EMAIL_HOST, etc.). ⚠️ FALLBACK: Si está deshabilitado, el sistema NO usará email_personal cuando falte email_institucional.',
             'classes': ('collapse',)
         }),
         ('✉️ Plantillas de Emails', {
