@@ -3062,7 +3062,8 @@ class ConfiguracionAdmin(admin.ModelAdmin):
 
     def exportar_json_view(self, request):
         """Exporta la configuración a JSON."""
-        from django.http import JsonResponse, HttpResponse
+        from django.http import HttpResponse
+        from django.core.serializers.json import DjangoJSONEncoder
         import json
         from datetime import datetime, time
 
@@ -3119,9 +3120,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'email_plantilla_enrollamiento': config.email_plantilla_enrollamiento,
         }
 
-        # Crear respuesta JSON
+        # Crear respuesta JSON usando DjangoJSONEncoder para manejar datetime/time
         response = HttpResponse(
-            json.dumps(data, indent=2, ensure_ascii=False),
+            json.dumps(data, indent=2, ensure_ascii=False, cls=DjangoJSONEncoder),
             content_type='application/json'
         )
         filename = f"configuracion_pylucy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
