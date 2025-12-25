@@ -1,0 +1,37 @@
+ 🚨 Si algo sale mal
+
+  Error: "migrations not applied"
+
+  docker compose -f docker-compose.testing.yml exec web python manage.py migrate
+
+  Error: "column already exists"
+
+  # La migración ahora es idempotente, debería funcionar automáticamente
+  # Si persiste el error:
+  docker compose -f docker-compose.testing.yml restart web
+
+  Servicios no arrancan
+
+  # Ver logs para identificar el problema
+  docker compose -f docker-compose.testing.yml logs --tail=100
+
+  # Reconstruir desde cero
+  docker compose -f docker-compose.testing.yml down
+  docker compose -f docker-compose.testing.yml build --no-cache
+  docker compose -f docker-compose.testing.yml up -d
+
+  ---
+  📝 Comando Recomendado (todo en uno)
+
+  Si quieres hacerlo todo de una vez:
+
+  cd ~/work/pylucy && \
+  git pull origin main && \
+  docker compose -f docker-compose.testing.yml build && \
+  docker compose -f docker-compose.testing.yml up -d && \
+  docker compose -f docker-compose.testing.yml ps
+
+  ---
+  ¿Prefieres que ejecute el script automático o hacerlo manualmente paso a paso?
+
+

@@ -181,8 +181,9 @@ def _build_defaults(
             if comisiones:
                 comision = str(comisiones[0].get("id_comision") or "").strip() or None
             try:
-                short = resolver_curso(str(id_carrera), modalidad_carrera, comision)
-                shortnames.append(short)
+                cursos = resolver_curso(str(id_carrera), modalidad_carrera, comision)
+                # Ahora resolver_curso devuelve List[str], extender la lista con todos los cursos
+                shortnames.extend(cursos)
             except Exception:
                 continue
         return shortnames

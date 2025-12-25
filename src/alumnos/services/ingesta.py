@@ -210,13 +210,11 @@ def _build_defaults(
             modalidad_carrera = (carrera.get("modalidad") or "").strip()
             comision = None
 
-            # Extraer número de comisión desde nombre_comision (ej: "COMISION 1" -> "1")
+            # Usar el nombre completo de la comisión (ej: "COMISION 1", "COMISION 02")
             if comisiones:
                 nombre_comision = comisiones[0].get("nombre_comision", "")
-                # Buscar patrón "COMISION X" o "COMISIÓN X" y extraer el número
-                match = re.search(r'COMISI[OÓ]N\s+(\d+)', nombre_comision, re.IGNORECASE)
-                if match:
-                    comision = match.group(1)  # Extrae "1", "2", "3", etc.
+                if nombre_comision:
+                    comision = nombre_comision  # Pasar nombre completo para match exacto
 
             # Mapear id_carrera de UTI a código interno (ej: 3 -> CP)
             codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
@@ -224,8 +222,9 @@ def _build_defaults(
                 continue  # Carrera no reconocida, skip
 
             try:
-                short = resolver_curso(codigo_carrera, modalidad_carrera, comision)
-                shortnames.append(short)
+                cursos = resolver_curso(codigo_carrera, modalidad_carrera, comision)
+                # Ahora resolver_curso devuelve List[str], extender la lista con todos los cursos
+                shortnames.extend(cursos)
             except Exception:
                 continue
         return shortnames

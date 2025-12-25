@@ -283,15 +283,19 @@ class MoodleService:
 
         return False
 
-    def enrol_user_in_course(self, user_id: int, course_shortname: str, alumno=None) -> bool:
+    def enrol_user_in_course(self, user_id: int, course_shortname: str, alumno=None,
+                            modalidad: str = None, comision: str = None) -> bool:
         """
         Enrolla un usuario en un curso de Moodle.
         Si ya está enrollado, no hace nada y retorna True.
+        Opcionalmente asigna al usuario a un grupo según modalidad y comisión.
 
         Args:
             user_id: ID del usuario en Moodle
             course_shortname: Shortname del curso en Moodle
             alumno: Instancia del modelo Alumno (opcional, para logs)
+            modalidad: Modalidad del alumno ("1" presencial, "2" distancia) - para grupos
+            comision: Comisión del alumno (ej: "COMISION 1", "COMISION 01") - para grupos
 
         Returns:
             True si se enrolló exitosamente o ya estaba enrollado, False en caso contrario
@@ -312,6 +316,7 @@ class MoodleService:
             return False
 
         course_id = course['id']
+        was_already_enrolled = False
 
         # Verificar si ya está enrollado
         if self.is_user_enrolled_in_course(user_id, course_id):
@@ -323,50 +328,67 @@ class MoodleService:
                 detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
                 alumno=alumno
             )
-            return True  # Ya está enrollado, éxito
+            was_already_enrolled = True
+        else:
+            # Si no está enrollado, enrollar ahora
+            logger.info(f"Enrollando usuario {user_id} en curso {course_shortname}")
+            student_roleid = get_moodle_student_roleid()
+            params = {
+                'enrolments[0][roleid]': student_roleid,
+                'enrolments[0][userid]': user_id,
+                'enrolments[0][courseid]': course_id,
+            }
 
-        # Si no está enrollado, enrollar ahora
-        logger.info(f"Enrollando usuario {user_id} en curso {course_shortname}")
-        student_roleid = get_moodle_student_roleid()
-        params = {
-            'enrolments[0][roleid]': student_roleid,
-            'enrolments[0][userid]': user_id,
-            'enrolments[0][courseid]': course_id,
-        }
+            result = self._call_webservice('enrol_manual_enrol_users', params)
 
-        result = self._call_webservice('enrol_manual_enrol_users', params)
+            if result is None:
+                logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: No response from Moodle")
+                log_to_db(
+                    'ERROR',
+                    'moodle_service',
+                    f"Error enrollando en curso {course_shortname}: No response from Moodle",
+                    detalles={'user_id': user_id, 'course_id': course_id},
+                    alumno=alumno
+                )
+                return False
 
-        if result is None:
-            logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: No response from Moodle")
+            if 'error' in result:
+                logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: {result['error']}")
+                log_to_db(
+                    'ERROR',
+                    'moodle_service',
+                    f"Error enrollando en curso {course_shortname}",
+                    detalles={'user_id': user_id, 'course_id': course_id, 'error': result},
+                    alumno=alumno
+                )
+                return False
+
+            # Si no hay error, el enrollamiento fue exitoso
+            logger.info(f"Usuario {user_id} enrollado en curso {course_shortname} (ID: {course_id})")
             log_to_db(
-                'ERROR',
+                'SUCCESS',
                 'moodle_service',
-                f"Error enrollando en curso {course_shortname}: No response from Moodle",
-                detalles={'user_id': user_id, 'course_id': course_id},
+                f"Usuario enrollado exitosamente en {course_shortname}",
+                detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
                 alumno=alumno
             )
-            return False
 
-        if 'error' in result:
-            logger.error(f"Error enrollando usuario {user_id} en curso {course_shortname}: {result['error']}")
-            log_to_db(
-                'ERROR',
-                'moodle_service',
-                f"Error enrollando en curso {course_shortname}",
-                detalles={'user_id': user_id, 'course_id': course_id, 'error': result},
-                alumno=alumno
-            )
-            return False
+        # Asignar a grupo si se proporcionaron modalidad y comisión
+        if modalidad and comision:
+            group_name = self.generate_group_name(modalidad, comision)
+            logger.info(f"Asignando usuario {user_id} al grupo '{group_name}' en curso {course_shortname}")
 
-        # Si no hay error, el enrollamiento fue exitoso
-        logger.info(f"Usuario {user_id} enrollado en curso {course_shortname} (ID: {course_id})")
-        log_to_db(
-            'SUCCESS',
-            'moodle_service',
-            f"Usuario enrollado exitosamente en {course_shortname}",
-            detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
-            alumno=alumno
-        )
+            try:
+                group_id = self.get_or_create_group(course_id, group_name)
+                if group_id:
+                    self.add_user_to_group(user_id, group_id, alumno)
+                    logger.info(f"Usuario {user_id} agregado al grupo '{group_name}'")
+                else:
+                    logger.warning(f"No se pudo crear/obtener grupo '{group_name}' en curso {course_shortname}")
+            except Exception as e:
+                # No fallar todo el enrollamiento si falla la asignación al grupo
+                logger.warning(f"Error asignando al grupo '{group_name}': {e}")
+
         return True
 
     def get_course_by_shortname(self, shortname: str) -> Optional[Dict]:
@@ -426,12 +448,22 @@ class MoodleService:
                 raise ValueError(f"M-004: {error_msg}")
             user_id = created_user['id']
 
-        # 2. Enrollar en cursos
+        # 2. Obtener modalidad y comisión del alumno para asignación a grupos
+        modalidad = None
+        comision = None
+        if alumno.carreras_data and isinstance(alumno.carreras_data, list) and len(alumno.carreras_data) > 0:
+            carrera_data = alumno.carreras_data[0]
+            modalidad = carrera_data.get('modalidad', '').strip()
+            comisiones = carrera_data.get('comisiones', [])
+            if comisiones and len(comisiones) > 0:
+                comision = comisiones[0].get('nombre_comision', '')
+
+        # 3. Enrollar en cursos (con asignación a grupo)
         enrolled = []
         failed = []
 
         for course_shortname in courses:
-            if self.enrol_user_in_course(user_id, course_shortname, alumno):
+            if self.enrol_user_in_course(user_id, course_shortname, alumno, modalidad, comision):
                 enrolled.append(course_shortname)
             else:
                 failed.append(course_shortname)
@@ -658,3 +690,188 @@ class MoodleService:
         logger.info(f"Usuario {username} (ID: {user_id}) eliminado de Moodle")
         log_to_db('SUCCESS', 'moodle_service', f'Usuario eliminado exitosamente: {username}', alumno=alumno)
         return True
+
+    def get_course_groups(self, course_id: int) -> List[Dict]:
+        """
+        Obtiene todos los grupos de un curso.
+
+        Args:
+            course_id: ID del curso en Moodle
+
+        Returns:
+            Lista de grupos [{'id': 123, 'name': 'P1', 'courseid': 456}, ...]
+        """
+        params = {'courseid': course_id}
+        result = self._call_webservice('core_group_get_course_groups', params)
+
+        if 'error' in result:
+            logger.error(f"Error obteniendo grupos del curso {course_id}: {result['error']}")
+            return []
+
+        return result if isinstance(result, list) else []
+
+    def create_group(self, course_id: int, group_name: str, description: str = "") -> Optional[int]:
+        """
+        Crea un grupo en un curso.
+
+        Args:
+            course_id: ID del curso en Moodle
+            group_name: Nombre del grupo (ej: "P1", "D2")
+            description: Descripción del grupo (opcional)
+
+        Returns:
+            ID del grupo creado o None si falló
+        """
+        params = {
+            'groups[0][courseid]': course_id,
+            'groups[0][name]': group_name,
+            'groups[0][description]': description,
+        }
+
+        result = self._call_webservice('core_group_create_groups', params)
+
+        if 'error' in result:
+            logger.error(f"Error creando grupo '{group_name}' en curso {course_id}: {result['error']}")
+            return None
+
+        if isinstance(result, list) and len(result) > 0:
+            group_id = result[0].get('id')
+            logger.info(f"Grupo creado: '{group_name}' (ID: {group_id})")
+            return group_id
+
+        return None
+
+    def add_user_to_group(self, user_id: int, group_id: int, alumno=None) -> bool:
+        """
+        Agrega un usuario a un grupo.
+
+        Args:
+            user_id: ID del usuario en Moodle
+            group_id: ID del grupo en Moodle
+            alumno: Instancia del modelo Alumno (opcional, para logs)
+
+        Returns:
+            True si se agregó exitosamente, False en caso contrario
+        """
+        params = {
+            'members[0][groupid]': group_id,
+            'members[0][userid]': user_id,
+        }
+
+        result = self._call_webservice('core_group_add_group_members', params)
+
+        # La API retorna None en éxito
+        if result is None or (isinstance(result, dict) and not result.get('error')):
+            logger.info(f"Usuario {user_id} agregado al grupo {group_id}")
+            log_to_db(
+                'SUCCESS',
+                'moodle_service',
+                f"Usuario agregado al grupo {group_id}",
+                detalles={'user_id': user_id, 'group_id': group_id},
+                alumno=alumno
+            )
+            return True
+
+        if 'error' in result:
+            logger.error(f"Error agregando usuario {user_id} al grupo {group_id}: {result['error']}")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Error agregando al grupo {group_id}",
+                detalles={'user_id': user_id, 'group_id': group_id, 'error': result},
+                alumno=alumno
+            )
+            return False
+
+        return False
+
+    def get_or_create_group(self, course_id: int, group_name: str) -> Optional[int]:
+        """
+        Busca un grupo por nombre, lo crea si no existe.
+
+        Args:
+            course_id: ID del curso en Moodle
+            group_name: Nombre del grupo (ej: "P1", "D2")
+
+        Returns:
+            ID del grupo
+        """
+        # Buscar grupo existente
+        groups = self.get_course_groups(course_id)
+        for group in groups:
+            if group.get('name') == group_name:
+                logger.info(f"Grupo '{group_name}' ya existe (ID: {group['id']})")
+                return group['id']
+
+        # Si no existe, crear
+        logger.info(f"Grupo '{group_name}' no existe, creando...")
+        return self.create_group(course_id, group_name)
+
+    def generate_group_name(self, modalidad: str, comision: str) -> str:
+        """
+        Genera el nombre del grupo según modalidad y comisión.
+
+        Lógica:
+        - Presencial (1) + COMISION 2 → "P2"
+        - Distancia (2) + COMISION 01 → "D1"
+
+        Args:
+            modalidad: "1" (presencial) o "2" (distancia)
+            comision: Nombre de la comisión (ej: "COMISION 1", "COMISION 01")
+
+        Returns:
+            Nombre del grupo (ej: "P1", "D2")
+        """
+        import re
+
+        # Determinar prefijo
+        prefix = "P" if modalidad == "1" else "D"
+
+        # Extraer número de la comisión (quitando ceros al inicio)
+        if comision:
+            # Buscar patrón "COMISION X" o solo el número
+            match = re.search(r'COMISI[OÓ]N\s+(\d+)', comision, re.IGNORECASE)
+            if match:
+                num = match.group(1).lstrip('0') or '0'  # Quitar ceros, si queda vacío usar '0'
+            else:
+                # Si solo viene el número
+                num = str(comision).lstrip('0') or '0'
+        else:
+            num = '0'
+
+        group_name = f"{prefix}{num}"
+        logger.info(f"Grupo generado: modalidad={modalidad}, comision={comision} → {group_name}")
+        return group_name
+
+    def get_required_groups_for_courses(self, course_shortnames: List[str] = None) -> Dict[str, List[str]]:
+        """
+        Genera la lista de grupos que deberían existir en cada curso.
+
+        Args:
+            course_shortnames: Lista de shortnames de cursos (opcional, si no se provee usa todos los activos)
+
+        Returns:
+            Dict con {course_shortname: [grupos_necesarios]}
+            Ejemplo: {'I3': ['P1', 'P2', 'P3', 'D1', 'D2', 'D3'], ...}
+        """
+        # Grupos estándar: Presencial 1-5 y Distancia 1-5
+        grupos_estandar = []
+        for i in range(1, 6):
+            grupos_estandar.append(f'P{i}')  # Presencial 1-5
+            grupos_estandar.append(f'D{i}')  # Distancia 1-5
+
+        if course_shortnames is None:
+            # Si no se especifican cursos, usar todos los cursos activos
+            from cursos.models import CursoIngreso
+            course_shortnames = list(
+                CursoIngreso.objects.filter(activo=True)
+                .values_list('curso_moodle', flat=True)
+                .distinct()
+            )
+
+        result = {}
+        for shortname in course_shortnames:
+            result[shortname] = grupos_estandar.copy()
+
+        logger.info(f"Grupos necesarios generados para {len(result)} cursos")
+        return result
