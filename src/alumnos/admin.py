@@ -3225,3 +3225,10 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context['show_export_import'] = True
         return super().change_view(request, object_id, form_url, extra_context)
+
+# Ocultar modelos innecesarios de django-celery-beat
+try:
+    from django_celery_beat.models import SolarSchedule
+    admin.site.unregister(SolarSchedule)
+except:
+    pass
