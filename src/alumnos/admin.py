@@ -251,10 +251,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 alumno.email_institucional = result.get('upn')
                 alumno.teams_password = result.get('password')
                 alumno.teams_procesado = True
-                alumno.teams_payload = result
+                # alumno.teams_payload = result
                 alumno.save(update_fields=[
                     'email_institucional', 'teams_password',
-                    'teams_procesado', 'teams_payload'
+                    'teams_procesado'
                 ])
 
                 # Enviar email solo si tenemos password
@@ -398,10 +398,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 alumno.email_institucional = result.get('upn')
                 alumno.teams_password = result.get('password')
                 alumno.teams_procesado = True
-                alumno.teams_payload = result
+                # alumno.teams_payload = result
                 alumno.save(update_fields=[
                     'email_institucional', 'teams_password',
-                    'teams_procesado', 'teams_payload'
+                    'teams_procesado'
                 ])
 
                 # Actualizar tarea
@@ -535,8 +535,8 @@ class AlumnoAdmin(admin.ModelAdmin):
 
                 # Actualizar alumno
                 alumno.moodle_procesado = True
-                alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
-                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+                # alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado'])
 
                 # Enviar email
                 email_enviado = email_svc.send_enrollment_email(alumno)
@@ -668,8 +668,8 @@ class AlumnoAdmin(admin.ModelAdmin):
 
                 # Actualizar alumno
                 alumno.moodle_procesado = True
-                alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
-                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+                # alumno.moodle_payload = {'user': result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado'])
 
                 fin = timezone.now()
                 duracion = time.time() - inicio_time
@@ -792,10 +792,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 alumno.email_institucional = teams_result.get('upn')
                 alumno.teams_password = teams_result.get('password')
                 alumno.teams_procesado = True
-                alumno.teams_payload = teams_result
+                # alumno.teams_payload = teams_result
                 alumno.save(update_fields=[
                     'email_institucional', 'teams_password',
-                    'teams_procesado', 'teams_payload'
+                    'teams_procesado'
                 ])
 
                 # PASO 2: Enviar email con credenciales Teams (solo si tenemos password)
@@ -819,8 +819,8 @@ class AlumnoAdmin(admin.ModelAdmin):
                     raise Exception(enroll_result.get('error', 'Error al enrollar en cursos'))
 
                 alumno.moodle_procesado = True
-                alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
-                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+                # alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado'])
 
                 # PASO 4: Enviar email de enrollamiento
                 email_svc.send_enrollment_email(alumno)
@@ -948,10 +948,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 alumno.email_institucional = teams_result.get('upn')
                 alumno.teams_password = teams_result.get('password')
                 alumno.teams_procesado = True
-                alumno.teams_payload = teams_result
+                # alumno.teams_payload = teams_result
                 alumno.save(update_fields=[
                     'email_institucional', 'teams_password',
-                    'teams_procesado', 'teams_payload'
+                    'teams_procesado'
                 ])
 
                 # PASO 2: Enrollar en Moodle
@@ -967,8 +967,8 @@ class AlumnoAdmin(admin.ModelAdmin):
                     raise Exception(enroll_result.get('error', 'Error al enrollar en cursos'))
 
                 alumno.moodle_procesado = True
-                alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
-                alumno.save(update_fields=['moodle_procesado', 'moodle_payload'])
+                # alumno.moodle_payload = {'user': moodle_result, 'enrollments': enroll_result}
+                alumno.save(update_fields=['moodle_procesado'])
 
                 fin = timezone.now()
                 duracion = time.time() - inicio_time
@@ -1397,10 +1397,10 @@ class AlumnoAdmin(admin.ModelAdmin):
                 alumno.email_institucional = None
                 alumno.teams_password = None
                 alumno.teams_procesado = False
-                alumno.teams_payload = None
+                # alumno.teams_payload = None
                 alumno.save(update_fields=[
                     'email_institucional', 'teams_password',
-                    'teams_procesado', 'teams_payload'
+                    'teams_procesado'
                 ])
 
                 # Actualizar tarea
