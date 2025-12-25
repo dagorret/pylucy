@@ -1769,8 +1769,25 @@ class AlumnoAdmin(admin.ModelAdmin):
         omitidos = 0
 
         for alumno in queryset:
-            # Validar que tenga email institucional o personal
-            username = alumno.email_institucional or alumno.email_personal
+            # Validar email institucional con manejo de fallback
+            username = alumno.email_institucional
+            if not username:
+                if config.deshabilitar_fallback_email_personal:
+                    # Fallback deshabilitado, omitir alumno
+                    Log.objects.create(
+                        tipo='WARNING',
+                        modulo='admin_action_sync',
+                        mensaje=f'⚠️ FALTA EMAIL INSTITUCIONAL - Alumno {alumno.id} omitido (fallback deshabilitado)',
+                        alumno=alumno,
+                        usuario=request.user.username if request.user.is_authenticated else None,
+                        detalles={'dni': alumno.dni, 'nombre': f'{alumno.nombre} {alumno.apellido}'}
+                    )
+                    omitidos += 1
+                    continue
+                else:
+                    # Usar fallback a email personal
+                    username = alumno.email_personal
+
             if not username:
                 omitidos += 1
                 continue
@@ -1955,8 +1972,25 @@ class AlumnoAdmin(admin.ModelAdmin):
         omitidos = 0
 
         for alumno in queryset:
-            # Validar que tenga email institucional o personal
-            username = alumno.email_institucional or alumno.email_personal
+            # Validar email institucional con manejo de fallback
+            username = alumno.email_institucional
+            if not username:
+                if config.deshabilitar_fallback_email_personal:
+                    # Fallback deshabilitado, omitir alumno
+                    Log.objects.create(
+                        tipo='WARNING',
+                        modulo='admin_action_sync',
+                        mensaje=f'⚠️ FALTA EMAIL INSTITUCIONAL - Alumno {alumno.id} omitido (fallback deshabilitado)',
+                        alumno=alumno,
+                        usuario=request.user.username if request.user.is_authenticated else None,
+                        detalles={'dni': alumno.dni, 'nombre': f'{alumno.nombre} {alumno.apellido}'}
+                    )
+                    omitidos += 1
+                    continue
+                else:
+                    # Usar fallback a email personal
+                    username = alumno.email_personal
+
             if not username:
                 omitidos += 1
                 continue

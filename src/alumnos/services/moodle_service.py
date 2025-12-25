@@ -98,9 +98,29 @@ class MoodleService:
             Dict con información del usuario (created=True si fue creado, False si ya existía)
         """
         from ..utils.config import get_moodle_email_type, get_moodle_auth_method
+        from ..models import Configuracion
 
-        # Preparar datos del usuario
-        username = alumno.email_institucional or alumno.email_personal
+        config = Configuracion.load()
+
+        # Preparar datos del usuario con manejo de fallback
+        username = alumno.email_institucional
+        if not username:
+            if config.deshabilitar_fallback_email_personal:
+                # Fallback deshabilitado, loguear advertencia y rechazar
+                error_msg = f"⚠️ FALTA EMAIL INSTITUCIONAL - Alumno {alumno.id} ({alumno.nombre} {alumno.apellido}) no tiene email_institucional y fallback está deshabilitado"
+                logger.warning(error_msg)
+                log_to_db(
+                    'WARNING',
+                    'moodle_service',
+                    error_msg,
+                    detalles={'alumno_id': alumno.id, 'dni': alumno.dni},
+                    alumno=alumno
+                )
+                raise ValueError(f"M-012: Falta email institucional y fallback deshabilitado")
+            else:
+                # Usar fallback a email personal
+                username = alumno.email_personal
+
         if not username:
             error_msg = f"Alumno {alumno.id} no tiene email"
             logger.error(error_msg)
@@ -429,7 +449,29 @@ class MoodleService:
         Returns:
             Dict con resultados: {success: bool, user_id: int, enrolled_courses: [...], failed_courses: [...]}
         """
-        username = alumno.email_institucional or alumno.email_personal
+        from ..models import Configuracion
+
+        config = Configuracion.load()
+
+        # Preparar username con manejo de fallback
+        username = alumno.email_institucional
+        if not username:
+            if config.deshabilitar_fallback_email_personal:
+                # Fallback deshabilitado, loguear advertencia y rechazar
+                error_msg = f"⚠️ FALTA EMAIL INSTITUCIONAL - Alumno {alumno.id} ({alumno.nombre} {alumno.apellido}) no tiene email_institucional y fallback está deshabilitado"
+                logger.warning(error_msg)
+                log_to_db(
+                    'WARNING',
+                    'moodle_service',
+                    error_msg,
+                    detalles={'alumno_id': alumno.id, 'dni': alumno.dni},
+                    alumno=alumno
+                )
+                return {'success': False, 'error': 'M-012: Falta email institucional y fallback deshabilitado'}
+            else:
+                # Usar fallback a email personal
+                username = alumno.email_personal
+
         if not username:
             logger.error(f"Alumno {alumno.id} no tiene email")
             return {'success': False, 'error': 'No email'}

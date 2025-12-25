@@ -446,6 +446,12 @@ class Configuracion(models.Model):
         help_text="Usar TLS para conexión SMTP. Si es NULL, usa EMAIL_USE_TLS de entorno"
     )
 
+    # Comportamiento de fallback de emails
+    deshabilitar_fallback_email_personal = models.BooleanField(
+        default=False,
+        help_text="⚠️ Si está activado, NO usa email personal como fallback cuando falta email institucional. Sistema loguea advertencia y rechaza operación."
+    )
+
     # Configuración de cursos Moodle
     moodle_courses_config = models.JSONField(
         default=dict,
