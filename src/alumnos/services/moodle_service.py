@@ -643,6 +643,22 @@ class MoodleService:
             )
             raise ValueError(f"M-006: Error al des-enrollar del curso - {result['error']}")
 
+        # Verificar que realmente se des-enrolló
+        import time
+        time.sleep(0.5)  # Esperar medio segundo para que Moodle procese
+
+        still_enrolled = self.is_user_enrolled_in_course(user_id, course_id)
+        if still_enrolled:
+            logger.error(f"Usuario {user_id} sigue enrollado en {course_shortname} después de llamar a unenrol")
+            log_to_db(
+                'ERROR',
+                'moodle_service',
+                f"Des-enrollamiento falló: usuario sigue enrollado en {course_shortname}",
+                detalles={'user_id': user_id, 'course_id': course_id, 'shortname': course_shortname},
+                alumno=alumno
+            )
+            raise ValueError(f"M-011: Des-enrollamiento falló - usuario sigue enrollado")
+
         # Si no hay error, el des-enrollamiento fue exitoso
         logger.info(f"Usuario {user_id} des-enrollado del curso {course_shortname} (ID: {course_id})")
         log_to_db(
