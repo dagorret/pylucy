@@ -7,5 +7,7 @@ class AlumnosConfig(AppConfig):
     verbose_name = "Alumnos"
 
     def ready(self):
-        """Importa signals cuando la app está lista."""
+        """Importa signals y tareas de Celery cuando la app está lista."""
         import alumnos.signals  # noqa
+        import alumnos.tasks  # noqa - registrar tareas de Celery
+        import alumnos.tasks_delete  # noqa - registrar tareas de borrado
