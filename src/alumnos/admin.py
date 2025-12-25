@@ -64,9 +64,6 @@ class AlumnoAdmin(admin.ModelAdmin):
         "updated_at",
         "fecha_ultima_modificacion",
         "carreras_formatted",
-        "teams_payload",
-        "email_payload",
-        "moodle_payload",
     )
     ordering = ("apellido", "nombre")
     actions = [
@@ -2185,6 +2182,7 @@ class AlumnoAdmin(admin.ModelAdmin):
     def borrar_solo_de_moodle(self, request, queryset):
         """
         Elimina usuarios solo de Moodle (no de Teams).
+        Intenta borrar sin validar moodle_procesado. Ignora errores de "usuario no encontrado".
         """
         from .tasks_delete import eliminar_solo_moodle
 
@@ -2196,11 +2194,7 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped += 1
                 continue
 
-            if not alumno.moodle_procesado:
-                skipped += 1
-                continue
-
-            # Programar tarea asíncrona
+            # Programar tarea asíncrona (sin validar moodle_procesado)
             eliminar_solo_moodle.delay(alumno.id, alumno.email_institucional)
             programadas += 1
 

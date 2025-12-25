@@ -32,9 +32,6 @@ class Alumno(models.Model):
         help_text="Array de carreras tal como viene de la API UTI/SIAL (id_carrera, nombre_carrera, modalidad, comisiones)"
     )
     teams_password = models.CharField(max_length=255, null=True, blank=True)
-    teams_payload = models.JSONField(null=True, blank=True)
-    email_payload = models.JSONField(null=True, blank=True)
-    moodle_payload = models.JSONField(null=True, blank=True)
     teams_procesado = models.BooleanField(
         default=False,
         help_text="Indica si el alumno ya fue procesado en Teams (usuario creado y licencia asignada)"

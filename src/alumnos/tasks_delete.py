@@ -139,8 +139,32 @@ def eliminar_solo_moodle(self, alumno_id, username):
 
         moodle_svc = MoodleService()
 
-        # Borrar usuario de Moodle
-        success = moodle_svc.delete_user(username)
+        # Intentar borrar usuario de Moodle
+        try:
+            success = moodle_svc.delete_user(username, alumno)
+        except ValueError as e:
+            error_msg = str(e)
+            # Ignorar error de "usuario no encontrado" (M-002)
+            if 'M-002' in error_msg or 'no encontrado' in error_msg.lower():
+                logger.info(f"[Borrar Moodle] ℹ️ Usuario {username} no existe en Moodle (ya estaba borrado)")
+                log_to_db(
+                    'INFO',
+                    'tasks_delete',
+                    f'Usuario no encontrado en Moodle (ya borrado): {username}',
+                    detalles={'username': username, 'ignorado': True},
+                    alumno=alumno
+                )
+
+                # Marcar tarea como completada (ya está borrado)
+                tarea.estado = Tarea.EstadoTarea.COMPLETED
+                tarea.hora_fin = timezone.now()
+                tarea.detalles['resultado'] = 'usuario_no_encontrado'
+                tarea.save()
+
+                return {'success': True, 'username': username, 'message': 'Usuario no encontrado (ya borrado)'}
+            else:
+                # Otro error, registrar como fallo
+                raise
 
         if success:
             # Marcar como no procesado en Moodle
