@@ -35,6 +35,9 @@ django-celery-beat>=2.6,<3.0  # Tareas programadas con BD
 # ---- Widgets enriquecidos (Select2) ----
 django-select2>=8.1,<9.0
 
+# ---- Exportación a Excel ----
+openpyxl>=3.1,<4.0
+
 # ---- Extra útil: herramientas de seguridad/estilo (se pueden usar desde dev) ----
 # No son obligatorias, pero ayudan:
 # dj-database-url>=2.2,<3.0    # si querés manejar DATABASE_URL desde envs

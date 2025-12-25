@@ -142,3 +142,209 @@ class CursoIngresoForm(BaseCursoForm):
 @admin.register(CursoIngreso)
 class CursoIngresoAdmin(BaseCursoAdmin):
     form = CursoIngresoForm
+    actions = ['exportar_cursos_excel', 'exportar_cursos_json']
+
+    @admin.action(description="📥 Exportar cursos a Excel")
+    def exportar_cursos_excel(self, request, queryset):
+        """Exporta los cursos seleccionados a un archivo Excel."""
+        from django.http import HttpResponse
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from datetime import datetime
+        from django.contrib import messages
+
+        # Crear workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Cursos de Ingreso"
+
+        # Encabezados
+        headers = [
+            'Nombre', 'Curso Moodle (Shortname)', 'Carreras',
+            'Modalidades', 'Comisiones', 'Activo'
+        ]
+
+        # Estilo de encabezados
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        # Escribir encabezados
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+
+        # Escribir datos
+        for row_num, curso in enumerate(queryset, 2):
+            row_data = [
+                curso.nombre,
+                curso.curso_moodle,
+                ", ".join(curso.carreras) if curso.carreras else "",
+                ", ".join(curso.modalidades) if curso.modalidades else "",
+                ", ".join(curso.comisiones) if curso.comisiones else "",
+                'Sí' if curso.activo else 'No',
+            ]
+
+            for col_num, value in enumerate(row_data, 1):
+                ws.cell(row=row_num, column=col_num, value=value)
+
+        # Ajustar ancho de columnas
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Crear respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"cursos_ingreso_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        # Guardar workbook en respuesta
+        wb.save(response)
+
+        self.message_user(
+            request,
+            f"✅ Exportados {queryset.count()} cursos a Excel",
+            level=messages.SUCCESS
+        )
+
+        return response
+
+    @admin.action(description="📥 Exportar cursos a JSON")
+    def exportar_cursos_json(self, request, queryset):
+        """Exporta los cursos seleccionados a un archivo JSON."""
+        from django.http import HttpResponse
+        from django.contrib import messages
+        import json
+        from datetime import datetime
+
+        # Crear lista de cursos
+        cursos_data = []
+        for curso in queryset:
+            cursos_data.append({
+                'nombre': curso.nombre,
+                'curso_moodle': curso.curso_moodle,
+                'carreras': curso.carreras,
+                'modalidades': curso.modalidades,
+                'comisiones': curso.comisiones,
+                'activo': curso.activo,
+            })
+
+        # Crear respuesta JSON
+        response = HttpResponse(
+            json.dumps(cursos_data, indent=2, ensure_ascii=False),
+            content_type='application/json'
+        )
+        filename = f"cursos_ingreso_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        self.message_user(
+            request,
+            f"✅ Exportados {queryset.count()} cursos a JSON",
+            level=messages.SUCCESS
+        )
+
+        return response
+
+    def get_urls(self):
+        """Agregar URL personalizada para importar JSON."""
+        urls = super().get_urls()
+        from django.urls import path
+        custom_urls = [
+            path(
+                'importar-json/',
+                self.admin_site.admin_view(self.importar_json_view),
+                name='cursos_cursoingreso_importar_json',
+            ),
+        ]
+        return custom_urls + urls
+
+    def importar_json_view(self, request):
+        """Importa cursos desde un archivo JSON."""
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        import json
+
+        if request.method != 'POST':
+            messages.error(request, "❌ Método no permitido")
+            return redirect('..')
+
+        if 'json_file' not in request.FILES:
+            messages.error(request, "❌ No se seleccionó ningún archivo")
+            return redirect('..')
+
+        try:
+            json_file = request.FILES['json_file']
+            data = json.load(json_file)
+
+            if not isinstance(data, list):
+                messages.error(request, "❌ El archivo JSON debe contener una lista de cursos")
+                return redirect('..')
+
+            created_count = 0
+            updated_count = 0
+            error_count = 0
+
+            for curso_data in data:
+                try:
+                    # Buscar si existe un curso con el mismo shortname
+                    curso_moodle = curso_data.get('curso_moodle')
+                    if not curso_moodle:
+                        error_count += 1
+                        continue
+
+                    curso, created = CursoIngreso.objects.update_or_create(
+                        curso_moodle=curso_moodle,
+                        defaults={
+                            'nombre': curso_data.get('nombre', ''),
+                            'carreras': curso_data.get('carreras', []),
+                            'modalidades': curso_data.get('modalidades', []),
+                            'comisiones': curso_data.get('comisiones', []),
+                            'activo': curso_data.get('activo', True),
+                        }
+                    )
+
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    messages.warning(
+                        request,
+                        f"⚠️ Error al importar curso '{curso_data.get('nombre', 'N/A')}': {str(e)}"
+                    )
+
+            # Mensaje de resumen
+            messages.success(
+                request,
+                f"✅ Importación completada: {created_count} creados, {updated_count} actualizados"
+            )
+
+            if error_count > 0:
+                messages.warning(request, f"⚠️ {error_count} cursos con errores")
+
+        except json.JSONDecodeError as e:
+            messages.error(request, f"❌ Error al parsear JSON: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"❌ Error al importar: {str(e)}")
+
+        return redirect('..')
+
+    def changelist_view(self, request, extra_context=None):
+        """Agrega contexto para mostrar botón de importar."""
+        extra_context = extra_context or {}
+        extra_context['show_import_button'] = True
+        return super().changelist_view(request, extra_context)

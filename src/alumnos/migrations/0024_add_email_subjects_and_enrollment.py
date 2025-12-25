@@ -3,6 +3,37 @@
 from django.db import migrations, models
 
 
+def add_fields_if_not_exist(apps, schema_editor):
+    """Agrega campos solo si no existen (migración idempotente)"""
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        # Verificar qué columnas existen
+        cursor.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='alumnos_configuracion'
+        """)
+        existing_columns = {row[0] for row in cursor.fetchall()}
+
+        # Lista de campos a agregar con sus definiciones SQL
+        fields_to_add = [
+            ('email_asunto_bienvenida', "VARCHAR(255) DEFAULT 'Bienvenido/a a la UNRC'"),
+            ('email_asunto_credenciales', "VARCHAR(255) DEFAULT 'Credenciales de acceso - UNRC'"),
+            ('email_asunto_password', "VARCHAR(255) DEFAULT 'Nueva contraseña - UNRC'"),
+            ('email_asunto_enrollamiento', "VARCHAR(255) DEFAULT 'Acceso al Ecosistema Virtual - UNRC'"),
+            ('email_plantilla_enrollamiento', "TEXT DEFAULT ''"),
+        ]
+
+        # Agregar solo las columnas que no existen
+        for field_name, field_definition in fields_to_add:
+            if field_name not in existing_columns:
+                cursor.execute(f"""
+                    ALTER TABLE alumnos_configuracion
+                    ADD COLUMN {field_name} {field_definition}
+                """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,57 +41,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Agregar campos de asunto para cada tipo de email
-        migrations.AddField(
-            model_name='configuracion',
-            name='email_asunto_bienvenida',
-            field=models.CharField(
-                blank=True,
-                default='Bienvenido/a a la UNRC',
-                max_length=255,
-                help_text='Asunto del email de bienvenida. Variables: {nombre}, {apellido}, {dni}'
-            ),
-        ),
-        migrations.AddField(
-            model_name='configuracion',
-            name='email_asunto_credenciales',
-            field=models.CharField(
-                blank=True,
-                default='Credenciales de acceso - UNRC',
-                max_length=255,
-                help_text='Asunto del email de credenciales. Variables: {nombre}, {apellido}, {upn}'
-            ),
-        ),
-        migrations.AddField(
-            model_name='configuracion',
-            name='email_asunto_password',
-            field=models.CharField(
-                blank=True,
-                default='Nueva contraseña - UNRC',
-                max_length=255,
-                help_text='Asunto del email de reseteo de password. Variables: {nombre}, {apellido}, {upn}'
-            ),
-        ),
-        migrations.AddField(
-            model_name='configuracion',
-            name='email_asunto_enrollamiento',
-            field=models.CharField(
-                blank=True,
-                default='Acceso al Ecosistema Virtual - UNRC',
-                max_length=255,
-                help_text='Asunto del email de enrollamiento Moodle. Variables: {nombre}, {apellido}'
-            ),
-        ),
-        # Agregar plantilla para enrollamiento
-        migrations.AddField(
-            model_name='configuracion',
-            name='email_plantilla_enrollamiento',
-            field=models.TextField(
-                blank=True,
-                help_text='Plantilla HTML para email de enrollamiento en Moodle. Variables: {nombre}, {apellido}, {upn}, {moodle_url}, {cursos_html}. Pegar HTML completo.'
-            ),
-        ),
-        # Actualizar help_text de plantillas existentes
+        # Usar migración personalizada para agregar campos de forma idempotente
+        migrations.RunPython(add_fields_if_not_exist, migrations.RunPython.noop),
+
+        # Actualizar help_text de plantillas existentes (esto es seguro)
         migrations.AlterField(
             model_name='configuracion',
             name='email_plantilla_bienvenida',

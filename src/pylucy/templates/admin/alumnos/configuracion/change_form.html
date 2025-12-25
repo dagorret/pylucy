@@ -1,0 +1,44 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+
+    {% if show_export_import %}
+    <li>
+        <a href="{% url 'admin:alumnos_configuracion_exportar_json' %}" class="historylink" style="background-color: #417690; color: white; padding: 10px 15px; border-radius: 4px; text-decoration: none;">
+            📥 Exportar a JSON
+        </a>
+    </li>
+    <li>
+        <a href="#" onclick="document.getElementById('importForm').style.display='block'; return false;" class="historylink" style="background-color: #28a745; color: white; padding: 10px 15px; border-radius: 4px; text-decoration: none;">
+            📤 Importar desde JSON
+        </a>
+    </li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    {% if show_export_import %}
+    <div id="importForm" style="display: none; margin-top: 20px; padding: 20px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">
+        <h3>Importar Configuración desde JSON</h3>
+        <form method="post" action="{% url 'admin:alumnos_configuracion_importar_json' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <p>
+                <label for="json_file">Selecciona un archivo JSON:</label>
+                <input type="file" name="json_file" id="json_file" accept=".json" required>
+            </p>
+            <p>
+                <button type="submit" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                    ✅ Importar
+                </button>
+                <button type="button" onclick="document.getElementById('importForm').style.display='none'" class="button" style="background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                    ❌ Cancelar
+                </button>
+            </p>
+        </form>
+    </div>
+    {% endif %}
+{% endblock %}

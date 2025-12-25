@@ -83,6 +83,8 @@ class AlumnoAdmin(admin.ModelAdmin):
         'desenrollar_moodle_sin_email_sync',
         'activar_teams_y_moodle_con_email_sync',
         'activar_teams_y_moodle_sin_email_sync',
+        # ===== EXPORTACIÓN/IMPORTACIÓN =====
+        'exportar_alumnos_excel',
     ]
 
     def get_urls(self):
@@ -2443,6 +2445,113 @@ class AlumnoAdmin(admin.ModelAdmin):
 
     email_status.short_description = "Email"
 
+    @admin.action(description="📥 Exportar alumnos seleccionados a Excel")
+    def exportar_alumnos_excel(self, request, queryset):
+        """
+        Exporta los alumnos seleccionados o filtrados a un archivo Excel.
+        """
+        from django.http import HttpResponse
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from datetime import datetime
+
+        # Crear workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Alumnos"
+
+        # Encabezados
+        headers = [
+            'Apellido', 'Nombre', 'Tipo Documento', 'DNI', 'Email Personal',
+            'Email Institucional', 'Estado Actual', 'Fecha Ingreso', 'Cohorte',
+            'Localidad', 'Teléfono', 'Modalidad', 'Carreras', 'Teams Procesado',
+            'Moodle Procesado', 'Email Procesado', 'Fecha Creación', 'Última Modificación'
+        ]
+
+        # Estilo de encabezados
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        # Escribir encabezados
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+
+        # Escribir datos
+        for row_num, alumno in enumerate(queryset, 2):
+            # Formatear carreras
+            carreras_texto = ""
+            if alumno.carreras_data:
+                carreras_nombres = [c.get('nombre_carrera', 'N/A') for c in alumno.carreras_data]
+                carreras_texto = ", ".join(carreras_nombres)
+
+            # Fecha de ingreso
+            fecha_ingreso = alumno.fecha_ingreso.strftime('%Y-%m-%d') if alumno.fecha_ingreso else ''
+
+            # Fecha de creación y modificación
+            fecha_creacion = alumno.created_at.strftime('%Y-%m-%d %H:%M') if alumno.created_at else ''
+            fecha_modificacion = alumno.updated_at.strftime('%Y-%m-%d %H:%M') if alumno.updated_at else ''
+
+            row_data = [
+                alumno.apellido,
+                alumno.nombre,
+                alumno.tipo_documento,
+                alumno.dni,
+                alumno.email_personal,
+                alumno.email_institucional or '',
+                alumno.estado_actual,
+                fecha_ingreso,
+                alumno.cohorte or '',
+                alumno.localidad or '',
+                alumno.telefono or '',
+                alumno.modalidad_actual or '',
+                carreras_texto,
+                'Sí' if alumno.teams_procesado else 'No',
+                'Sí' if alumno.moodle_procesado else 'No',
+                'Sí' if alumno.email_procesado else 'No',
+                fecha_creacion,
+                fecha_modificacion
+            ]
+
+            for col_num, value in enumerate(row_data, 1):
+                ws.cell(row=row_num, column=col_num, value=value)
+
+        # Ajustar ancho de columnas
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Crear respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"alumnos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        # Guardar workbook en respuesta
+        wb.save(response)
+
+        self.message_user(
+            request,
+            f"✅ Exportados {queryset.count()} alumnos a Excel",
+            level=messages.SUCCESS
+        )
+
+        return response
+
+    exportar_alumnos_excel.short_description = "📥 Exportar alumnos a Excel"
+
     def carreras_formatted(self, obj):
         """Muestra la carrera del alumno (primera carrera de la lista)."""
         if not obj.carreras_data or len(obj.carreras_data) == 0:
@@ -2898,6 +3007,128 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         obj.actualizado_por = request.user.username
         super().save_model(request, obj, form, change)
 
+    def get_urls(self):
+        """Agregar URLs personalizadas para exportar/importar."""
+        urls = super().get_urls()
+        from django.urls import path
+        custom_urls = [
+            path(
+                'exportar-json/',
+                self.admin_site.admin_view(self.exportar_json_view),
+                name='alumnos_configuracion_exportar_json',
+            ),
+            path(
+                'importar-json/',
+                self.admin_site.admin_view(self.importar_json_view),
+                name='alumnos_configuracion_importar_json',
+            ),
+        ]
+        return custom_urls + urls
+
+    def exportar_json_view(self, request):
+        """Exporta la configuración a JSON."""
+        from django.http import JsonResponse, HttpResponse
+        import json
+        from datetime import datetime
+
+        config = Configuracion.load()
+
+        # Crear diccionario con todos los campos excepto id, actualizado_en, actualizado_por
+        data = {
+            'batch_size': config.batch_size,
+            'rate_limit_teams': config.rate_limit_teams,
+            'rate_limit_moodle': config.rate_limit_moodle,
+            'rate_limit_uti': config.rate_limit_uti,
+            'preinscriptos_dia_inicio': config.preinscriptos_dia_inicio,
+            'preinscriptos_dia_fin': config.preinscriptos_dia_fin,
+            'preinscriptos_frecuencia_segundos': config.preinscriptos_frecuencia_segundos,
+            'preinscriptos_enviar_email': config.preinscriptos_enviar_email,
+            'aspirantes_dia_inicio': config.aspirantes_dia_inicio,
+            'aspirantes_dia_fin': config.aspirantes_dia_fin,
+            'aspirantes_frecuencia_segundos': config.aspirantes_frecuencia_segundos,
+            'aspirantes_enviar_email': config.aspirantes_enviar_email,
+            'ingresantes_dia_inicio': config.ingresantes_dia_inicio,
+            'ingresantes_dia_fin': config.ingresantes_dia_fin,
+            'ingresantes_frecuencia_segundos': config.ingresantes_frecuencia_segundos,
+            'ingresantes_enviar_email': config.ingresantes_enviar_email,
+            'teams_tenant_id': config.teams_tenant_id,
+            'teams_client_id': config.teams_client_id,
+            'teams_client_secret': config.teams_client_secret,
+            'account_prefix': config.account_prefix,
+            'sial_base_url': config.sial_base_url,
+            'sial_basic_user': config.sial_basic_user,
+            'sial_basic_pass': config.sial_basic_pass,
+            'moodle_base_url': config.moodle_base_url,
+            'moodle_wstoken': config.moodle_wstoken,
+            'moodle_email_type': config.moodle_email_type,
+            'moodle_student_roleid': config.moodle_student_roleid,
+            'moodle_auth_method': config.moodle_auth_method,
+            'moodle_courses_config': config.moodle_courses_config,
+            'email_from': config.email_from,
+            'email_host': config.email_host,
+            'email_port': config.email_port,
+            'email_use_tls': config.email_use_tls,
+            'email_asunto_bienvenida': config.email_asunto_bienvenida,
+            'email_plantilla_bienvenida': config.email_plantilla_bienvenida,
+            'email_asunto_credenciales': config.email_asunto_credenciales,
+            'email_plantilla_credenciales': config.email_plantilla_credenciales,
+            'email_asunto_password': config.email_asunto_password,
+            'email_plantilla_password': config.email_plantilla_password,
+            'email_asunto_enrollamiento': config.email_asunto_enrollamiento,
+            'email_plantilla_enrollamiento': config.email_plantilla_enrollamiento,
+        }
+
+        # Crear respuesta JSON
+        response = HttpResponse(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            content_type='application/json'
+        )
+        filename = f"configuracion_pylucy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        messages.success(request, "✅ Configuración exportada correctamente")
+        return response
+
+    def importar_json_view(self, request):
+        """Importa la configuración desde JSON."""
+        from django.shortcuts import redirect
+        from django.urls import reverse
+        import json
+
+        if request.method != 'POST':
+            messages.error(request, "❌ Método no permitido")
+            return redirect('..')
+
+        if 'json_file' not in request.FILES:
+            messages.error(request, "❌ No se seleccionó ningún archivo")
+            return redirect('..')
+
+        try:
+            json_file = request.FILES['json_file']
+            data = json.load(json_file)
+
+            config = Configuracion.load()
+
+            # Actualizar todos los campos
+            for field, value in data.items():
+                if hasattr(config, field):
+                    setattr(config, field, value)
+
+            config.actualizado_por = request.user.username
+            config.save()
+
+            messages.success(
+                request,
+                f"✅ Configuración importada correctamente desde {json_file.name}"
+            )
+
+        except json.JSONDecodeError as e:
+            messages.error(request, f"❌ Error al parsear JSON: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"❌ Error al importar: {str(e)}")
+
+        return redirect('..')
+
     def changelist_view(self, request, extra_context=None):
         """Redirige directamente al formulario de edición."""
         obj = Configuracion.load()
@@ -2905,3 +3136,9 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         from django.http import HttpResponseRedirect
         url = reverse('admin:alumnos_configuracion_change', args=[obj.pk])
         return HttpResponseRedirect(url)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """Agrega botones de exportar/importar al formulario."""
+        extra_context = extra_context or {}
+        extra_context['show_export_import'] = True
+        return super().change_view(request, object_id, form_url, extra_context)
