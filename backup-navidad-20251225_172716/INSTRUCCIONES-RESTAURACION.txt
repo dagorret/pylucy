@@ -1,0 +1,162 @@
+╔════════════════════════════════════════════════════════════════╗
+║     INSTRUCCIONES DE RESTAURACIÓN - PyLucy Navidad 2025       ║
+╚════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════
+PASO 1: Copiar backup al servidor de producción
+═══════════════════════════════════════════════════════════════
+
+En tu máquina local:
+
+  scp -r backup-navidad-* usuario@servidor:/home/usuario/pylucy/
+
+O usando rsync (más rápido):
+
+  rsync -avz backup-navidad-* usuario@servidor:/home/usuario/pylucy/
+
+
+═══════════════════════════════════════════════════════════════
+PASO 2: En el servidor, preparar el entorno
+═══════════════════════════════════════════════════════════════
+
+cd /home/usuario/pylucy/backup-navidad-*/
+
+# Copiar archivo de configuración
+cp env-example-navidad.txt ../.env.prod
+
+# IMPORTANTE: Editar .env.prod si es necesario
+# - Cambiar ENVIRONMENT_MODE=production
+# - Cambiar ACCOUNT_PREFIX=a
+# - Cambiar DJANGO_DEBUG=False
+nano ../.env.prod
+
+
+═══════════════════════════════════════════════════════════════
+PASO 3: Levantar servicios (primera vez)
+═══════════════════════════════════════════════════════════════
+
+cd ..  # Volver a la raíz de pylucy
+
+# Levantar servicios
+docker compose -f docker-compose.prod.yml up -d
+
+# Esperar que la BD esté lista
+sleep 10
+
+
+═══════════════════════════════════════════════════════════════
+PASO 4A: Restaurar SOLO cursos y configuración (RECOMENDADO)
+═══════════════════════════════════════════════════════════════
+
+# Usar este método si quieres empezar con BD limpia
+# Solo restaura cursos y configuración del sistema
+
+cd backup-navidad-*/
+
+docker compose -f ../docker-compose.prod.yml exec -T db \
+  psql -U pylucy pylucy < cursos-config.sql
+
+# Aplicar migraciones
+docker compose -f ../docker-compose.prod.yml exec web \
+  python manage.py migrate
+
+
+═══════════════════════════════════════════════════════════════
+PASO 4B: Restaurar base de datos COMPLETA (alternativa)
+═══════════════════════════════════════════════════════════════
+
+# Usar este método si quieres copiar TODO incluyendo alumnos
+
+cd backup-navidad-*/
+
+docker compose -f ../docker-compose.prod.yml exec -T db \
+  psql -U pylucy pylucy < database-completa.sql
+
+
+═══════════════════════════════════════════════════════════════
+PASO 5: Reiniciar servicios
+═══════════════════════════════════════════════════════════════
+
+cd ..  # Volver a la raíz
+
+docker compose -f docker-compose.prod.yml restart web celery celery-beat
+
+
+═══════════════════════════════════════════════════════════════
+PASO 6: Verificar funcionamiento
+═══════════════════════════════════════════════════════════════
+
+# Ver logs en tiempo real
+docker compose -f docker-compose.prod.yml logs -f web
+
+# Verificar servicios
+docker compose -f docker-compose.prod.yml ps
+
+# Acceder al admin de Django
+# http://tu-servidor:8000/admin
+
+
+═══════════════════════════════════════════════════════════════
+COMANDOS ÚTILES EN PRODUCCIÓN
+═══════════════════════════════════════════════════════════════
+
+# Actualizar código desde Git
+./update-testing-prod.sh prod
+
+# Ver logs
+docker compose -f docker-compose.prod.yml logs -f web
+docker compose -f docker-compose.prod.yml logs -f celery
+
+# Reiniciar un servicio
+docker compose -f docker-compose.prod.yml restart web
+
+# Shell de Django
+docker compose -f docker-compose.prod.yml exec web python manage.py shell
+
+# Crear superusuario
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+
+# Backup de la BD en producción
+docker compose -f docker-compose.prod.yml exec db pg_dump -U pylucy pylucy \
+  > backup-prod-$(date +%Y%m%d_%H%M%S).sql
+
+
+═══════════════════════════════════════════════════════════════
+ARCHIVOS EN ESTE BACKUP
+═══════════════════════════════════════════════════════════════
+
+cursos-config.sql              - Solo cursos y configuración (RÁPIDO)
+database-completa.sql          - Base de datos completa con alumnos
+env-example-navidad.txt        - Configuración de entorno actual
+env-testing.txt                - Template para testing
+env-production.txt             - Template para producción
+README-ENV.md                  - Documentación de variables
+todo-email.txt                 - Notas para implementar emails
+docker-services.txt            - Estado de servicios Docker
+INSTRUCCIONES-RESTAURACION.txt - Este archivo
+
+
+═══════════════════════════════════════════════════════════════
+SOLUCIÓN DE PROBLEMAS
+═══════════════════════════════════════════════════════════════
+
+Error: "relation does not exist"
+  → Las tablas no existen, primero ejecuta las migraciones:
+    docker compose -f docker-compose.prod.yml exec web python manage.py migrate
+
+Error: "role pylucy does not exist"
+  → El usuario de BD no existe, verifica docker-compose.prod.yml
+
+Error: "permission denied"
+  → Verifica permisos del archivo .env.prod
+
+Servicios no inician:
+  → Verifica logs: docker compose -f docker-compose.prod.yml logs
+
+
+═══════════════════════════════════════════════════════════════
+SOPORTE
+═══════════════════════════════════════════════════════════════
+
+Documentación completa: README-ENV.md
+Backup creado: $(date)

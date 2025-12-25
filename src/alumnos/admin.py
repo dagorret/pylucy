@@ -1757,24 +1757,15 @@ class AlumnoAdmin(admin.ModelAdmin):
         from django.utils import timezone
         import time
 
+        from cursos.services import resolver_curso
+        from cursos.constants import CARRERAS_DICT
+
         config = Configuracion.load()
         moodle_svc = MoodleService()
         email_svc = EmailService()
         exitos = 0
         errores = 0
         omitidos = 0
-
-        # Obtener cursos desde configuración
-        courses_config = config.moodle_courses_config or {}
-        courses_aspirante = courses_config.get('aspirante', [])
-
-        if not courses_aspirante:
-            self.message_user(
-                request,
-                "⚠️ No hay cursos configurados para aspirantes en Configuración del Sistema",
-                level=messages.WARNING
-            )
-            return
 
         for alumno in queryset:
             # Validar que tenga email institucional o personal
@@ -1785,6 +1776,33 @@ class AlumnoAdmin(admin.ModelAdmin):
 
             # Validar que tenga email personal para notificación
             if not alumno.email:
+                omitidos += 1
+                continue
+
+            # Obtener cursos dinámicamente basado en carreras_data
+            courses_to_unenrol = []
+            if alumno.carreras_data and isinstance(alumno.carreras_data, list):
+                for carrera_data in alumno.carreras_data:
+                    id_carrera = carrera_data.get('id_carrera')
+                    modalidad = carrera_data.get('modalidad', '').strip()
+                    comisiones = carrera_data.get('comisiones', [])
+                    comision = comisiones[0].get('nombre_comision', '') if comisiones else ''
+
+                    # Mapear id_carrera a código
+                    codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
+                    if not codigo_carrera:
+                        continue
+
+                    try:
+                        cursos = resolver_curso(codigo_carrera, modalidad, comision)
+                        courses_to_unenrol.extend(cursos)
+                    except Exception:
+                        continue
+
+            # Eliminar duplicados
+            courses_to_unenrol = list(set(courses_to_unenrol))
+
+            if not courses_to_unenrol:
                 omitidos += 1
                 continue
 
@@ -1812,7 +1830,7 @@ class AlumnoAdmin(admin.ModelAdmin):
                     'modulo': 'admin_action_sync',
                     'accion': 'desenrollar_moodle_con_email',
                     'username': username,
-                    'cursos': courses_aspirante,
+                    'cursos': courses_to_unenrol,
                     'enviar_email': True
                 }
             )
@@ -1828,7 +1846,7 @@ class AlumnoAdmin(admin.ModelAdmin):
 
                 # Des-enrollar de cada curso
                 desenrollados = []
-                for course_shortname in courses_aspirante:
+                for course_shortname in courses_to_unenrol:
                     try:
                         if moodle_svc.unenrol_user_from_course(user_id, course_shortname, alumno):
                             desenrollados.append(course_shortname)
@@ -1926,6 +1944,8 @@ class AlumnoAdmin(admin.ModelAdmin):
         from .models import Log, Tarea, Configuracion
         from django.utils import timezone
         import time
+        from cursos.services import resolver_curso
+        from cursos.constants import CARRERAS_DICT
 
         config = Configuracion.load()
         moodle_svc = MoodleService()
@@ -1933,22 +1953,37 @@ class AlumnoAdmin(admin.ModelAdmin):
         errores = 0
         omitidos = 0
 
-        # Obtener cursos desde configuración
-        courses_config = config.moodle_courses_config or {}
-        courses_aspirante = courses_config.get('aspirante', [])
-
-        if not courses_aspirante:
-            self.message_user(
-                request,
-                "⚠️ No hay cursos configurados para aspirantes en Configuración del Sistema",
-                level=messages.WARNING
-            )
-            return
-
         for alumno in queryset:
             # Validar que tenga email institucional o personal
             username = alumno.email_institucional or alumno.email_personal
             if not username:
+                omitidos += 1
+                continue
+
+            # Obtener cursos dinámicamente basado en carreras_data
+            courses_to_unenrol = []
+            if alumno.carreras_data and isinstance(alumno.carreras_data, list):
+                for carrera_data in alumno.carreras_data:
+                    id_carrera = carrera_data.get('id_carrera')
+                    modalidad = carrera_data.get('modalidad', '').strip()
+                    comisiones = carrera_data.get('comisiones', [])
+                    comision = comisiones[0].get('nombre_comision', '') if comisiones else ''
+
+                    # Mapear id_carrera a código
+                    codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
+                    if not codigo_carrera:
+                        continue
+
+                    try:
+                        cursos = resolver_curso(codigo_carrera, modalidad, comision)
+                        courses_to_unenrol.extend(cursos)
+                    except Exception:
+                        continue
+
+            # Eliminar duplicados
+            courses_to_unenrol = list(set(courses_to_unenrol))
+
+            if not courses_to_unenrol:
                 omitidos += 1
                 continue
 
@@ -1976,7 +2011,7 @@ class AlumnoAdmin(admin.ModelAdmin):
                     'modulo': 'admin_action_sync',
                     'accion': 'desenrollar_moodle_sin_email',
                     'username': username,
-                    'cursos': courses_aspirante,
+                    'cursos': courses_to_unenrol,
                     'enviar_email': False
                 }
             )
@@ -1992,7 +2027,7 @@ class AlumnoAdmin(admin.ModelAdmin):
 
                 # Des-enrollar de cada curso
                 desenrollados = []
-                for course_shortname in courses_aspirante:
+                for course_shortname in courses_to_unenrol:
                     try:
                         if moodle_svc.unenrol_user_from_course(user_id, course_shortname, alumno):
                             desenrollados.append(course_shortname)

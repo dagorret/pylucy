@@ -1,0 +1,62 @@
+# TODO: Implementar envío de emails con Microsoft Graph API
+
+## Configuración en Azure AD:
+
+1. Ir a Azure Portal → App Registrations
+2. Abrir app "PyLucy Testing" (la misma que usas para Teams)
+3. API Permissions → Add a permission
+4. Microsoft Graph → Application permissions
+5. Agregar: Mail.Send
+6. Grant admin consent ✓
+
+## Implementación:
+
+### Opción RECOMENDADA: Microsoft Graph API
+
+**Ventajas:**
+- Ya tienes App Registration (misma que Teams)
+- Solo agregar permiso Mail.Send
+- Más moderno y seguro
+- API REST (no SMTP)
+- Microsoft no lo va a deprecar
+
+**Código a implementar:**
+```python
+def send_email_graph_api(self, to_email: str, subject: str, body: str, alumno=None):
+    """Envía email usando Microsoft Graph API"""
+
+    # 1. Obtener token (igual que para Teams)
+    token_url = f"https://login.microsoftonline.com/{TEAMS_TENANT}/oauth2/v2.0/token"
+    token_data = {
+        'grant_type': 'client_credentials',
+        'client_id': TEAMS_CLIENT_ID,
+        'client_secret': TEAMS_CLIENT_SECRET,
+        'scope': 'https://graph.microsoft.com/.default'
+    }
+
+    # 2. Enviar email vía Graph API
+    graph_url = f"https://graph.microsoft.com/v1.0/users/{from_email}/sendMail"
+    # ... resto del código
+```
+
+**Comparación de opciones:**
+
+| Característica | Graph API | SMTP OAuth2 | SMTP Tradicional |
+|----------------|-----------|-------------|------------------|
+| Seguridad | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ |
+| Soporte Microsoft | ✓ Activo | ✓ Activo | ❌ Deprecado |
+| Configuración | Simple | Compleja | Simple |
+| Usa misma app Teams | ✓ Sí | ✓ Sí | ❌ No |
+
+**Email remitente necesario:**
+- Cuenta de buzón: no-reply@eco.unrc.edu.ar (o cualquier cuenta con licencia)
+
+**Ya tienes:**
+- ✓ Azure AD Tenant ID
+- ✓ Application (client) ID
+- ✓ Client Secret
+
+**Solo falta:**
+- Agregar permiso Mail.Send en Azure AD
+- Implementar función de envío
+- Configurar email remitente en settings

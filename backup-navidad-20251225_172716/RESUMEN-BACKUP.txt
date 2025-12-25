@@ -1,0 +1,31 @@
+RESUMEN DEL BACKUP
+==================
+Fecha: jue 25 dic 2025 17:27:16 -03
+Directorio: backup-navidad-20251225_172716
+
+Archivos SQL:
+-rw-rw-r-- 1 carlos carlos  13K dic 25 17:27 backup-navidad-20251225_172716/cursos-config.sql
+-rw-rw-r-- 1 carlos carlos 726K dic 25 17:27 backup-navidad-20251225_172716/database-completa.sql
+
+Archivos de configuración:
+-rw-rw-r-- 1 carlos carlos 1,5K dic 25 17:27 backup-navidad-20251225_172716/docker-services.txt
+-rw------- 1 carlos carlos 3,9K dic 25 17:27 backup-navidad-20251225_172716/env-example-navidad.txt
+-rw------- 1 carlos carlos 5,7K dic 25 17:27 backup-navidad-20251225_172716/env-production.txt
+-rw------- 1 carlos carlos 3,6K dic 25 17:27 backup-navidad-20251225_172716/env-testing.txt
+-rw-rw-r-- 1 carlos carlos 8,1K dic 25 17:27 backup-navidad-20251225_172716/INSTRUCCIONES-RESTAURACION.txt
+-rw------- 1 carlos carlos 6,7K dic 25 17:27 backup-navidad-20251225_172716/README-ENV.md
+-rw-rw-r-- 1 carlos carlos    0 dic 25 17:27 backup-navidad-20251225_172716/RESUMEN-BACKUP.txt
+-rw------- 1 carlos carlos 2,0K dic 25 17:27 backup-navidad-20251225_172716/todo-email.txt
+
+Tamaño total:
+788K	backup-navidad-20251225_172716
+
+SIGUIENTE PASO:
+===============
+1. Lee INSTRUCCIONES-RESTAURACION.txt
+2. Copia esta carpeta al servidor de producción
+3. Sigue los pasos del archivo de instrucciones
+
+COMANDO RÁPIDO:
+===============
+scp -r backup-navidad-20251225_172716 usuario@servidor:/home/usuario/pylucy/

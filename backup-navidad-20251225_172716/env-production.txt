@@ -1,0 +1,153 @@
+# ============================================
+# PyLucy - Configuración de PRODUCCIÓN
+# ============================================
+# Este archivo contiene las variables de entorno para el servidor de producción
+# Usado por: docker-compose.prod.yml
+#
+# Para usar este archivo:
+#   cp env-production.txt .env.prod
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# IMPORTANTE: Este repo es PRIVADO, por eso incluimos credenciales reales
+
+# ============================================
+# DJANGO
+# ============================================
+DJANGO_DEBUG=False
+DJANGO_ENV=production
+
+# Generar una clave secreta única para producción:
+# python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+SECRET_KEY=django-insecure-CAMBIAR-POR-CLAVE-GENERADA-UNICA-PRODUCCION
+
+# Dominios permitidos (separados por comas)
+# Ejemplo: tu-servidor.unrc.edu.ar,www.tu-servidor.unrc.edu.ar
+ALLOWED_HOSTS=pylucy.eco.unrc.edu.ar,localhost
+
+# Modo producción
+# production: usa prefijo "a" para cuentas Teams reales
+ENVIRONMENT_MODE=production
+ACCOUNT_PREFIX=a
+
+# ============================================
+# BASE DE DATOS (PostgreSQL)
+# ============================================
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=pylucy
+DB_USER=pylucy
+# IMPORTANTE: Cambiar por una contraseña segura en producción
+DB_PASSWORD=CAMBIAR_CONTRASEÑA_POSTGRESQL_SEGURA_PRODUCCION
+DB_HOST=db
+DB_PORT=5432
+
+# ============================================
+# SIAL/UTI API REAL (Producción)
+# ============================================
+# API REAL de UTI para producción
+SIAL_BASE_URL=https://sisinfo.unrc.edu.ar
+SIAL_BASIC_USER=SIAL04_565
+SIAL_BASIC_PASS=pos15MAL@kapri
+
+# ============================================
+# MOODLE (Servidor de Producción)
+# ============================================
+# OPCIÓN 1: Usar servidor de producción (cambiar URL y token)
+# MOODLE_BASE_URL=https://moodle.eco.unrc.edu.ar
+# MOODLE_WSTOKEN=TOKEN_PRODUCCION_CAMBIAR
+
+# OPCIÓN 2: Usar servidor de testing v.eco.unrc.edu.ar (mientras no tengamos token de prod)
+MOODLE_BASE_URL=https://v.eco.unrc.edu.ar
+MOODLE_WSTOKEN=45fba879dcddc17a16436ac156cb880e
+
+# ============================================
+# EMAIL (SMTP Real - Servidor Institucional)
+# ============================================
+# Configurar servidor SMTP institucional de la UNRC
+EMAIL_HOST=smtp.eco.unrc.edu.ar
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+# Usuario y contraseña del correo institucional
+EMAIL_HOST_USER=no-reply@eco.unrc.edu.ar
+EMAIL_HOST_PASSWORD=CAMBIAR_CONTRASEÑA_SMTP_PRODUCCION
+DEFAULT_FROM_EMAIL=no-reply@eco.unrc.edu.ar
+
+# ============================================
+# MICROSOFT TEAMS / AZURE AD (Producción)
+# ============================================
+# OPCIÓN 1: Usar App Registration de producción (cuando esté disponible)
+# TEAMS_TENANT=GUID_TENANT_PRODUCCION
+# TEAMS_CLIENT_ID=GUID_CLIENT_PRODUCCION
+# TEAMS_CLIENT_SECRET=SECRET_PRODUCCION
+
+# OPCIÓN 2: Usar App Registration de testing (mientras no tengamos app de prod)
+TEAMS_TENANT=1f7d4699-ccd7-45d6-bc78-b8b950bcaedc
+TEAMS_DOMAIN=eco.unrc.edu.ar
+TEAMS_CLIENT_ID=138e98af-33e5-439c-9981-3caaedc65c70
+TEAMS_CLIENT_SECRET=VE~8Q~SbnnIUg-iEHnr1m8nxu5J0RAskpLJPlbuU
+
+# ============================================
+# CELERY (Redis para tareas asíncronas)
+# ============================================
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# ============================================
+# STATIC FILES
+# ============================================
+STATIC_ROOT=/app/staticfiles
+STATIC_URL=/static/
+
+# ============================================
+# SEGURIDAD (HTTPS)
+# ============================================
+# Descomentar cuando se configure HTTPS con certificado SSL
+# SECURE_SSL_REDIRECT=True
+# SESSION_COOKIE_SECURE=True
+# CSRF_COOKIE_SECURE=True
+# SECURE_HSTS_SECONDS=31536000
+# SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+# SECURE_HSTS_PRELOAD=True
+
+# ============================================
+# LOGGING
+# ============================================
+LOG_LEVEL=INFO
+
+# ============================================
+# NOTAS IMPORTANTES PARA PRODUCCIÓN
+# ============================================
+#
+# ANTES DE DESPLEGAR EN PRODUCCIÓN:
+# ----------------------------------
+# 1. Cambiar SECRET_KEY por una clave única generada
+# 2. Cambiar DB_PASSWORD por una contraseña segura
+# 3. Configurar EMAIL_HOST_PASSWORD con credenciales SMTP reales
+# 4. Actualizar ALLOWED_HOSTS con el dominio real del servidor
+# 5. Considerar crear App Registration separada en Azure AD para producción
+# 6. Obtener token de Moodle de producción (si se usa servidor diferente a v.eco)
+# 7. Habilitar HTTPS y descomentar configuraciones de seguridad
+#
+# DIFERENCIAS CON TESTING:
+# ------------------------
+# - ACCOUNT_PREFIX: "a" en producción vs "test-a" en testing
+#   Ejemplo producción: a12345678@eco.unrc.edu.ar
+#   Ejemplo testing: test-a12345678@eco.unrc.edu.ar
+#
+# - DEBUG: False en producción (nunca True en producción)
+# - Emails: Se envían realmente (no MailHog)
+# - Base de datos: Persistente y con backups regulares
+# - Logs: Nivel INFO (menos verbose que DEBUG)
+#
+# COMANDOS ÚTILES:
+# ----------------
+# Generar SECRET_KEY:
+#   docker compose -f docker-compose.prod.yml exec web python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+#
+# Ver logs:
+#   docker compose -f docker-compose.prod.yml logs -f web
+#
+# Backup de base de datos:
+#   docker compose -f docker-compose.prod.yml exec db pg_dump -U pylucy pylucy > backup_$(date +%Y%m%d_%H%M%S).sql
+#
+# Restaurar base de datos:
+#   docker compose -f docker-compose.prod.yml exec -T db psql -U pylucy pylucy < backup.sql

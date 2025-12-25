@@ -1,0 +1,9 @@
+NAME                          IMAGE                 COMMAND                  SERVICE        CREATED       STATUS                 PORTS
+pylucy-celery-beat-testing    pylucy-celery-beat    "/entrypoint.sh cele…"   celery-beat    5 hours ago   Up 5 hours             8000/tcp
+pylucy-celery-testing         pylucy-celery         "/entrypoint.sh cele…"   celery         5 hours ago   Up 5 hours             8000/tcp
+pylucy-db-testing             postgres:16           "docker-entrypoint.s…"   db             5 hours ago   Up 5 hours (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+pylucy-mailhog-testing        mailhog/mailhog       "MailHog"                mailhog        5 hours ago   Up 5 hours             0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp
+pylucy-mock-api-uti-testing   pylucy-mock-api-uti   "uvicorn app.main:ap…"   mock-api-uti   5 hours ago   Up 5 hours             0.0.0.0:8088->8000/tcp, [::]:8088->8000/tcp
+pylucy-pgadmin-testing        dpage/pgadmin4        "/entrypoint.sh"         pgadmin        5 hours ago   Up 5 hours             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+pylucy-redis-testing          redis:7-alpine        "docker-entrypoint.s…"   redis          5 hours ago   Up 5 hours (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+pylucy-web-testing            pylucy-web            "/entrypoint.sh pyth…"   web            5 hours ago   Up 44 minutes          0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
