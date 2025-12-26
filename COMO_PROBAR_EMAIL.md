@@ -4,7 +4,7 @@
 
 1. **Iniciar el ambiente de desarrollo**:
    ```bash
-   docker compose up -d
+   docker compose -f docker-compose.dev.yml up -d
    ```
 
 2. **Ir al Dashboard del Admin**:
@@ -12,9 +12,14 @@
    http://localhost:8000/admin/
    ```
 
-3. **Buscar la sección**:
+3. **En el menú "Acciones Rápidas", hacer clic en**:
    ```
-   📧 Probar Envío de Email (Office 365 / Graph API)
+   📧 Probar Email
+   ```
+
+4. **O ir directamente a**:
+   ```
+   http://localhost:8000/admin/probar-email/
    ```
 
 ---

@@ -3255,6 +3255,12 @@ class PyLucyAdminSite(AdminSite):
 
     def test_email_view(self, request):
         """Vista para probar envío de emails usando Microsoft Graph API."""
+        # Si es GET, mostrar el formulario
+        if request.method == 'GET':
+            from django.shortcuts import render
+            return render(request, 'admin/test_email.html')
+
+        # Si es POST, procesar el envío del email
         if request.method == 'POST':
             try:
                 # Obtener parámetros del formulario
