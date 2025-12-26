@@ -10,6 +10,7 @@ Funcionalidades:
 import requests
 import logging
 from typing import Optional, Dict, List
+from urllib.parse import quote
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -325,7 +326,9 @@ class TeamsService:
         Returns:
             Dict con información del usuario o None si no existe
         """
-        url = f"{self.BASE_URL}/users/{upn}"
+        # URL encode del UPN para manejar caracteres especiales como @
+        upn_encoded = quote(upn, safe='')
+        url = f"{self.BASE_URL}/users/{upn_encoded}"
 
         try:
             response = requests.get(url, headers=self._get_headers(), timeout=10)
@@ -360,7 +363,9 @@ class TeamsService:
             dni = upn.split('@')[0].replace(settings.ACCOUNT_PREFIX, '')
             new_password = self._generate_temp_password(dni)
 
-        url = f"{self.BASE_URL}/users/{upn}"
+        # URL encode del UPN para manejar caracteres especiales como @
+        upn_encoded = quote(upn, safe='')
+        url = f"{self.BASE_URL}/users/{upn_encoded}"
         data = {
             "passwordProfile": {
                 "forceChangePasswordNextSignIn": True,
@@ -379,6 +384,12 @@ class TeamsService:
             response.raise_for_status()
             logger.info(f"Contraseña reseteada exitosamente para {upn}")
             log_to_db('SUCCESS', 'teams_service', f'Contraseña reseteada exitosamente: {upn}', alumno=alumno)
+
+            # Guardar nueva password en el modelo Alumno
+            if alumno:
+                alumno.teams_password = new_password
+                alumno.save(update_fields=['teams_password'])
+
             return new_password
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
@@ -443,7 +454,9 @@ class TeamsService:
             log_to_db('ERROR', 'teams_service', f'SEGURIDAD: Intento de eliminar cuenta no-test: {upn}', alumno=alumno)
             raise ValueError(f"T-999: Por seguridad, solo se pueden eliminar cuentas test-*")
 
-        url = f"{self.BASE_URL}/users/{upn}"
+        # URL encode del UPN para manejar caracteres especiales como @
+        upn_encoded = quote(upn, safe='')
+        url = f"{self.BASE_URL}/users/{upn_encoded}"
 
         try:
             logger.info(f"Eliminando usuario: {upn}")
@@ -469,15 +482,39 @@ class TeamsService:
             raise ValueError(f"T-009: Error de conexión - {e}")
 
     @staticmethod
-    def _generate_temp_password(dni: str) -> str:
+    def _generate_temp_password(dni: str = None) -> str:
         """
-        Genera contraseña temporal segura basada en el DNI.
-        Formato: Unrc2025!{dni}
+        Genera contraseña temporal completamente aleatoria que cumple con los estándares de Microsoft.
+
+        Requisitos de Microsoft:
+        - Mínimo 8 caracteres
+        - Al menos 3 de estas 4 categorías: mayúsculas, minúsculas, números, símbolos
+
+        Genera una password de 16 caracteres con:
+        - 4 mayúsculas
+        - 4 minúsculas
+        - 4 dígitos
+        - 4 símbolos especiales
 
         Args:
-            dni: DNI del alumno
+            dni: DNI del alumno (no se usa, mantenido por compatibilidad)
 
         Returns:
-            Contraseña temporal
+            Contraseña temporal aleatoria
         """
-        return f"Unrc2025!{dni}"
+        import secrets
+        import string
+
+        # Generar caracteres aleatorios de cada categoría
+        uppercase = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(4))
+        lowercase = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
+        digits = ''.join(secrets.choice(string.digits) for _ in range(4))
+        symbols = ''.join(secrets.choice('!@#$%^&*') for _ in range(4))
+
+        # Combinar todos los caracteres
+        all_chars = list(uppercase + lowercase + digits + symbols)
+
+        # Mezclar aleatoriamente
+        secrets.SystemRandom().shuffle(all_chars)
+
+        return ''.join(all_chars)

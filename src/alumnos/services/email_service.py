@@ -292,12 +292,15 @@ Universidad Nacional de Río Cuarto
         # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
         plantilla = config.email_plantilla_enrollamiento
         html_message = None
+        password = alumno.teams_password or "[Contactar soporte]"
+
         if plantilla:
             try:
                 message = plantilla.format(
                     nombre=alumno.nombre,
                     apellido=alumno.apellido,
                     upn=upn,
+                    password=password,
                     moodle_url=moodle_url,
                     cursos_html=cursos_html,
                     cursos_texto=cursos_texto
@@ -322,12 +325,13 @@ URL: {moodle_url}
 
 🔑 CREDENCIALES DE ACCESO:
 Usuario: {upn}
-Contraseña: La misma que usas para Microsoft Teams
+Contraseña: {password}
 
 IMPORTANTE:
-- Usa las mismas credenciales que recibiste para Teams
-- Si cambiaste tu contraseña de Teams, usa la nueva contraseña
+- Estas son las mismas credenciales para Microsoft Teams y el Campus Virtual
+- En el primer acceso deberás cambiar tu contraseña
 - El acceso es mediante autenticación de Microsoft (OpenID Connect)
+- Guarda estas credenciales en un lugar seguro
 
 📚 CURSOS ENROLLADOS:
 {cursos_texto}
@@ -342,8 +346,78 @@ Universidad Nacional de Río Cuarto
 ---
 Este es un mensaje automático, por favor no responder.
 """
-            # Si no hay plantilla personalizada, no enviar HTML
-            html_message = None
+            # Generar versión HTML del fallback
+            html_message = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #003366; color: white; padding: 20px; text-align: center; }}
+        .content {{ background-color: #f9f9f9; padding: 20px; }}
+        .credentials {{ background-color: #e8f4f8; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0; }}
+        .important {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+        .courses {{ background-color: #fff; padding: 15px; margin: 20px 0; border: 1px solid #ddd; }}
+        .footer {{ background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666; }}
+        ul {{ padding-left: 20px; }}
+        a {{ color: #0066cc; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Ecosistema Virtual FCE - UNRC</h1>
+        </div>
+
+        <div class="content">
+            <p>Hola <strong>{alumno.nombre} {alumno.apellido}</strong>,</p>
+
+            <p>¡Bienvenido/a al <strong>Ecosistema Virtual de la Facultad de Ciencias Económicas</strong>!</p>
+
+            <p>Has sido enrollado/a en nuestro campus virtual Moodle.</p>
+
+            <h3>🌐 ACCESO AL ECOSISTEMA VIRTUAL</h3>
+            <p>URL: <a href="{moodle_url}">{moodle_url}</a></p>
+
+            <div class="credentials">
+                <h3>🔑 CREDENCIALES DE ACCESO</h3>
+                <p><strong>Usuario:</strong> {upn}</p>
+                <p><strong>Contraseña:</strong> {password}</p>
+            </div>
+
+            <div class="important">
+                <h3>⚠️ IMPORTANTE</h3>
+                <ul>
+                    <li>Estas son las mismas credenciales para Microsoft Teams y el Campus Virtual</li>
+                    <li>En el primer acceso deberás cambiar tu contraseña</li>
+                    <li>El acceso es mediante autenticación de Microsoft (OpenID Connect)</li>
+                    <li>Guarda estas credenciales en un lugar seguro</li>
+                </ul>
+            </div>
+
+            <div class="courses">
+                <h3>📚 CURSOS ENROLLADOS</h3>
+                {cursos_html}
+            </div>
+
+            <p>Si tienes alguna consulta o problema para acceder, contacta con soporte técnico.</p>
+
+            <p>Saludos,<br>
+            <strong>Sistema Lucy AMS</strong><br>
+            Facultad de Ciencias Económicas<br>
+            Universidad Nacional de Río Cuarto</p>
+        </div>
+
+        <div class="footer">
+            <p>Este es un mensaje automático, por favor no responder.</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
 
         try:
             email_to = alumno.email_personal or alumno.email_institucional
