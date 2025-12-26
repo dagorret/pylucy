@@ -3254,31 +3254,24 @@ class PyLucyAdminSite(AdminSite):
         return custom_urls + urls
 
     def test_email_view(self, request):
-        """Vista para probar envío de emails con configuración personalizada (Office 365)."""
+        """Vista para probar envío de emails usando Microsoft Graph API."""
         if request.method == 'POST':
             try:
                 # Obtener parámetros del formulario
                 destinatario = request.POST.get('destinatario', '').strip()
-                smtp_host = request.POST.get('smtp_host', '').strip()
-                smtp_port = request.POST.get('smtp_port', '').strip()
-                smtp_user = request.POST.get('smtp_user', '').strip()
-                smtp_password = request.POST.get('smtp_password', '').strip()
                 email_from = request.POST.get('email_from', '').strip()
-                use_tls = request.POST.get('use_tls', 'false').lower() == 'true'
                 mensaje_personalizado = request.POST.get('mensaje', '').strip()
 
                 # Validaciones
-                if not destinatario:
+                if not destinatario or not email_from:
                     return JsonResponse({
                         'success': False,
-                        'error': 'Debe ingresar un destinatario'
+                        'error': 'Debe ingresar remitente y destinatario'
                     })
 
-                if not smtp_host or not smtp_port:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Debe configurar SMTP host y port'
-                    })
+                # Importar TeamsService para usar el token de Graph API
+                from .services.teams_service import TeamsService
+                teams_svc = TeamsService()
 
                 # Email de prueba
                 subject = "✅ Prueba de Email Office 365 - PyLucy"
@@ -3287,28 +3280,14 @@ class PyLucyAdminSite(AdminSite):
                 if mensaje_personalizado:
                     message_body = mensaje_personalizado
                 else:
-                    message_body = """
-Hola,
+                    message_body = """Hola,
 
-Este es un email de prueba enviado desde PyLucy usando Office 365.
+Este es un email de prueba enviado desde PyLucy usando Microsoft Graph API.
 
 Si recibes este mensaje, la configuración de Office 365 está funcionando correctamente.
 
 Saludos,
-Sistema PyLucy
-"""
-
-                message = f"""
-{message_body}
-
----
-Detalles técnicos de envío:
-- Host: {smtp_host}
-- Port: {smtp_port}
-- TLS: {'Sí' if use_tls else 'No'}
-- Usuario: {smtp_user}
-- From: {email_from}
-"""
+Sistema PyLucy"""
 
                 html_message = f"""
 <!DOCTYPE html>
@@ -3320,7 +3299,7 @@ Detalles técnicos de envío:
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
         .header {{ background-color: #0078d4; color: white; padding: 20px; text-align: center; }}
         .content {{ background-color: #f9f9f9; padding: 20px; }}
-        .message-box {{ background-color: white; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px; }}
+        .message-box {{ background-color: white; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px; white-space: pre-wrap; }}
         .info {{ background-color: #e8f4f8; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0; }}
         .footer {{ background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666; }}
     </style>
@@ -3333,22 +3312,18 @@ Detalles técnicos de envío:
         </div>
 
         <div class="content">
-            <div class="message-box">
-                <p style="white-space: pre-wrap;">{message_body}</p>
-            </div>
+            <div class="message-box">{message_body}</div>
 
             <div class="info">
                 <h3 style="margin-top: 0;">📋 Detalles técnicos de envío</h3>
                 <ul style="margin-bottom: 0;">
-                    <li><strong>Host:</strong> {smtp_host}</li>
-                    <li><strong>Port:</strong> {smtp_port}</li>
-                    <li><strong>TLS:</strong> {'Sí' if use_tls else 'No'}</li>
-                    <li><strong>Usuario:</strong> {smtp_user}</li>
+                    <li><strong>Método:</strong> Microsoft Graph API</li>
                     <li><strong>From:</strong> {email_from}</li>
+                    <li><strong>To:</strong> {destinatario}</li>
                 </ul>
             </div>
 
-            <p>Si recibes este mensaje, la configuración de <strong>Office 365</strong> está funcionando correctamente.</p>
+            <p>Si recibes este mensaje, Microsoft Graph API está configurado correctamente.</p>
 
             <p>Saludos,<br>
             <strong>Sistema PyLucy</strong></p>
@@ -3362,69 +3337,69 @@ Detalles técnicos de envío:
 </html>
 """
 
-                # Enviar usando Django con configuración personalizada
-                import smtplib
-                from email.mime.multipart import MIMEMultipart
-                from email.mime.text import MIMEText
+                # Enviar usando Microsoft Graph API
+                import requests
 
-                # Crear mensaje
-                msg = MIMEMultipart('alternative')
-                msg['Subject'] = subject
-                msg['From'] = email_from
-                msg['To'] = destinatario
+                # Obtener token
+                token = teams_svc._get_token()
 
-                # Agregar partes texto y HTML
-                part1 = MIMEText(message, 'plain', 'utf-8')
-                part2 = MIMEText(html_message, 'html', 'utf-8')
-                msg.attach(part1)
-                msg.attach(part2)
+                # Construir mensaje
+                message_payload = {
+                    "message": {
+                        "subject": subject,
+                        "body": {
+                            "contentType": "HTML",
+                            "content": html_message
+                        },
+                        "toRecipients": [
+                            {
+                                "emailAddress": {
+                                    "address": destinatario
+                                }
+                            }
+                        ]
+                    },
+                    "saveToSentItems": "true"
+                }
 
-                # Conectar y enviar
-                logger.info(f"Conectando a {smtp_host}:{smtp_port} (TLS: {use_tls})")
+                # Enviar email usando Graph API
+                # https://graph.microsoft.com/v1.0/users/{userId}/sendMail
+                url = f"https://graph.microsoft.com/v1.0/users/{email_from}/sendMail"
 
-                smtp_port_int = int(smtp_port)
+                logger.info(f"Enviando email vía Graph API desde {email_from} a {destinatario}")
 
-                if use_tls:
-                    # Usar STARTTLS (puerto 587)
-                    server = smtplib.SMTP(smtp_host, smtp_port_int, timeout=30)
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
-                else:
-                    # Sin TLS (puerto 25 o MailHog)
-                    server = smtplib.SMTP(smtp_host, smtp_port_int, timeout=30)
+                response = requests.post(
+                    url,
+                    json=message_payload,
+                    headers={
+                        'Authorization': f'Bearer {token}',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=30
+                )
 
-                # Autenticar si hay credenciales
-                if smtp_user and smtp_password:
-                    logger.info(f"Autenticando como {smtp_user}")
-                    server.login(smtp_user, smtp_password)
+                response.raise_for_status()
 
-                # Enviar
-                logger.info(f"Enviando email a {destinatario}")
-                server.sendmail(email_from, [destinatario], msg.as_string())
-                server.quit()
-
-                logger.info(f"✅ Email de prueba Office 365 enviado a {destinatario}")
+                logger.info(f"✅ Email de prueba enviado exitosamente a {destinatario}")
                 return JsonResponse({
                     'success': True,
-                    'message': f'Email enviado exitosamente a {destinatario} usando {smtp_host}'
+                    'message': f'Email enviado exitosamente a {destinatario} usando Microsoft Graph API'
                 })
 
-            except smtplib.SMTPAuthenticationError as e:
-                error_msg = f"Error de autenticación: {str(e)}"
+            except requests.exceptions.HTTPError as e:
+                error_msg = f"Error HTTP {e.response.status_code}: {e.response.text}"
                 logger.error(error_msg)
+
+                hint = None
+                if e.response.status_code == 403:
+                    hint = 'Verifica que el permiso Mail.Send esté configurado y tenga admin consent.'
+                elif e.response.status_code == 404:
+                    hint = f'El buzón "{email_from}" no existe en Office 365.'
+
                 return JsonResponse({
                     'success': False,
                     'error': error_msg,
-                    'hint': 'Verifica usuario y contraseña. Si usas MFA, necesitas una App Password.'
-                })
-
-            except smtplib.SMTPException as e:
-                error_msg = f"Error SMTP: {str(e)}"
-                logger.error(error_msg)
-                return JsonResponse({
-                    'success': False,
-                    'error': error_msg
+                    'hint': hint
                 })
 
             except Exception as e:
@@ -3433,7 +3408,7 @@ Detalles técnicos de envío:
                 return JsonResponse({
                     'success': False,
                     'error': str(e),
-                    'traceback': traceback.format_exc()
+                    'hint': 'Verifica la configuración de Azure AD (TEAMS_TENANT, TEAMS_CLIENT_ID, TEAMS_CLIENT_SECRET)'
                 })
 
         return JsonResponse({'success': False, 'error': 'Método no permitido'})

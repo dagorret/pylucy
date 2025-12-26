@@ -4,195 +4,83 @@
 {% block content %}
 {{ block.super }}
 
-{# Sección de Prueba de Email con Office 365 #}
+{# Sección de Prueba de Email con Microsoft Graph API #}
 <div class="module" style="margin-top: 20px; border-left: 4px solid #0078d4;">
-    <h2>📧 Probar Envío de Email (Office 365)</h2>
+    <h2>📧 Probar Envío de Email (Office 365 / Graph API)</h2>
     <p style="color: #666; margin-bottom: 15px;">
-        Configura y prueba el envío de emails con Office 365 sin afectar la configuración actual de MailHog.
+        Envía un email de prueba usando Microsoft Graph API con las credenciales ya configuradas en Azure AD.
     </p>
 
     <form id="test-email-form" style="background-color: #f9f9f9; padding: 20px; border-radius: 4px;">
         {% csrf_token %}
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-            {# Columna 1: Configuración SMTP #}
-            <div style="border-right: 1px solid #ddd; padding-right: 15px;">
-                <h3 style="margin-top: 0; color: #0078d4;">⚙️ Configuración SMTP</h3>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="smtp_host" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        SMTP Host:
-                    </label>
-                    <input
-                        type="text"
-                        id="smtp_host"
-                        name="smtp_host"
-                        value="smtp.office365.com"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="smtp_port" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Puerto:
-                    </label>
-                    <input
-                        type="number"
-                        id="smtp_port"
-                        name="smtp_port"
-                        value="587"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input
-                            type="checkbox"
-                            id="use_tls"
-                            name="use_tls"
-                            value="true"
-                            checked
-                            style="margin-right: 8px;"
-                        />
-                        <span style="font-weight: bold;">Usar TLS (recomendado para Office 365)</span>
-                    </label>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="smtp_user" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Usuario (email completo):
-                    </label>
-                    <input
-                        type="email"
-                        id="smtp_user"
-                        name="smtp_user"
-                        placeholder="admin@eco.unrc.edu.ar"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="smtp_password" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Contraseña / App Password:
-                    </label>
-                    <input
-                        type="password"
-                        id="smtp_password"
-                        name="smtp_password"
-                        placeholder="••••••••"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                    <small style="color: #666;">Si usas MFA, ingresa una App Password</small>
-                </div>
-            </div>
-
-            {# Columna 2: Mensaje #}
-            <div style="padding-left: 15px;">
-                <h3 style="margin-top: 0; color: #0078d4;">✉️ Contenido del Email</h3>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="email_from" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Remitente (From):
-                    </label>
-                    <input
-                        type="email"
-                        id="email_from"
-                        name="email_from"
-                        placeholder="no-reply@eco.unrc.edu.ar"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="destinatario" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Destinatario (Para):
-                    </label>
-                    <input
-                        type="email"
-                        id="destinatario"
-                        name="destinatario"
-                        placeholder="ejemplo@dominio.com"
-                        required
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                    />
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label for="mensaje" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                        Mensaje personalizado (opcional):
-                    </label>
-                    <textarea
-                        id="mensaje"
-                        name="mensaje"
-                        rows="6"
-                        placeholder="Escribe aquí tu mensaje de prueba..."
-                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"
-                    ></textarea>
-                    <small style="color: #666;">Si dejas vacío, se enviará un mensaje por defecto</small>
-                </div>
-            </div>
+        <div style="margin-bottom: 15px;">
+            <label for="email_from" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                Remitente (From):
+            </label>
+            <input
+                type="email"
+                id="email_from"
+                name="email_from"
+                placeholder="admin@eco.unrc.edu.ar"
+                required
+                style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+            />
+            <small style="color: #666;">Debe ser un buzón válido en tu Office 365</small>
         </div>
 
-        <div style="border-top: 1px solid #ddd; padding-top: 15px;">
-            <button
-                type="submit"
-                style="background-color: #0078d4; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;"
-            >
-                📤 Enviar Email de Prueba con Office 365
-            </button>
-
-            <button
-                type="button"
-                id="btn-limpiar"
-                style="background-color: #6c757d; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; margin-left: 10px;"
-            >
-                🔄 Limpiar Formulario
-            </button>
-
-            <div id="email-result" style="margin-top: 15px; display: none;"></div>
+        <div style="margin-bottom: 15px;">
+            <label for="destinatario" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                Destinatario (Para):
+            </label>
+            <input
+                type="email"
+                id="destinatario"
+                name="destinatario"
+                placeholder="ejemplo@dominio.com"
+                required
+                style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+            />
         </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="mensaje" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                Mensaje personalizado (opcional):
+            </label>
+            <textarea
+                id="mensaje"
+                name="mensaje"
+                rows="4"
+                placeholder="Escribe aquí tu mensaje de prueba..."
+                style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"
+            ></textarea>
+            <small style="color: #666;">Si dejas vacío, se enviará un mensaje por defecto</small>
+        </div>
+
+        <button
+            type="submit"
+            style="background-color: #0078d4; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+        >
+            📤 Enviar Email de Prueba
+        </button>
+
+        <div id="email-result" style="margin-top: 15px; display: none;"></div>
     </form>
 </div>
 
 <script>
-// Botón limpiar
-document.getElementById('btn-limpiar').addEventListener('click', function() {
-    document.getElementById('test-email-form').reset();
-    document.getElementById('email-result').style.display = 'none';
-});
-
-// Enviar formulario
 document.getElementById('test-email-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const form = e.target;
     const button = form.querySelector('button[type="submit"]');
     const resultDiv = document.getElementById('email-result');
-
-    // Obtener valores del formulario
     const formData = new FormData(form);
-    const data = new URLSearchParams();
-
-    // Agregar todos los campos
-    data.append('destinatario', formData.get('destinatario'));
-    data.append('smtp_host', formData.get('smtp_host'));
-    data.append('smtp_port', formData.get('smtp_port'));
-    data.append('smtp_user', formData.get('smtp_user'));
-    data.append('smtp_password', formData.get('smtp_password'));
-    data.append('email_from', formData.get('email_from'));
-    data.append('use_tls', document.getElementById('use_tls').checked ? 'true' : 'false');
-    data.append('mensaje', formData.get('mensaje') || '');
 
     // Deshabilitar botón y mostrar loading
     button.disabled = true;
     const originalText = button.textContent;
-    button.textContent = '⏳ Conectando y enviando...';
+    button.textContent = '⏳ Enviando...';
     resultDiv.style.display = 'none';
 
     try {
@@ -202,32 +90,31 @@ document.getElementById('test-email-form').addEventListener('submit', async func
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             },
-            body: data
+            body: new URLSearchParams({
+                'email_from': formData.get('email_from'),
+                'destinatario': formData.get('destinatario'),
+                'mensaje': formData.get('mensaje') || ''
+            })
         });
 
-        const jsonData = await response.json();
+        const data = await response.json();
 
         // Mostrar resultado
         resultDiv.style.display = 'block';
-        if (jsonData.success) {
+        if (data.success) {
             resultDiv.innerHTML = `
                 <div style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
-                    <strong>✅ Éxito:</strong> ${jsonData.message}
+                    <strong>✅ Éxito:</strong> ${data.message}
                     <br><small>Revisa la bandeja de entrada del destinatario</small>
                 </div>
             `;
-            // Opcional: limpiar password después de envío exitoso
-            // document.getElementById('smtp_password').value = '';
         } else {
             let errorHtml = `
                 <div style="padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                    <strong>❌ Error:</strong> ${jsonData.error}
+                    <strong>❌ Error:</strong> ${data.error}
             `;
-            if (jsonData.hint) {
-                errorHtml += `<br><br><strong>💡 Sugerencia:</strong> ${jsonData.hint}`;
-            }
-            if (jsonData.traceback) {
-                errorHtml += `<br><br><details><summary style="cursor: pointer;">Ver detalles técnicos</summary><pre style="font-size: 11px; overflow: auto;">${jsonData.traceback}</pre></details>`;
+            if (data.hint) {
+                errorHtml += `<br><br><strong>💡 Sugerencia:</strong> ${data.hint}`;
             }
             errorHtml += `</div>`;
             resultDiv.innerHTML = errorHtml;
