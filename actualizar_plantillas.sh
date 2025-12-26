@@ -15,26 +15,37 @@ echo "PyLucy - Sistema de Gestión de Alumnos"
 echo "============================================"
 echo ""
 
-# Verificar que estamos en el directorio correcto
-if [ ! -f "manage.py" ]; then
-    echo "❌ Error: Este script debe ejecutarse desde el directorio raíz del proyecto (donde está manage.py)"
+# Detectar si estamos en el directorio src o en el raíz
+if [ -f "manage.py" ]; then
+    # Estamos en src/
+    cd ..
+fi
+
+# Verificar que estamos en el directorio raíz del proyecto
+if [ ! -f "docker-compose.yml" ] && [ ! -f "docker-compose.dev.yml" ] && [ ! -f "docker-compose.testing.yml" ] && [ ! -f "docker-compose.prod.yml" ]; then
+    echo "❌ Error: No se encontró docker-compose.yml"
+    echo "   Este script debe ejecutarse desde el directorio del proyecto"
     exit 1
 fi
 
 echo "📧 Actualizando plantillas de email en la base de datos..."
 echo ""
 
-# Ejecutar script Python para actualizar la configuración
-python3 << 'PYTHON_SCRIPT'
-import os
-import sys
-import django
+# Detectar qué docker-compose usar
+COMPOSE_FILE=""
+if [ -f "docker-compose.dev.yml" ]; then
+    COMPOSE_FILE="-f docker-compose.dev.yml"
+elif [ -f "docker-compose.testing.yml" ]; then
+    COMPOSE_FILE="-f docker-compose.testing.yml"
+elif [ -f "docker-compose.prod.yml" ]; then
+    COMPOSE_FILE="-f docker-compose.prod.yml"
+fi
 
-# Setup Django
-sys.path.insert(0, '/home/carlos/work/pylucy/src')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pylucy.settings')
-django.setup()
+echo "🐳 Ejecutando script en contenedor Docker..."
+echo ""
 
+# Ejecutar comando Python directamente en el contenedor
+docker compose $COMPOSE_FILE exec -T web python manage.py shell << 'PYTHON_SCRIPT'
 from alumnos.models import Configuracion
 
 # Cargar configuración
