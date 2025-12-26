@@ -1,0 +1,349 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block content %}
+{{ block.super }}
+
+{# Sección de Prueba de Email con Office 365 #}
+<div class="module" style="margin-top: 20px; border-left: 4px solid #0078d4;">
+    <h2>📧 Probar Envío de Email (Office 365)</h2>
+    <p style="color: #666; margin-bottom: 15px;">
+        Configura y prueba el envío de emails con Office 365 sin afectar la configuración actual de MailHog.
+    </p>
+
+    <form id="test-email-form" style="background-color: #f9f9f9; padding: 20px; border-radius: 4px;">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            {# Columna 1: Configuración SMTP #}
+            <div style="border-right: 1px solid #ddd; padding-right: 15px;">
+                <h3 style="margin-top: 0; color: #0078d4;">⚙️ Configuración SMTP</h3>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="smtp_host" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        SMTP Host:
+                    </label>
+                    <input
+                        type="text"
+                        id="smtp_host"
+                        name="smtp_host"
+                        value="smtp.office365.com"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="smtp_port" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Puerto:
+                    </label>
+                    <input
+                        type="number"
+                        id="smtp_port"
+                        name="smtp_port"
+                        value="587"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input
+                            type="checkbox"
+                            id="use_tls"
+                            name="use_tls"
+                            value="true"
+                            checked
+                            style="margin-right: 8px;"
+                        />
+                        <span style="font-weight: bold;">Usar TLS (recomendado para Office 365)</span>
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="smtp_user" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Usuario (email completo):
+                    </label>
+                    <input
+                        type="email"
+                        id="smtp_user"
+                        name="smtp_user"
+                        placeholder="admin@eco.unrc.edu.ar"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="smtp_password" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Contraseña / App Password:
+                    </label>
+                    <input
+                        type="password"
+                        id="smtp_password"
+                        name="smtp_password"
+                        placeholder="••••••••"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                    <small style="color: #666;">Si usas MFA, ingresa una App Password</small>
+                </div>
+            </div>
+
+            {# Columna 2: Mensaje #}
+            <div style="padding-left: 15px;">
+                <h3 style="margin-top: 0; color: #0078d4;">✉️ Contenido del Email</h3>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="email_from" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Remitente (From):
+                    </label>
+                    <input
+                        type="email"
+                        id="email_from"
+                        name="email_from"
+                        placeholder="no-reply@eco.unrc.edu.ar"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="destinatario" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Destinatario (Para):
+                    </label>
+                    <input
+                        type="email"
+                        id="destinatario"
+                        name="destinatario"
+                        placeholder="ejemplo@dominio.com"
+                        required
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="mensaje" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                        Mensaje personalizado (opcional):
+                    </label>
+                    <textarea
+                        id="mensaje"
+                        name="mensaje"
+                        rows="6"
+                        placeholder="Escribe aquí tu mensaje de prueba..."
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"
+                    ></textarea>
+                    <small style="color: #666;">Si dejas vacío, se enviará un mensaje por defecto</small>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #ddd; padding-top: 15px;">
+            <button
+                type="submit"
+                style="background-color: #0078d4; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;"
+            >
+                📤 Enviar Email de Prueba con Office 365
+            </button>
+
+            <button
+                type="button"
+                id="btn-limpiar"
+                style="background-color: #6c757d; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; margin-left: 10px;"
+            >
+                🔄 Limpiar Formulario
+            </button>
+
+            <div id="email-result" style="margin-top: 15px; display: none;"></div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Botón limpiar
+document.getElementById('btn-limpiar').addEventListener('click', function() {
+    document.getElementById('test-email-form').reset();
+    document.getElementById('email-result').style.display = 'none';
+});
+
+// Enviar formulario
+document.getElementById('test-email-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const button = form.querySelector('button[type="submit"]');
+    const resultDiv = document.getElementById('email-result');
+
+    // Obtener valores del formulario
+    const formData = new FormData(form);
+    const data = new URLSearchParams();
+
+    // Agregar todos los campos
+    data.append('destinatario', formData.get('destinatario'));
+    data.append('smtp_host', formData.get('smtp_host'));
+    data.append('smtp_port', formData.get('smtp_port'));
+    data.append('smtp_user', formData.get('smtp_user'));
+    data.append('smtp_password', formData.get('smtp_password'));
+    data.append('email_from', formData.get('email_from'));
+    data.append('use_tls', document.getElementById('use_tls').checked ? 'true' : 'false');
+    data.append('mensaje', formData.get('mensaje') || '');
+
+    // Deshabilitar botón y mostrar loading
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = '⏳ Conectando y enviando...';
+    resultDiv.style.display = 'none';
+
+    try {
+        const response = await fetch('{% url "admin:test_email" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            },
+            body: data
+        });
+
+        const jsonData = await response.json();
+
+        // Mostrar resultado
+        resultDiv.style.display = 'block';
+        if (jsonData.success) {
+            resultDiv.innerHTML = `
+                <div style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                    <strong>✅ Éxito:</strong> ${jsonData.message}
+                    <br><small>Revisa la bandeja de entrada del destinatario</small>
+                </div>
+            `;
+            // Opcional: limpiar password después de envío exitoso
+            // document.getElementById('smtp_password').value = '';
+        } else {
+            let errorHtml = `
+                <div style="padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                    <strong>❌ Error:</strong> ${jsonData.error}
+            `;
+            if (jsonData.hint) {
+                errorHtml += `<br><br><strong>💡 Sugerencia:</strong> ${jsonData.hint}`;
+            }
+            if (jsonData.traceback) {
+                errorHtml += `<br><br><details><summary style="cursor: pointer;">Ver detalles técnicos</summary><pre style="font-size: 11px; overflow: auto;">${jsonData.traceback}</pre></details>`;
+            }
+            errorHtml += `</div>`;
+            resultDiv.innerHTML = errorHtml;
+        }
+    } catch (error) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+            <div style="padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                <strong>❌ Error de conexión:</strong> ${error.message}
+            </div>
+        `;
+    } finally {
+        // Re-habilitar botón
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+});
+</script>
+
+{# Sección de Tareas Asíncronas #}
+<div class="module" style="margin-top: 20px;">
+    <h2>📋 Tareas Asíncronas Recientes</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                <th style="padding: 10px; text-align: left;">ID</th>
+                <th style="padding: 10px; text-align: left;">Tipo</th>
+                <th style="padding: 10px; text-align: left;">Estado</th>
+                <th style="padding: 10px; text-align: left;">Programada</th>
+                <th style="padding: 10px; text-align: left;">Entidades</th>
+                <th style="padding: 10px; text-align: left;">Duración</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tarea in tareas_recientes %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px;">
+                    <a href="{% url 'admin:alumnos_tarea_change' tarea.id %}">#{{ tarea.id }}</a>
+                </td>
+                <td style="padding: 10px;">
+                    {% if tarea.tipo == 'ingesta_preinscriptos' %}
+                        <span style="color: #3498db; font-weight: bold;">📥 Preinscriptos</span>
+                    {% elif tarea.tipo == 'ingesta_aspirantes' %}
+                        <span style="color: #2ecc71; font-weight: bold;">📥 Aspirantes</span>
+                    {% elif tarea.tipo == 'ingesta_ingresantes' %}
+                        <span style="color: #9b59b6; font-weight: bold;">📥 Ingresantes</span>
+                    {% elif tarea.tipo == 'eliminar_cuenta' %}
+                        <span style="color: #e74c3c; font-weight: bold;">🗑️ Eliminar Cuenta</span>
+                    {% elif tarea.tipo == 'enviar_email' %}
+                        <span style="color: #f39c12; font-weight: bold;">📧 Enviar Email</span>
+                    {% elif tarea.tipo == 'activar_servicios' %}
+                        <span style="color: #1abc9c; font-weight: bold;">🚀 Activar Servicios</span>
+                    {% elif tarea.tipo == 'crear_usuario_teams' %}
+                        <span style="color: #34495e; font-weight: bold;">👤 Crear Usuario</span>
+                    {% elif tarea.tipo == 'resetear_password' %}
+                        <span style="color: #e67e22; font-weight: bold;">🔑 Resetear Password</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if tarea.estado == 'pending' %}
+                        <span style="color: #f39c12; font-weight: bold;">⏳ Pendiente</span>
+                    {% elif tarea.estado == 'running' %}
+                        <span style="color: #3498db; font-weight: bold;">▶️ Ejecutando</span>
+                    {% elif tarea.estado == 'completed' %}
+                        <span style="color: #27ae60; font-weight: bold;">✅ Completada</span>
+                    {% elif tarea.estado == 'failed' %}
+                        <span style="color: #e74c3c; font-weight: bold;">❌ Fallida</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">{{ tarea.hora_programada|date:"d/m/Y H:i:s" }}</td>
+                <td style="padding: 10px;">{{ tarea.cantidad_entidades }}</td>
+                <td style="padding: 10px;">
+                    {% if tarea.duracion %}
+                        {{ tarea.duracion|floatformat:2 }} seg
+                    {% elif tarea.estado == 'running' %}
+                        <span style="color: #3498db;">En progreso...</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="padding: 20px; text-align: center; color: #999;">
+                    No hay tareas recientes
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="margin-top: 15px;">
+        <a href="{% url 'admin:alumnos_tarea_changelist' %}" style="color: #417690; font-weight: bold;">
+            Ver todas las tareas →
+        </a>
+    </p>
+
+    <div style="margin-top: 30px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #1976D2;">📊 Resumen</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #f39c12;">{{ resumen.pending }}</div>
+                <div style="color: #666; font-size: 12px;">Pendientes</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #3498db;">{{ resumen.running }}</div>
+                <div style="color: #666; font-size: 12px;">En Ejecución</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #27ae60;">{{ resumen.completed }}</div>
+                <div style="color: #666; font-size: 12px;">Completadas (24h)</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">{{ resumen.failed }}</div>
+                <div style="color: #666; font-size: 12px;">Fallidas (24h)</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

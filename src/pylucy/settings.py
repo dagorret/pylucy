@@ -162,7 +162,13 @@ ADMIN_SITE_TITLE = "Lucy Admin"
 ADMIN_INDEX_TITLE = "Panel de Administración"
 
 # Email configuration
+# =============================================================================
+# CONFIGURACIÓN DE EMAIL (Office 365 / SMTP)
+# =============================================================================
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# Office 365 SMTP: smtp.office365.com:587 (TLS)
+# MailHog (dev): mailhog:1025 (sin auth)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "mailhog")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
@@ -170,6 +176,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
 DEFAULT_FROM_EMAIL = os.getenv("EMAIL_FROM", "no-reply@v.eco.unrc.edu.ar")
+EMAIL_FROM = DEFAULT_FROM_EMAIL  # Alias para consistencia
 
 ALLOWED_HOSTS = ['*']
 

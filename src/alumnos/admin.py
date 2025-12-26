@@ -3226,9 +3226,233 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         extra_context['show_export_import'] = True
         return super().change_view(request, object_id, form_url, extra_context)
 
+# ============================================
+# VISTA PERSONALIZADA DEL ADMIN INDEX
+# ============================================
+
+from django.contrib.admin import AdminSite
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.core.mail import send_mail
+from django.conf import settings
+
+
+class PyLucyAdminSite(AdminSite):
+    """Admin personalizado con dashboard extendido."""
+    site_header = "PyLucy - Sistema de Gestión de Alumnos"
+    site_title = "PyLucy Admin"
+    index_title = "Dashboard"
+    index_template = "admin/pylucy_index.html"
+
+    def get_urls(self):
+        """Agregar URLs personalizadas."""
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('probar-email/', self.admin_view(self.test_email_view), name='test_email'),
+        ]
+        return custom_urls + urls
+
+    def test_email_view(self, request):
+        """Vista para probar envío de emails con configuración personalizada (Office 365)."""
+        if request.method == 'POST':
+            try:
+                # Obtener parámetros del formulario
+                destinatario = request.POST.get('destinatario', '').strip()
+                smtp_host = request.POST.get('smtp_host', '').strip()
+                smtp_port = request.POST.get('smtp_port', '').strip()
+                smtp_user = request.POST.get('smtp_user', '').strip()
+                smtp_password = request.POST.get('smtp_password', '').strip()
+                email_from = request.POST.get('email_from', '').strip()
+                use_tls = request.POST.get('use_tls', 'false').lower() == 'true'
+                mensaje_personalizado = request.POST.get('mensaje', '').strip()
+
+                # Validaciones
+                if not destinatario:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Debe ingresar un destinatario'
+                    })
+
+                if not smtp_host or not smtp_port:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Debe configurar SMTP host y port'
+                    })
+
+                # Email de prueba
+                subject = "✅ Prueba de Email Office 365 - PyLucy"
+
+                # Mensaje personalizado o por defecto
+                if mensaje_personalizado:
+                    message_body = mensaje_personalizado
+                else:
+                    message_body = """
+Hola,
+
+Este es un email de prueba enviado desde PyLucy usando Office 365.
+
+Si recibes este mensaje, la configuración de Office 365 está funcionando correctamente.
+
+Saludos,
+Sistema PyLucy
+"""
+
+                message = f"""
+{message_body}
+
+---
+Detalles técnicos de envío:
+- Host: {smtp_host}
+- Port: {smtp_port}
+- TLS: {'Sí' if use_tls else 'No'}
+- Usuario: {smtp_user}
+- From: {email_from}
+"""
+
+                html_message = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #0078d4; color: white; padding: 20px; text-align: center; }}
+        .content {{ background-color: #f9f9f9; padding: 20px; }}
+        .message-box {{ background-color: white; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px; }}
+        .info {{ background-color: #e8f4f8; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0; }}
+        .footer {{ background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Prueba de Email Office 365</h1>
+            <p style="margin: 0;">PyLucy - Sistema de Gestión de Alumnos</p>
+        </div>
+
+        <div class="content">
+            <div class="message-box">
+                <p style="white-space: pre-wrap;">{message_body}</p>
+            </div>
+
+            <div class="info">
+                <h3 style="margin-top: 0;">📋 Detalles técnicos de envío</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Host:</strong> {smtp_host}</li>
+                    <li><strong>Port:</strong> {smtp_port}</li>
+                    <li><strong>TLS:</strong> {'Sí' if use_tls else 'No'}</li>
+                    <li><strong>Usuario:</strong> {smtp_user}</li>
+                    <li><strong>From:</strong> {email_from}</li>
+                </ul>
+            </div>
+
+            <p>Si recibes este mensaje, la configuración de <strong>Office 365</strong> está funcionando correctamente.</p>
+
+            <p>Saludos,<br>
+            <strong>Sistema PyLucy</strong></p>
+        </div>
+
+        <div class="footer">
+            <p>Este es un mensaje de prueba del sistema PyLucy</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+                # Enviar usando Django con configuración personalizada
+                import smtplib
+                from email.mime.multipart import MIMEMultipart
+                from email.mime.text import MIMEText
+
+                # Crear mensaje
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = email_from
+                msg['To'] = destinatario
+
+                # Agregar partes texto y HTML
+                part1 = MIMEText(message, 'plain', 'utf-8')
+                part2 = MIMEText(html_message, 'html', 'utf-8')
+                msg.attach(part1)
+                msg.attach(part2)
+
+                # Conectar y enviar
+                logger.info(f"Conectando a {smtp_host}:{smtp_port} (TLS: {use_tls})")
+
+                smtp_port_int = int(smtp_port)
+
+                if use_tls:
+                    # Usar STARTTLS (puerto 587)
+                    server = smtplib.SMTP(smtp_host, smtp_port_int, timeout=30)
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                else:
+                    # Sin TLS (puerto 25 o MailHog)
+                    server = smtplib.SMTP(smtp_host, smtp_port_int, timeout=30)
+
+                # Autenticar si hay credenciales
+                if smtp_user and smtp_password:
+                    logger.info(f"Autenticando como {smtp_user}")
+                    server.login(smtp_user, smtp_password)
+
+                # Enviar
+                logger.info(f"Enviando email a {destinatario}")
+                server.sendmail(email_from, [destinatario], msg.as_string())
+                server.quit()
+
+                logger.info(f"✅ Email de prueba Office 365 enviado a {destinatario}")
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Email enviado exitosamente a {destinatario} usando {smtp_host}'
+                })
+
+            except smtplib.SMTPAuthenticationError as e:
+                error_msg = f"Error de autenticación: {str(e)}"
+                logger.error(error_msg)
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg,
+                    'hint': 'Verifica usuario y contraseña. Si usas MFA, necesitas una App Password.'
+                })
+
+            except smtplib.SMTPException as e:
+                error_msg = f"Error SMTP: {str(e)}"
+                logger.error(error_msg)
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg
+                })
+
+            except Exception as e:
+                logger.error(f"Error enviando email de prueba: {e}")
+                import traceback
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e),
+                    'traceback': traceback.format_exc()
+                })
+
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+# Reemplazar el admin site por defecto
+admin_site = PyLucyAdminSite(name='admin')
+
+# Re-registrar todos los modelos en el nuevo admin site
+admin_site.register(Alumno, AlumnoAdmin)
+admin_site.register(Log, LogAdmin)
+admin_site.register(Configuracion, ConfiguracionAdmin)
+admin_site.register(Tarea, TareaAdmin)
+
+
 # Ocultar modelos innecesarios de django-celery-beat
 try:
     from django_celery_beat.models import SolarSchedule
     admin.site.unregister(SolarSchedule)
+    admin_site.unregister(SolarSchedule)
 except:
     pass

@@ -1,0 +1,57 @@
+# ============================================
+# EJEMPLO: CONFIGURACIÓN DE EMAIL CON OFFICE 365
+# ============================================
+#
+# Copia este archivo como .env.prod y completa con tus credenciales reales
+#
+
+# Office 365 SMTP Configuration
+EMAIL_HOST=smtp.office365.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+
+# Credenciales de Office 365
+# IMPORTANTE: Usar App Password si tienes MFA habilitado
+EMAIL_HOST_USER=admin@eco.unrc.edu.ar
+EMAIL_HOST_PASSWORD=TU_PASSWORD_O_APP_PASSWORD_AQUI
+
+# Dirección "From" para todos los emails
+EMAIL_FROM=no-reply@eco.unrc.edu.ar
+
+# ============================================
+# OTRAS CONFIGURACIONES
+# ============================================
+
+# Django
+DJANGO_SECRET_KEY=your-secret-key-here
+DJANGO_DEBUG=False
+DJANGO_ENV=production
+ENVIRONMENT_MODE=production
+
+# Base de datos
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=pylucy
+DB_USER=pylucy
+DB_PASSWORD=your-db-password
+DB_HOST=db
+DB_PORT=5432
+
+# Celery
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Teams / Azure AD
+TEAMS_TENANT=your-tenant-id
+TEAMS_CLIENT_ID=your-client-id
+TEAMS_CLIENT_SECRET=your-client-secret
+ACCOUNT_PREFIX=a
+
+# SIAL/UTI
+SIAL_BASE_URL=https://uti.eco.unrc.edu.ar
+SIAL_BASIC_USER=your-sial-user
+SIAL_BASIC_PASS=your-sial-password
+
+# Moodle
+MOODLE_BASE_URL=https://v.eco.unrc.edu.ar
+MOODLE_WSTOKEN=your-moodle-token

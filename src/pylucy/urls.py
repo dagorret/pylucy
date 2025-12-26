@@ -18,10 +18,13 @@ from django.contrib import admin
 from django.urls import include, path
 from . import views
 
+# Importar el admin site personalizado
+from alumnos.admin import admin_site
+
 urlpatterns = [
     path('', views.index, name='index'),
     path('test-css/', views.test_css, name='test_css'),
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),  # Usar admin_site personalizado
     path('select2/', include('django_select2.urls')),
 ]
 
