@@ -83,6 +83,26 @@ Cada tipo de tarea tiene su propio rate limit y procesamiento:
 
 ---
 
+## 🧹 Mantenimiento Automático
+
+### Limpieza de Resultados (celery.backend_cleanup)
+
+**Tarea**: `celery.backend_cleanup`
+**Frecuencia**: Diaria a las 4:00 AM
+**Propósito**: Limpia resultados viejos almacenados en Redis
+
+Aunque la mayoría de nuestras tareas usan `ignore_result=True`, algunos resultados se guardan en Redis. Esta tarea automática:
+- Elimina resultados de tareas completadas hace más de X días (configurable)
+- Previene acumulación de datos en el backend de resultados
+- Mejora rendimiento general del sistema
+- Se ejecuta en horario de baja actividad (4 AM)
+
+**Configuración**: Editable desde Admin → Periodic tasks → "celery.backend_cleanup"
+
+**¿Es necesaria?** Sí. Sin esta tarea, Redis acumularía resultados indefinidamente, consumiendo memoria y degradando el rendimiento.
+
+---
+
 ## 📝 Modelo `Tarea`
 
 ### Estados
@@ -233,14 +253,32 @@ TOTAL: 15 minutos para procesar 50 alumnos
 
 ---
 
-## 🚀 Próximos Pasos
+## 🎯 Tareas Periódicas Configuradas
+
+Todas las tareas se configuran automáticamente en la migración `0027_setup_periodic_tasks.py` y son editables desde **Admin → Periodic tasks**:
+
+| Tarea | Frecuencia | Descripción |
+|-------|------------|-------------|
+| **Procesador de Cola de Tareas** | Cada 5 minutos | Procesa tareas pendientes respetando batch_size y rate_limits |
+| **Ingesta Automática de Preinscriptos** | Cada 5 minutos | Ingesta desde API UTI/SIAL (verifica horario internamente) |
+| **Ingesta Automática de Aspirantes** | Cada 5 minutos | Ingesta desde API UTI/SIAL (verifica horario internamente) |
+| **Ingesta Automática de Ingresantes** | Cada 5 minutos | Ingesta desde API UTI/SIAL (verifica horario internamente) |
+| **celery.backend_cleanup** | Diario 4:00 AM | Limpieza de resultados viejos en Redis |
+
+**Nota**: Todas las frecuencias son configurables desde el admin sin necesidad de reiniciar servicios.
+
+---
+
+## 🚀 Estado de Implementación
 
 1. ✅ Implementar `procesar_cola_tareas_pendientes()`
-2. ✅ Configurar Celery Beat schedule
-3. ✅ Modificar acciones del admin
-4. ✅ Testing con diferentes batch_size y rate_limits
-5. ⏳ Agregar métricas/logging detallado
-6. ⏳ Dashboard de monitoreo en tiempo real
+2. ✅ Configurar Celery Beat con DatabaseScheduler
+3. ✅ Modificar acciones del admin con helper
+4. ✅ Feature flag USE_QUEUE_SYSTEM
+5. ✅ Migración automática de tareas periódicas
+6. ✅ Documentación completa
+7. ⏳ Testing con diferentes batch_size y rate_limits
+8. ⏳ Dashboard de monitoreo en tiempo real
 
 ---
 

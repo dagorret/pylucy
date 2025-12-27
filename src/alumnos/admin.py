@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import path
 from django.utils import timezone
+from django.utils.html import format_html
 from datetime import timedelta
 import logging
 
@@ -1084,13 +1085,18 @@ class AlumnoAdmin(admin.ModelAdmin):
     def activar_teams_email(self, request, queryset):
         """
         Crea usuario en Teams y envía email con credenciales (modo asíncrono).
-        Las tareas se ejecutan en background vía Celery.
+
+        **Comportamiento según USE_QUEUE_SYSTEM**:
+        - False: Ejecuta inmediatamente con .delay()
+        - True: Encola para procesamiento cada 5 min con rate limiting
         """
+        from django.conf import settings
         from .tasks import activar_servicios_alumno
-        from .models import Tarea
 
         tareas_programadas = 0
         skipped_count = 0
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         for alumno in queryset:
             # Validar que tenga email
@@ -1103,27 +1109,22 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped_count += 1
                 continue
 
-            # Programar tarea asíncrona
-            task = activar_servicios_alumno.delay(alumno.id)
-
-            # Crear registro de tarea
-            Tarea.objects.create(
-                tipo=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
-                estado=Tarea.EstadoTarea.PENDING,
-                celery_task_id=task.id,
+            encolar_o_ejecutar_tarea(
                 alumno=alumno,
-                usuario=request.user.username if request.user.is_authenticated else None
+                tipo_tarea=Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+                task_func=activar_servicios_alumno,
+                task_args=(alumno.id,),
+                usuario=usuario
             )
-
             tareas_programadas += 1
 
-        # Resumen final
-        self.message_user(
-            request,
-            f"📋 {tareas_programadas} tareas programadas en cola de Celery. "
-            f"Revisa la tabla de Tareas Asíncronas para ver el progreso.",
-            level=messages.SUCCESS
-        )
+        # Mensaje según modo
+        if use_queue:
+            mensaje = f"✅ {tareas_programadas} tareas encoladas. Serán procesadas en máx 5 minutos."
+        else:
+            mensaje = f"📋 {tareas_programadas} tareas ejecutándose en background."
+
+        self.message_user(request, mensaje + " Ver Tareas Asíncronas.", level=messages.SUCCESS)
 
         if skipped_count > 0:
             self.message_user(
@@ -1137,8 +1138,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         """
         Enrolla alumnos en Moodle y envía email de enrollamiento (Ecosistema Virtual).
         """
+        from django.conf import settings
         from .tasks import enrollar_moodle_task
         from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         tareas_programadas = 0
         already_processed = 0
@@ -1160,25 +1165,24 @@ class AlumnoAdmin(admin.ModelAdmin):
                 already_processed += 1
                 continue
 
-            # Programar tarea asíncrona con envío de email
-            task = enrollar_moodle_task.delay(alumno.id, enviar_email=True)
-
-            # Crear registro de tarea
-            Tarea.objects.create(
-                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
-                estado=Tarea.EstadoTarea.PENDING,
-                celery_task_id=task.id,
+            # Encolar o ejecutar tarea con envío de email
+            encolar_o_ejecutar_tarea(
                 alumno=alumno,
-                usuario=request.user.username if request.user.is_authenticated else None
+                tipo_tarea=Tarea.TipoTarea.MOODLE_ENROLL,
+                task_func=enrollar_moodle_task,
+                task_args=(alumno.id, True),  # enviar_email=True
+                usuario=usuario,
+                detalles={'enviar_email': True}
             )
 
             tareas_programadas += 1
 
         # Resumen final
         if tareas_programadas > 0:
+            modo = "encoladas" if use_queue else "programadas"
             self.message_user(
                 request,
-                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (con email de enrollamiento).",
+                f"📋 {tareas_programadas} tareas {modo} para enrollamiento en Moodle (con email de enrollamiento).",
                 level=messages.SUCCESS
             )
 
@@ -1201,8 +1205,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         """
         Enrolla alumnos en Moodle SIN enviar email de bienvenida.
         """
+        from django.conf import settings
         from .tasks import enrollar_moodle_task
         from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         tareas_programadas = 0
         already_processed = 0
@@ -1224,25 +1232,24 @@ class AlumnoAdmin(admin.ModelAdmin):
                 already_processed += 1
                 continue
 
-            # Programar tarea asíncrona SIN envío de email
-            task = enrollar_moodle_task.delay(alumno.id, enviar_email=False)
-
-            # Crear registro de tarea
-            Tarea.objects.create(
-                tipo=Tarea.TipoTarea.MOODLE_ENROLL,
-                estado=Tarea.EstadoTarea.PENDING,
-                celery_task_id=task.id,
+            # Encolar o ejecutar tarea SIN envío de email
+            encolar_o_ejecutar_tarea(
                 alumno=alumno,
-                usuario=request.user.username if request.user.is_authenticated else None
+                tipo_tarea=Tarea.TipoTarea.MOODLE_ENROLL,
+                task_func=enrollar_moodle_task,
+                task_args=(alumno.id, False),  # enviar_email=False
+                usuario=usuario,
+                detalles={'enviar_email': False}
             )
 
             tareas_programadas += 1
 
         # Resumen final
         if tareas_programadas > 0:
+            modo = "encoladas" if use_queue else "programadas"
             self.message_user(
                 request,
-                f"📋 {tareas_programadas} tareas programadas para enrollamiento en Moodle (sin email).",
+                f"📋 {tareas_programadas} tareas {modo} para enrollamiento en Moodle (sin email).",
                 level=messages.SUCCESS
             )
 
@@ -2195,7 +2202,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         """
         Elimina usuarios solo de Teams (no de Moodle).
         """
+        from django.conf import settings
         from .tasks_delete import eliminar_solo_teams
+        from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         programadas = 0
         skipped = 0
@@ -2209,13 +2221,20 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped += 1
                 continue
 
-            # Programar tarea asíncrona
-            eliminar_solo_teams.delay(alumno.id, alumno.email_institucional)
+            # Encolar o ejecutar tarea de borrado de Teams
+            encolar_o_ejecutar_tarea(
+                alumno=alumno,
+                tipo_tarea=Tarea.TipoTarea.ELIMINAR_TEAMS,
+                task_func=eliminar_solo_teams,
+                task_args=(alumno.id, alumno.email_institucional),
+                usuario=usuario
+            )
             programadas += 1
 
+        modo = "encoladas" if use_queue else "programadas"
         self.message_user(
             request,
-            f"🗑️ {programadas} tareas de borrado de Teams programadas",
+            f"🗑️ {programadas} tareas de borrado de Teams {modo}",
             level=messages.SUCCESS
         )
 
@@ -2232,7 +2251,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         Elimina usuarios solo de Moodle (no de Teams).
         Intenta borrar sin validar moodle_procesado. Ignora errores de "usuario no encontrado".
         """
+        from django.conf import settings
         from .tasks_delete import eliminar_solo_moodle
+        from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         programadas = 0
         skipped = 0
@@ -2242,13 +2266,20 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped += 1
                 continue
 
-            # Programar tarea asíncrona (sin validar moodle_procesado)
-            eliminar_solo_moodle.delay(alumno.id, alumno.email_institucional)
+            # Encolar o ejecutar tarea de borrado de Moodle
+            encolar_o_ejecutar_tarea(
+                alumno=alumno,
+                tipo_tarea=Tarea.TipoTarea.ELIMINAR_MOODLE,
+                task_func=eliminar_solo_moodle,
+                task_args=(alumno.id, alumno.email_institucional),
+                usuario=usuario
+            )
             programadas += 1
 
+        modo = "encoladas" if use_queue else "programadas"
         self.message_user(
             request,
-            f"🗑️ {programadas} tareas de borrado de Moodle programadas",
+            f"🗑️ {programadas} tareas de borrado de Moodle {modo}",
             level=messages.SUCCESS
         )
 
@@ -2259,24 +2290,52 @@ class AlumnoAdmin(admin.ModelAdmin):
                 level=messages.WARNING
             )
 
+    @admin.action(description="🗑️ Eliminar solo de BD (sin tareas asíncronas)")
+    def eliminar_solo_bd_directo(self, request, queryset):
+        """
+        Elimina alumnos SOLO de la base de datos, SIN disparar tareas asíncronas.
+        NO elimina de Teams ni Moodle.
+        PRECAUCIÓN: Esta acción es irreversible y directa.
+        """
+        total = queryset.count()
+        queryset.delete()
+
+        self.message_user(
+            request,
+            f"🗑️ {total} alumnos eliminados directamente de la base de datos (sin tareas asíncronas).",
+            level=messages.SUCCESS
+        )
+
     @admin.action(description="🗑️💀 Eliminar alumno completamente (Teams + Moodle + BD)")
     def eliminar_alumno_completo(self, request, queryset):
         """
         Elimina alumnos completamente: Teams + Moodle + Base de datos.
         PRECAUCIÓN: Esta acción es irreversible.
         """
+        from django.conf import settings
         from .tasks_delete import eliminar_alumno_completo as task_eliminar_completo
+        from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         programadas = 0
 
         for alumno in queryset:
-            # Programar tarea asíncrona
-            task_eliminar_completo.delay(alumno.id)
+            # Encolar o ejecutar tarea de eliminación completa
+            encolar_o_ejecutar_tarea(
+                alumno=alumno,
+                tipo_tarea=Tarea.TipoTarea.ELIMINAR_COMPLETO,
+                task_func=task_eliminar_completo,
+                task_args=(alumno.id,),
+                usuario=usuario
+            )
             programadas += 1
 
+        modo = "encoladas" if use_queue else "programadas"
         self.message_user(
             request,
-            f"🗑️💀 {programadas} tareas de eliminación completa programadas. "
+            f"🗑️💀 {programadas} tareas de eliminación completa {modo}. "
             f"Los alumnos serán eliminados de Teams, Moodle y la base de datos.",
             level=messages.WARNING
         )
@@ -2287,8 +2346,12 @@ class AlumnoAdmin(admin.ModelAdmin):
         Resetea contraseña en Teams y envía email (modo asíncrono).
         Las tareas se ejecutan en background vía Celery.
         """
+        from django.conf import settings
         from .tasks import resetear_password_y_enviar_email
         from .models import Tarea
+
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         tareas_programadas = 0
         skipped_count = 0
@@ -2303,24 +2366,22 @@ class AlumnoAdmin(admin.ModelAdmin):
                 skipped_count += 1
                 continue
 
-            # Programar tarea asíncrona
-            task = resetear_password_y_enviar_email.delay(alumno.id)
-
-            # Crear registro de tarea
-            Tarea.objects.create(
-                tipo=Tarea.TipoTarea.RESETEAR_PASSWORD,
-                estado=Tarea.EstadoTarea.PENDING,
-                celery_task_id=task.id,
+            # Encolar o ejecutar tarea de reseteo de contraseña
+            encolar_o_ejecutar_tarea(
                 alumno=alumno,
-                usuario=request.user.username if request.user.is_authenticated else None
+                tipo_tarea=Tarea.TipoTarea.RESETEAR_PASSWORD,
+                task_func=resetear_password_y_enviar_email,
+                task_args=(alumno.id,),
+                usuario=usuario
             )
 
             tareas_programadas += 1
 
         # Resumen final
+        modo = "encoladas" if use_queue else "programadas"
         self.message_user(
             request,
-            f"📋 {tareas_programadas} tareas programadas en cola de Celery. "
+            f"📋 {tareas_programadas} tareas {modo} en cola de Celery. "
             f"Revisa la tabla de Tareas Asíncronas para ver el progreso.",
             level=messages.SUCCESS
         )
@@ -3269,6 +3330,7 @@ class ConfiguracionAdmin(admin.ModelAdmin):
 
         return redirect('..')
 
+
     def changelist_view(self, request, extra_context=None):
         """Redirige directamente al formulario de edición."""
         obj = Configuracion.load()
@@ -3521,24 +3583,146 @@ admin_site.register(CursoIngreso, CursoIngresoAdmin)
 admin_site.register(Carrera, CarreraAdmin)
 
 
-# Registrar modelos de django-celery-beat en admin_site personalizado
+# =============================================================================
+# TAREAS PERSONALIZADAS
+# =============================================================================
+from .models import TareaPersonalizada
+
+
+@admin.register(TareaPersonalizada, site=admin_site)
+class TareaPersonalizadaAdmin(admin.ModelAdmin):
+    """Admin para gestionar tareas personalizadas con periodicidad configurable."""
+
+    list_display = (
+        'nombre',
+        'activa',
+        'tipo_usuario',
+        'accion',
+        'respetar_rate_limits',
+        'cantidad_ejecuciones',
+        'ultima_ejecucion',
+        'ver_periodic_task'
+    )
+    list_filter = ('activa', 'tipo_usuario', 'accion', 'respetar_rate_limits')
+    search_fields = ('nombre',)
+    readonly_fields = ('cantidad_ejecuciones', 'ultima_ejecucion', 'creada_en', 'modificada_en')
+
+    fieldsets = (
+        ('Información General', {
+            'fields': ('nombre', 'activa')
+        }),
+        ('Configuración de la Tarea', {
+            'fields': ('tipo_usuario', 'accion', 'respetar_rate_limits')
+        }),
+        ('Filtros de Fecha (solo para ingesta SIAL)', {
+            'fields': ('fecha_desde', 'fecha_hasta'),
+            'description': 'Configura el rango de fechas para consultar datos desde SIAL/UTI. Deja "fecha_hasta" vacío para usar la fecha actual.'
+        }),
+        ('Opciones de Procesamiento', {
+            'fields': ('enviar_email',),
+            'description': 'Configuración adicional para el procesamiento de usuarios.'
+        }),
+        ('Periodicidad', {
+            'fields': ('periodic_task',),
+            'description': 'Vincula esta tarea con una tarea periódica de Celery Beat. Crea primero un Crontab Schedule y luego una Periodic Task que ejecute "alumnos.tasks.ejecutar_tarea_personalizada".'
+        }),
+        ('Estadísticas', {
+            'fields': ('cantidad_ejecuciones', 'ultima_ejecucion', 'creada_en', 'modificada_en'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def ver_periodic_task(self, obj):
+        """Link a la tarea periódica asociada."""
+        if obj.periodic_task:
+            url = f'/admin/django_celery_beat/periodictask/{obj.periodic_task.id}/change/'
+            return format_html('<a href="{}">Ver configuración</a>', url)
+        return '-'
+    ver_periodic_task.short_description = 'Periodicidad'
+
+
+# =============================================================================
+# DJANGO-CELERY-BEAT: Tareas Periódicas Configurables desde Admin
+# =============================================================================
+# Registramos lo necesario para configurar tareas periódicas:
+# - PeriodicTask: Para crear/editar tareas programadas
+# - CrontabSchedule: Para definir intervalos tipo cron (ej: */5 * * * *)
+# - IntervalSchedule: Para intervalos en segundos/minutos/horas (ej: cada 1 segundo)
+# =============================================================================
 try:
     from django_celery_beat.models import (
-        PeriodicTask, IntervalSchedule, CrontabSchedule,
-        SolarSchedule, ClockedSchedule, PeriodicTasks
+        PeriodicTask, CrontabSchedule, IntervalSchedule
     )
     from django_celery_beat.admin import (
-        PeriodicTaskAdmin, PeriodicTaskForm,
+        PeriodicTaskAdmin as BasePeriodicTaskAdmin,
+        CrontabScheduleAdmin as BaseCrontabScheduleAdmin,
+        IntervalScheduleAdmin as BaseIntervalScheduleAdmin
     )
 
-    # Registrar modelos importantes en admin_site personalizado
-    admin_site.register(PeriodicTask, PeriodicTaskAdmin)
-    admin_site.register(IntervalSchedule)
-    admin_site.register(CrontabSchedule)
-    admin_site.register(ClockedSchedule)
+    # Personalizar PeriodicTaskAdmin para asegurar que se puedan agregar tareas
+    class PyLucyPeriodicTaskAdmin(BasePeriodicTaskAdmin):
+        """Admin personalizado para PeriodicTask con permisos completos."""
 
-    # SolarSchedule no se registra porque no es útil
-    # PeriodicTasks tampoco (es tabla interna de señales)
+        def has_add_permission(self, request):
+            """Permitir agregar tareas periódicas."""
+            return True
+
+        def has_change_permission(self, request, obj=None):
+            """Permitir editar tareas periódicas."""
+            return True
+
+        def has_delete_permission(self, request, obj=None):
+            """Permitir eliminar tareas periódicas."""
+            return True
+
+        def has_module_permission(self, request):
+            """Mostrar el módulo en el admin."""
+            return True
+
+    # Personalizar CrontabScheduleAdmin
+    class PyLucyCrontabScheduleAdmin(BaseCrontabScheduleAdmin):
+        """Admin personalizado para CrontabSchedule con permisos completos."""
+
+        def has_add_permission(self, request):
+            """Permitir agregar crontabs."""
+            return True
+
+        def has_change_permission(self, request, obj=None):
+            """Permitir editar crontabs."""
+            return True
+
+        def has_delete_permission(self, request, obj=None):
+            """Permitir eliminar crontabs."""
+            return True
+
+        def has_module_permission(self, request):
+            """Mostrar el módulo en el admin."""
+            return True
+
+    # Personalizar IntervalScheduleAdmin
+    class PyLucyIntervalScheduleAdmin(BaseIntervalScheduleAdmin):
+        """Admin personalizado para IntervalSchedule con permisos completos."""
+
+        def has_add_permission(self, request):
+            """Permitir agregar intervalos."""
+            return True
+
+        def has_change_permission(self, request, obj=None):
+            """Permitir editar intervalos."""
+            return True
+
+        def has_delete_permission(self, request, obj=None):
+            """Permitir eliminar intervalos."""
+            return True
+
+        def has_module_permission(self, request):
+            """Mostrar el módulo en el admin."""
+            return True
+
+    # Registrar con admins personalizados
+    admin_site.register(PeriodicTask, PyLucyPeriodicTaskAdmin)
+    admin_site.register(CrontabSchedule, PyLucyCrontabScheduleAdmin)
+    admin_site.register(IntervalSchedule, PyLucyIntervalScheduleAdmin)
 
 except ImportError:
     # django-celery-beat no está instalado

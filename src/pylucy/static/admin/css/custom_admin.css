@@ -238,3 +238,138 @@ body.nav-sidebar #content {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
+
+/* ========== PERIODIC TASKS INLINE ========== */
+/* Mejorar visualización de tareas periódicas en CrontabSchedule */
+.inline-group {
+  margin-top: 25px !important;
+  margin-bottom: 25px !important;
+}
+
+.inline-group h2 {
+  padding: 15px 12px !important;
+  margin-bottom: 15px !important;
+  margin-top: 0 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Tabla de tareas periódicas inline */
+.inline-related {
+  margin-top: 15px !important;
+  margin-bottom: 15px !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+}
+
+/* Headers de tablas inline */
+.inline-related thead th {
+  padding: 12px 10px !important;
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222) !important;
+  color: #e2e8f0 !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Filas de tareas periódicas - evitar texto superpuesto */
+.inline-related tbody tr td,
+.tabular.inline-related tbody tr td,
+table.inline-related tbody tr td {
+  padding: 14px 12px !important;
+  line-height: 1.8 !important;
+  vertical-align: middle !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  font-size: 15px !important;
+  color: #000 !important;
+  font-weight: 500 !important;
+}
+
+/* Párrafos dentro de celdas de tareas periódicas */
+.inline-related tbody tr td p,
+.tabular.inline-related tbody tr td p,
+table.inline-related tbody tr td p {
+  font-size: 15px !important;
+  color: #000 !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.8 !important;
+}
+
+/* Campo de nombre de tarea - asegurar que no se superponga */
+.inline-related tbody tr td.field-name,
+.inline-related tbody tr td.field-task {
+  min-width: 200px !important;
+  max-width: 350px !important;
+}
+
+/* Links dentro de celdas - tamaño y color legibles */
+.inline-related tbody tr td a,
+.tabular.inline-related tbody tr td a,
+table.inline-related tbody tr td a {
+  display: inline-block !important;
+  word-break: break-word !important;
+  font-size: 15px !important;
+  color: #1d4ed8 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.inline-related tbody tr td a:hover,
+.tabular.inline-related tbody tr td a:hover,
+table.inline-related tbody tr td a:hover {
+  color: #ef4444 !important;
+  text-decoration: underline !important;
+}
+
+/* Texto descriptivo debajo de los links */
+.inline-related tbody tr td .help,
+.inline-related tbody tr td small {
+  font-size: 12px !important;
+  color: #666 !important;
+  display: block !important;
+  margin-top: 4px !important;
+}
+
+/* Columna "original" con descripción de la tarea */
+.inline-related tbody tr td.original p {
+  font-size: 14px !important;
+  color: #333 !important;
+  font-weight: 400 !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1.6 !important;
+}
+
+.inline-related tbody tr td.original a {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Mejor espaciado para el grupo inline completo */
+.tabular.inline-related {
+  margin-top: 20px !important;
+  padding-top: 15px !important;
+  padding-bottom: 15px !important;
+  border-spacing: 0 !important;
+}
+
+/* Título del inline group con mejor padding */
+.inline-group .tabular caption,
+.inline-group h2 {
+  margin-top: 10px !important;
+  padding: 15px 12px !important;
+}
+
+/* Espaciado entre filas */
+.inline-related tbody tr {
+  border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+.inline-related tbody tr:last-child {
+  border-bottom: none !important;
+}

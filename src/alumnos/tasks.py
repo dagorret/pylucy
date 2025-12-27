@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 def ingestar_preinscriptos(self):
     """
     Tarea programada para ingestar preinscriptos desde SIAL.
-    Se ejecuta según la configuración en BD.
+    Usa consulta incremental: solo trae registros modificados desde última ejecución.
     """
+    from datetime import timedelta
+
     config = Configuracion.load()
 
     # Verificar si está habilitada la ingesta
@@ -37,12 +39,24 @@ def ingestar_preinscriptos(self):
         logger.info(f"Fuera de rango: {ahora} > {config.preinscriptos_dia_fin}")
         return
 
+    # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    desde = None
+    hasta = ahora.isoformat()
+
+    if config.ultima_ingesta_preinscriptos:
+        # Desde 1 segundo después de última ingesta exitosa
+        desde = (config.ultima_ingesta_preinscriptos + timedelta(seconds=1)).isoformat()
+        logger.info(f"[Ingesta Incremental Preinscriptos] Desde: {desde}, Hasta: {hasta}")
+    else:
+        logger.info("[Ingesta Completa Preinscriptos] Primera ejecución, trayendo lista completa")
+
     # Crear registro de tarea
     tarea = Tarea.objects.create(
         tipo=Tarea.TipoTarea.INGESTA_PREINSCRIPTOS,
         estado=Tarea.EstadoTarea.RUNNING,
         celery_task_id=self.request.id,
-        hora_inicio=timezone.now()
+        hora_inicio=timezone.now(),
+        detalles={'desde': desde, 'hasta': hasta}
     )
 
     # Ejecutar ingesta
@@ -51,7 +65,15 @@ def ingestar_preinscriptos(self):
         # Leer configuración de email
         enviar_email = config.preinscriptos_enviar_email
         logger.info(f"[Ingesta Auto-Preinscriptos] Enviar email: {enviar_email}")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='preinscriptos', retornar_nuevos=True, enviar_email=enviar_email)
+
+        # ✨ Ejecutar con desde/hasta
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(
+            tipo='preinscriptos',
+            desde=desde,
+            hasta=hasta,
+            retornar_nuevos=True,
+            enviar_email=enviar_email
+        )
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {
@@ -91,6 +113,11 @@ def ingestar_preinscriptos(self):
             'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
+
+        # ✨ Actualizar timestamp de última ingesta exitosa (para próxima consulta incremental)
+        config.ultima_ingesta_preinscriptos = ahora
+        config.save(update_fields=['ultima_ingesta_preinscriptos'])
+        logger.info(f"[Ingesta Auto-Preinscriptos] 🕒 Timestamp actualizado: {ahora}")
 
         Log.objects.create(
             tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
@@ -172,6 +199,17 @@ def ingestar_aspirantes(self):
         logger.info(f"Fuera de rango: {ahora} > {config.aspirantes_dia_fin}")
         return
 
+    # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    desde = None
+    hasta = ahora.isoformat()
+
+    if config.ultima_ingesta_aspirantes:
+        # Desde 1 segundo después de última ingesta exitosa
+        desde = (config.ultima_ingesta_aspirantes + timedelta(seconds=1)).isoformat()
+        logger.info(f"[Ingesta Incremental Aspirantes] Desde: {desde}, Hasta: {hasta}")
+    else:
+        logger.info("[Ingesta Completa Aspirantes] Primera ejecución, trayendo lista completa")
+
     # Crear registro de tarea
     tarea = Tarea.objects.create(
         tipo=Tarea.TipoTarea.INGESTA_ASPIRANTES,
@@ -185,7 +223,13 @@ def ingestar_aspirantes(self):
         # Leer configuración de email
         enviar_email = config.aspirantes_enviar_email
         logger.info(f"[Ingesta Auto-Aspirantes] Enviar email: {enviar_email}")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='aspirantes', retornar_nuevos=True, enviar_email=enviar_email)
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(
+            tipo='aspirantes',
+            desde=desde,
+            hasta=hasta,
+            retornar_nuevos=True,
+            enviar_email=enviar_email
+        )
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {
@@ -225,6 +269,11 @@ def ingestar_aspirantes(self):
             'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
+
+        # ✨ Actualizar timestamp de última ingesta exitosa
+        config.ultima_ingesta_aspirantes = ahora
+        config.save(update_fields=['ultima_ingesta_aspirantes'])
+        logger.info(f"[Ingesta Auto-Aspirantes] 🕒 Timestamp actualizado: {ahora}")
 
         Log.objects.create(
             tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
@@ -306,6 +355,17 @@ def ingestar_ingresantes(self):
         logger.info(f"Fuera de rango: {ahora} > {config.ingresantes_dia_fin}")
         return
 
+    # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    desde = None
+    hasta = ahora.isoformat()
+
+    if config.ultima_ingesta_ingresantes:
+        # Desde 1 segundo después de última ingesta exitosa
+        desde = (config.ultima_ingesta_ingresantes + timedelta(seconds=1)).isoformat()
+        logger.info(f"[Ingesta Incremental Ingresantes] Desde: {desde}, Hasta: {hasta}")
+    else:
+        logger.info("[Ingesta Completa Ingresantes] Primera ejecución, trayendo lista completa")
+
     # Crear registro de tarea
     tarea = Tarea.objects.create(
         tipo=Tarea.TipoTarea.INGESTA_INGRESANTES,
@@ -319,7 +379,13 @@ def ingestar_ingresantes(self):
         # Leer configuración de email
         enviar_email = config.ingresantes_enviar_email
         logger.info(f"[Ingesta Auto-Ingresantes] Enviar email: {enviar_email}")
-        created, updated, errors, nuevos_ids = ingerir_desde_sial(tipo='ingresantes', retornar_nuevos=True, enviar_email=enviar_email)
+        created, updated, errors, nuevos_ids = ingerir_desde_sial(
+            tipo='ingresantes',
+            desde=desde,
+            hasta=hasta,
+            retornar_nuevos=True,
+            enviar_email=enviar_email
+        )
 
         # 🔧 CATEGORIZACIÓN DE ERRORES
         errores_categorizados = {
@@ -359,6 +425,11 @@ def ingestar_ingresantes(self):
             'errores_otros': errores_categorizados['otros'],
         }
         tarea.save()
+
+        # ✨ Actualizar timestamp de última ingesta exitosa
+        config.ultima_ingesta_ingresantes = ahora
+        config.save(update_fields=['ultima_ingesta_ingresantes'])
+        logger.info(f"[Ingesta Auto-Ingresantes] 🕒 Timestamp actualizado: {ahora}")
 
         Log.objects.create(
             tipo='SUCCESS' if len(errors) == 0 else 'WARNING',
@@ -419,6 +490,7 @@ def ingestar_ingresantes(self):
             detalles={'error': str(e)}
         )
         raise
+
 
 
 @shared_task
@@ -1913,26 +1985,36 @@ def ejecutar_crear_usuario_teams(tarea):
     if not tarea.alumno:
         return {'success': False, 'error': 'Tarea sin alumno asociado'}
 
-    # Usar la lógica existente de crear_usuario_teams_async
     from .services.teams_service import TeamsService
 
     teams_service = TeamsService()
-    resultado = teams_service.crear_usuario_y_obtener_password(tarea.alumno)
+    resultado = teams_service.create_user(tarea.alumno)
 
-    if resultado.get('success'):
+    # Interpretar resultado de create_user
+    # create_user retorna: {'created': True/False, 'already_exists': True, ...} o None
+    if resultado and ('created' in resultado or 'already_exists' in resultado):
+        # Usuario creado o ya existía → ÉXITO
+        # Marcar como procesado en Teams
+        tarea.alumno.teams_procesado = True
+        tarea.alumno.save(update_fields=['teams_procesado'])
+
         return {
             'success': True,
             'detalles': {
                 'upn': resultado.get('upn'),
-                'user_id': resultado.get('user_id')
+                'user_id': resultado.get('id'),
+                'created': resultado.get('created', False),
+                'already_exists': resultado.get('already_exists', False)
             },
             'cantidad_entidades': 1
         }
     else:
+        # Error o None
+        error_msg = resultado.get('error') if resultado else 'Error desconocido creando usuario Teams'
         return {
             'success': False,
-            'error': resultado.get('error', 'Error creando usuario Teams'),
-            'detalles': resultado
+            'error': error_msg,
+            'detalles': resultado if resultado else {}
         }
 
 
@@ -1980,15 +2062,18 @@ def ejecutar_enrollar_moodle(tarea):
     from .services.moodle_service import MoodleService
 
     moodle_service = MoodleService()
-    enviar_email = tarea.detalles.get('enviar_email', False) if tarea.detalles else False
+    resultado = moodle_service.enroll_user_in_courses(tarea.alumno)
 
-    resultado = moodle_service.enrollar_alumno(tarea.alumno, enviar_email=enviar_email)
+    # Marcar como procesado en Moodle si fue exitoso
+    if resultado.get('success'):
+        tarea.alumno.moodle_procesado = True
+        tarea.alumno.save(update_fields=['moodle_procesado'])
 
     return {
         'success': resultado.get('success', False),
         'error': resultado.get('error'),
         'detalles': resultado,
-        'cantidad_entidades': len(resultado.get('cursos_enrolled', []))
+        'cantidad_entidades': len(resultado.get('enrolled_courses', []))
     }
 
 
@@ -2088,3 +2173,285 @@ def ejecutar_enviar_email(tarea):
             'success': False,
             'error': f'Error enviando email: {str(e)}'
         }
+
+
+# =============================================================================
+# TAREAS PERSONALIZADAS - Ejemplos
+# =============================================================================
+
+@shared_task(bind=True)
+def tarea_personalizada_ejemplo(self):
+    """
+    Tarea personalizada de ejemplo.
+
+    Puedes crear tareas personalizadas para ejecutar cualquier código
+    de forma programada (ej: domingos, diario, cada hora, etc).
+
+    Uso:
+    1. Crea tu tarea aquí siguiendo este patrón
+    2. Reinicia celery: docker compose restart celery celery-beat
+    3. En Admin → Tareas periódicas → Agregar
+    4. Selecciona esta tarea del dropdown
+    5. Asigna un crontab (horario)
+
+    Ejemplo de uso:
+    - Reportes semanales
+    - Limpieza de datos
+    - Backups programados
+    - Notificaciones periódicas
+    """
+    logger.info("🎯 Ejecutando tarea personalizada de ejemplo")
+
+    try:
+        # Tu código personalizado aquí
+        # Ejemplo: generar reporte, limpiar datos, enviar notificaciones, etc.
+
+        # Ejemplo simple: contar alumnos activos
+        from .models import Alumno
+        total_activos = Alumno.objects.filter(activo=True).count()
+
+        logger.info(f"📊 Total de alumnos activos: {total_activos}")
+
+        return {
+            'success': True,
+            'mensaje': f'Tarea completada. Alumnos activos: {total_activos}',
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error en tarea personalizada: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task(bind=True)
+def ejecutar_tarea_personalizada(self, tarea_personalizada_id):
+    """
+    Ejecuta una tarea personalizada definida por el usuario.
+    Esta tarea es llamada por Celery Beat según la periodicidad configurada.
+
+    Args:
+        tarea_personalizada_id: ID de la TareaPersonalizada a ejecutar
+    """
+    from .models import TareaPersonalizada, Tarea
+    from django.utils import timezone
+
+    try:
+        tarea_config = TareaPersonalizada.objects.get(id=tarea_personalizada_id)
+    except TareaPersonalizada.DoesNotExist:
+        logger.error(f"TareaPersonalizada {tarea_personalizada_id} no existe")
+        return {'success': False, 'error': 'Tarea no encontrada'}
+
+    # Verificar si está activa
+    if not tarea_config.activa:
+        logger.info(f"[TareaPersonalizada] '{tarea_config.nombre}' está inactiva, omitiendo ejecución")
+        return {'success': False, 'error': 'Tarea inactiva'}
+
+    logger.info(f"[TareaPersonalizada] 🚀 Ejecutando '{tarea_config.nombre}'")
+    logger.info(f"[TareaPersonalizada] Tipo: {tarea_config.get_tipo_usuario_display()}, Acción: {tarea_config.get_accion_display()}")
+
+    inicio = timezone.now()
+
+    try:
+        # Actualizar contador de ejecuciones
+        tarea_config.ultima_ejecucion = inicio
+        tarea_config.cantidad_ejecuciones += 1
+        tarea_config.save()
+
+        # Ejecutar según el tipo de acción
+        if tarea_config.accion == TareaPersonalizada.AccionTarea.INGESTA_SIAL:
+            resultado = _ejecutar_ingesta_personalizada(tarea_config, self.request.id)
+
+        elif tarea_config.accion in [
+            TareaPersonalizada.AccionTarea.CREAR_USUARIO_TEAMS,
+            TareaPersonalizada.AccionTarea.ENVIAR_EMAIL,
+            TareaPersonalizada.AccionTarea.ACTIVAR_SERVICIOS,
+            TareaPersonalizada.AccionTarea.MOODLE_ENROLL,
+            TareaPersonalizada.AccionTarea.RESETEAR_PASSWORD
+        ]:
+            resultado = _ejecutar_accion_sobre_alumnos(tarea_config, self.request.id)
+
+        else:
+            resultado = {'success': False, 'error': f'Acción no implementada: {tarea_config.accion}'}
+
+        duracion = (timezone.now() - inicio).total_seconds()
+        logger.info(f"[TareaPersonalizada] ✅ '{tarea_config.nombre}' completada en {duracion:.2f}s")
+
+        return resultado
+
+    except Exception as e:
+        logger.error(f"[TareaPersonalizada] ❌ Error ejecutando '{tarea_config.nombre}': {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {'success': False, 'error': str(e)}
+
+
+def _ejecutar_ingesta_personalizada(tarea_config, celery_task_id):
+    """
+    Ejecuta una ingesta SIAL según configuración de TareaPersonalizada.
+    """
+    from .services import ingerir_desde_sial
+    from .models import Tarea
+    from datetime import timedelta
+
+    # Mapear tipo de usuario a tipo de ingesta
+    tipo_map = {
+        'preinscripto': 'preinscriptos',
+        'aspirante': 'aspirantes',
+        'ingresante': 'ingresantes',
+    }
+
+    tipo_ingesta = tipo_map.get(tarea_config.tipo_usuario)
+    if not tipo_ingesta:
+        return {'success': False, 'error': f'Tipo de usuario no válido para ingesta: {tarea_config.tipo_usuario}'}
+
+    # ✨ INGESTA INCREMENTAL: Usar ultima_ejecucion para consultas incrementales
+    ahora = timezone.now()
+
+    # Determinar "desde" para consulta incremental
+    if tarea_config.ultima_ejecucion:
+        # Ya se ejecutó antes: traer solo desde la última ejecución + 1 segundo
+        desde = (tarea_config.ultima_ejecucion + timedelta(seconds=1)).isoformat()
+        logger.info(f"[TareaPersonalizada] Modo INCREMENTAL: desde última ejecución")
+    elif tarea_config.fecha_desde:
+        # Primera ejecución: usar fecha_desde configurada
+        desde = tarea_config.fecha_desde.isoformat()
+        logger.info(f"[TareaPersonalizada] Primera ejecución: usando fecha_desde configurada")
+    else:
+        # Sin fecha_desde ni última ejecución: traer todo
+        desde = None
+        logger.info(f"[TareaPersonalizada] Sin filtro de fecha: traer todos los registros")
+
+    # Determinar "hasta"
+    hasta = tarea_config.fecha_hasta.isoformat() if tarea_config.fecha_hasta else ahora.isoformat()
+
+    logger.info(f"[TareaPersonalizada] Ingesta {tipo_ingesta}: desde={desde}, hasta={hasta}")
+
+    # Si se debe respetar rate limits, crear tarea en cola
+    if tarea_config.respetar_rate_limits:
+        # Mapear a tipo de tarea
+        tipo_tarea_map = {
+            'preinscriptos': Tarea.TipoTarea.INGESTA_PREINSCRIPTOS,
+            'aspirantes': Tarea.TipoTarea.INGESTA_ASPIRANTES,
+            'ingresantes': Tarea.TipoTarea.INGESTA_INGRESANTES,
+        }
+
+        # Crear tarea en cola PENDING
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea_map[tipo_ingesta],
+            estado=Tarea.EstadoTarea.PENDING,
+            celery_task_id=None,  # Se asignará cuando el procesador la tome
+            detalles={
+                'tarea_personalizada_id': tarea_config.id,
+                'desde': desde,
+                'hasta': hasta,
+                'enviar_email': tarea_config.enviar_email,
+                'origen': 'tarea_personalizada'
+            }
+        )
+
+        logger.info(f"[TareaPersonalizada] ✅ Tarea {tarea.id} creada en cola (PENDING)")
+        return {
+            'success': True,
+            'mensaje': f'Tarea encolada (ID: {tarea.id})',
+            'tarea_id': tarea.id,
+            'en_cola': True
+        }
+
+    else:
+        # Ejecutar directamente sin rate limits
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea_map[tipo_ingesta],
+            estado=Tarea.EstadoTarea.RUNNING,
+            celery_task_id=celery_task_id,
+            hora_inicio=timezone.now(),
+            detalles={'desde': desde, 'hasta': hasta, 'origen': 'tarea_personalizada'}
+        )
+
+        try:
+            created, updated, errors, nuevos_ids = ingerir_desde_sial(
+                tipo=tipo_ingesta,
+                desde=desde,
+                hasta=hasta,
+                retornar_nuevos=True,
+                enviar_email=tarea_config.enviar_email
+            )
+
+            tarea.estado = Tarea.EstadoTarea.COMPLETED
+            tarea.cantidad_entidades = created + updated
+            tarea.hora_fin = timezone.now()
+            tarea.detalles.update({
+                'created': created,
+                'updated': updated,
+                'errors': len(errors)
+            })
+            tarea.save()
+
+            return {
+                'success': True,
+                'created': created,
+                'updated': updated,
+                'errors': len(errors),
+                'tarea_id': tarea.id
+            }
+
+        except Exception as e:
+            tarea.estado = Tarea.EstadoTarea.FAILED
+            tarea.mensaje_error = str(e)
+            tarea.hora_fin = timezone.now()
+            tarea.save()
+            raise
+
+
+def _ejecutar_accion_sobre_alumnos(tarea_config, celery_task_id):
+    """
+    Ejecuta una acción sobre alumnos según filtros de TareaPersonalizada.
+    """
+    from .models import Alumno, Tarea
+
+    # Filtrar alumnos según tipo
+    queryset = Alumno.objects.all()
+    if tarea_config.tipo_usuario != 'todos':
+        queryset = queryset.filter(estado_actual=tarea_config.tipo_usuario)
+
+    alumnos = list(queryset)
+    logger.info(f"[TareaPersonalizada] Encontrados {len(alumnos)} alumnos para procesar")
+
+    if not alumnos:
+        return {'success': True, 'mensaje': 'No hay alumnos para procesar', 'procesados': 0}
+
+    # Mapear acción a tipo de tarea
+    accion_to_tipo = {
+        'crear_usuario_teams': Tarea.TipoTarea.CREAR_USUARIO_TEAMS,
+        'enviar_email': Tarea.TipoTarea.ENVIAR_EMAIL,
+        'activar_servicios': Tarea.TipoTarea.ACTIVAR_SERVICIOS,
+        'moodle_enroll': Tarea.TipoTarea.MOODLE_ENROLL,
+        'resetear_password': Tarea.TipoTarea.RESETEAR_PASSWORD,
+    }
+
+    tipo_tarea = accion_to_tipo.get(tarea_config.accion)
+
+    # Crear tareas en cola para cada alumno
+    tareas_creadas = []
+    for alumno in alumnos:
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea,
+            estado=Tarea.EstadoTarea.PENDING,
+            alumno=alumno,
+            detalles={
+                'tarea_personalizada_id': tarea_config.id,
+                'origen': 'tarea_personalizada'
+            }
+        )
+        tareas_creadas.append(tarea.id)
+
+    logger.info(f"[TareaPersonalizada] ✅ {len(tareas_creadas)} tareas creadas en cola")
+
+    return {
+        'success': True,
+        'mensaje': f'{len(tareas_creadas)} tareas encoladas',
+        'tareas_creadas': tareas_creadas,
+        'procesados': len(tareas_creadas)
+    }

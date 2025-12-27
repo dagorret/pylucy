@@ -20,43 +20,18 @@ app.autodiscover_tasks()
 # =============================================================================
 # CELERY BEAT SCHEDULE - Tareas Programadas
 # =============================================================================
-app.conf.beat_schedule = {
-    # Procesador de cola de tareas - CADA 5 MINUTOS
-    'procesar-cola-tareas-cada-5min': {
-        'task': 'alumnos.tasks.procesar_cola_tareas_pendientes',
-        'schedule': crontab(minute='*/5'),  # Cada 5 minutos
-        'options': {
-            'expires': 240,  # Expira en 4 minutos (antes del siguiente)
-        }
-    },
-
-    # Ingesta automática de preinscriptos - SEGÚN CONFIGURACIÓN
-    'ingestar-preinscriptos': {
-        'task': 'alumnos.tasks.ingestar_preinscriptos',
-        'schedule': 300.0,  # Cada 5 minutos (la tarea verifica horario internamente)
-        'options': {
-            'expires': 240,
-        }
-    },
-
-    # Ingesta automática de aspirantes - SEGÚN CONFIGURACIÓN
-    'ingestar-aspirantes': {
-        'task': 'alumnos.tasks.ingestar_aspirantes',
-        'schedule': 300.0,  # Cada 5 minutos (la tarea verifica horario internamente)
-        'options': {
-            'expires': 240,
-        }
-    },
-
-    # Ingesta automática de ingresantes - SEGÚN CONFIGURACIÓN
-    'ingestar-ingresantes': {
-        'task': 'alumnos.tasks.ingestar_ingresantes',
-        'schedule': 300.0,  # Cada 5 minutos (la tarea verifica horario internamente)
-        'options': {
-            'expires': 240,
-        }
-    },
-}
+# NOTA: Las tareas periódicas se configuran desde Django Admin usando
+#       django-celery-beat (Admin → Periodic tasks)
+#
+# Al usar DatabaseScheduler, las tareas se crean/editan dinámicamente
+# sin necesidad de reiniciar servicios.
+#
+# Las tareas se crean automáticamente en la migración de datos:
+# - procesar_cola_tareas_pendientes: cada 5 minutos
+# - ingestar_preinscriptos: cada 5 minutos
+# - ingestar_aspirantes: cada 5 minutos
+# - ingestar_ingresantes: cada 5 minutos
+# =============================================================================
 
 
 @app.task(bind=True, ignore_result=True)

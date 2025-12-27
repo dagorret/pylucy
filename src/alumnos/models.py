@@ -254,6 +254,12 @@ class Configuracion(models.Model):
         default=True,
         help_text="✉️ Enviar email de bienvenida a preinscriptos durante ingesta automática"
     )
+    ultima_ingesta_preinscriptos = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="🕒 Timestamp de última ingesta exitosa de preinscriptos (para consulta incremental)"
+    )
 
     # Ingesta automática de Aspirantes
     aspirantes_dia_inicio = models.DateTimeField(
@@ -274,6 +280,12 @@ class Configuracion(models.Model):
         default=True,
         help_text="✉️ Enviar emails a aspirantes durante ingesta automática (bienvenida + credenciales + enrollamiento)"
     )
+    ultima_ingesta_aspirantes = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="🕒 Timestamp de última ingesta exitosa de aspirantes (para consulta incremental)"
+    )
 
     # Ingesta automática de Ingresantes
     ingresantes_dia_inicio = models.DateTimeField(
@@ -293,6 +305,12 @@ class Configuracion(models.Model):
     ingresantes_enviar_email = models.BooleanField(
         default=True,
         help_text="✉️ Enviar email de enrollamiento a ingresantes durante ingesta automática"
+    )
+    ultima_ingesta_ingresantes = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="🕒 Timestamp de última ingesta exitosa de ingresantes (para consulta incremental)"
     )
 
     # Configuración de procesamiento en lotes
@@ -481,3 +499,99 @@ class Configuracion(models.Model):
         """Obtiene la configuración (crea una si no existe)."""
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class TareaPersonalizada(models.Model):
+    """
+    Modelo para definir tareas personalizadas que se ejecutan periódicamente.
+    Permite crear tareas que procesan alumnos según filtros y ejecutan acciones específicas.
+    """
+
+    class TipoUsuario(models.TextChoices):
+        PREINSCRIPTO = "preinscripto", "Preinscriptos"
+        ASPIRANTE = "aspirante", "Aspirantes"
+        INGRESANTE = "ingresante", "Ingresantes"
+        ALUMNO = "alumno", "Alumnos"
+        TODOS = "todos", "Todos"
+
+    class AccionTarea(models.TextChoices):
+        INGESTA_SIAL = "ingesta_sial", "Ingestar desde SIAL/UTI"
+        CREAR_USUARIO_TEAMS = "crear_usuario_teams", "Crear Usuario en Teams"
+        ENVIAR_EMAIL = "enviar_email", "Enviar Email de Bienvenida"
+        ACTIVAR_SERVICIOS = "activar_servicios", "Activar Servicios (Teams+Email)"
+        MOODLE_ENROLL = "moodle_enroll", "Enrollar en Moodle"
+        RESETEAR_PASSWORD = "resetear_password", "Resetear Contraseña"
+
+    nombre = models.CharField(
+        max_length=200,
+        help_text="Nombre descriptivo de la tarea personalizada"
+    )
+    activa = models.BooleanField(
+        default=True,
+        help_text="Si está activa, la tarea se ejecutará según la periodicidad configurada"
+    )
+    tipo_usuario = models.CharField(
+        max_length=20,
+        choices=TipoUsuario.choices,
+        default=TipoUsuario.TODOS,
+        help_text="Tipo de usuario al que aplicar la tarea"
+    )
+    accion = models.CharField(
+        max_length=30,
+        choices=AccionTarea.choices,
+        help_text="Acción a ejecutar sobre los usuarios seleccionados"
+    )
+
+    # Filtros de fecha para ingesta
+    fecha_desde = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Para ingesta SIAL: fecha desde la cual consultar (formato: YYYY-MM-DD HH:MM:SS)"
+    )
+    fecha_hasta = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Para ingesta SIAL: fecha hasta la cual consultar (deja vacío para usar 'ahora')"
+    )
+
+    # Periodicidad (vinculación con Celery Beat)
+    periodic_task = models.OneToOneField(
+        'django_celery_beat.PeriodicTask',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='tarea_personalizada',
+        help_text="Tarea periódica de Celery Beat asociada"
+    )
+
+    # Configuración de procesamiento
+    enviar_email = models.BooleanField(
+        default=False,
+        help_text="Para ingestas: enviar email de bienvenida a usuarios nuevos"
+    )
+    respetar_rate_limits = models.BooleanField(
+        default=True,
+        help_text="Usar el sistema de cola con rate limits (recomendado)"
+    )
+
+    # Metadatos
+    creada_en = models.DateTimeField(auto_now_add=True)
+    modificada_en = models.DateTimeField(auto_now=True)
+    ultima_ejecucion = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Última vez que se ejecutó esta tarea"
+    )
+    cantidad_ejecuciones = models.PositiveIntegerField(
+        default=0,
+        help_text="Número de veces que se ha ejecutado esta tarea"
+    )
+
+    class Meta:
+        verbose_name = "Tarea Personalizada"
+        verbose_name_plural = "Tareas Personalizadas"
+        ordering = ('-creada_en',)
+
+    def __str__(self):
+        estado = "✓ Activa" if self.activa else "✗ Inactiva"
+        return f"{self.nombre} ({estado}) - {self.get_accion_display()}"
