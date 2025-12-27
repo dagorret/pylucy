@@ -21,9 +21,11 @@ venv/
 db.sqlite3
 media/
 staticfiles/
-# Ignorar static/ excepto src/static/
-static/
+# Ignorar static/ recolectados, pero permitir archivos fuente en src/
+# Permitimos src/static/ y src/pylucy/static/ (archivos CSS personalizados)
+/static/
 !src/static/
+!src/*/static/
 
 # --- Environment variables ---
 # Repo privado: Permitimos archivos de desarrollo y examples
