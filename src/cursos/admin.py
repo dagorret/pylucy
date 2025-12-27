@@ -223,35 +223,43 @@ class CursoIngresoAdmin(BaseCursoAdmin):
 
     @admin.action(description="📥 Exportar cursos a JSON")
     def exportar_cursos_json(self, request, queryset):
-        """Exporta los cursos seleccionados a un archivo JSON."""
+        """
+        Exporta los cursos seleccionados a un archivo JSON.
+
+        El formato exportado es compatible con la importación posterior.
+        Los campos JSONField (carreras, modalidades, comisiones) se exportan
+        como listas de strings.
+        """
         from django.http import HttpResponse
         from django.contrib import messages
         import json
         from datetime import datetime
 
-        # Crear lista de cursos
+        # Crear lista de cursos con validación explícita de tipos
         cursos_data = []
         for curso in queryset:
+            # Asegurar que los campos JSONField sean listas
             cursos_data.append({
                 'nombre': curso.nombre,
                 'curso_moodle': curso.curso_moodle,
-                'carreras': curso.carreras,
-                'modalidades': curso.modalidades,
-                'comisiones': curso.comisiones,
+                'carreras': list(curso.carreras) if curso.carreras else [],
+                'modalidades': list(curso.modalidades) if curso.modalidades else [],
+                'comisiones': list(curso.comisiones) if curso.comisiones else [],
                 'activo': curso.activo,
             })
 
-        # Crear respuesta JSON
+        # Crear respuesta JSON con codificación UTF-8 explícita
+        json_content = json.dumps(cursos_data, indent=2, ensure_ascii=False)
         response = HttpResponse(
-            json.dumps(cursos_data, indent=2, ensure_ascii=False),
-            content_type='application/json'
+            json_content,
+            content_type='application/json; charset=utf-8'
         )
         filename = f"cursos_ingreso_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
         self.message_user(
             request,
-            f"✅ Exportados {queryset.count()} cursos a JSON",
+            f"✅ Exportados {queryset.count()} cursos a JSON ({len(json_content)} bytes)",
             level=messages.SUCCESS
         )
 
