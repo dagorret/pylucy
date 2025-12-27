@@ -77,15 +77,45 @@ log_success "Código actualizado"
 
 # 2. Verificar si hay migraciones pendientes
 log_info "Verificando migraciones..."
-PENDING_MIGRATIONS=$(docker compose -f $COMPOSE_FILE exec -T web python manage.py showmigrations --plan | grep "\[ \]" | wc -l || true)
 
-if [ "$PENDING_MIGRATIONS" -gt 0 ]; then
-    log_warning "Hay $PENDING_MIGRATIONS migraciones pendientes"
-    log_info "Aplicando migraciones..."
-    docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
+# Intentar aplicar migraciones y capturar el resultado
+MIGRATE_OUTPUT=$(docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate 2>&1 || true)
+
+# Verificar si hay conflictos de migraciones
+if echo "$MIGRATE_OUTPUT" | grep -q "Conflicting migrations detected"; then
+    log_warning "⚠️ Conflicto de migraciones detectado"
+    log_info "Resolviendo conflicto con makemigrations --merge..."
+
+    # Ejecutar merge de migraciones
+    docker compose -f $COMPOSE_FILE exec -T web python manage.py makemigrations --merge --noinput
+
+    # Copiar la migración de merge generada al host
+    log_info "Copiando migración de merge al host..."
+    CONTAINER_NAME=$(docker compose -f $COMPOSE_FILE ps -q web | head -1)
+    MERGE_FILE=$(docker exec $CONTAINER_NAME find /app/alumnos/migrations -name "*merge*.py" -type f -printf "%T@ %p\n" | sort -n | tail -1 | cut -d' ' -f2)
+
+    if [ -n "$MERGE_FILE" ]; then
+        MERGE_FILENAME=$(basename "$MERGE_FILE")
+        docker cp $CONTAINER_NAME:$MERGE_FILE ./src/alumnos/migrations/$MERGE_FILENAME
+        log_success "Migración de merge copiada: $MERGE_FILENAME"
+
+        # Aplicar migraciones después del merge
+        log_info "Aplicando migraciones después del merge..."
+        docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
+        log_success "Migraciones aplicadas exitosamente"
+    else
+        log_error "No se encontró archivo de merge generado"
+        exit 1
+    fi
+elif echo "$MIGRATE_OUTPUT" | grep -q "No migrations to apply"; then
+    log_success "No hay migraciones pendientes"
+elif echo "$MIGRATE_OUTPUT" | grep -q "Operations to perform"; then
     log_success "Migraciones aplicadas"
 else
-    log_success "No hay migraciones pendientes"
+    # Mostrar el output si hubo algún otro error
+    echo "$MIGRATE_OUTPUT"
+    log_error "Error al aplicar migraciones"
+    exit 1
 fi
 
 # 3. Recolectar archivos estáticos (solo en producción)
