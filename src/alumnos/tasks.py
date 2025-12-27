@@ -145,22 +145,31 @@ def ingestar_preinscriptos(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Preinscriptos] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
-        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
-        logger.info(f"[Ingesta Auto-Preinscriptos] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
+        # 🔧 WORKFLOW AUTOMÁTICO: Crear tareas para Teams y Moodle si está habilitado
         if nuevos_ids and len(nuevos_ids) > 0:
-            logger.info(f"[Ingesta Auto-Preinscriptos] ℹ️ {len(nuevos_ids)} alumnos nuevos creados (sin procesar)")
+            logger.info(f"[Ingesta Auto-Preinscriptos] {len(nuevos_ids)} alumnos nuevos detectados")
 
-        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
-        # if nuevos_ids and len(nuevos_ids) > 0:
-        #     batch_size = config.batch_size
-        #     logger.info(f"Detectados {len(nuevos_ids)} alumnos nuevos, lanzando workflow en lotes de {batch_size}")
-        #
-        #     # Dividir en lotes
-        #     for i in range(0, len(nuevos_ids), batch_size):
-        #         lote = nuevos_ids[i:i + batch_size]
-        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} alumnos")
-        #         procesar_lote_alumnos_nuevos.delay(lote, 'preinscripto')
+            # Verificar si hay que crear tareas automáticas
+            if config.preinscriptos_activar_teams:
+                logger.info(f"[Ingesta Auto-Preinscriptos] 🔵 Creando tarea Teams para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_TEAMS,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_preinscriptos'}
+                )
+
+            if config.preinscriptos_activar_moodle:
+                logger.info(f"[Ingesta Auto-Preinscriptos] 🟠 Creando tarea Moodle para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_MOODLE,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_preinscriptos'}
+                )
+
+            if not config.preinscriptos_activar_teams and not config.preinscriptos_activar_moodle:
+                logger.info(f"[Ingesta Auto-Preinscriptos] ℹ️ Sin activación automática configurada")
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 
@@ -304,22 +313,31 @@ def ingestar_aspirantes(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Aspirantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
-        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
-        logger.info(f"[Ingesta Auto-Aspirantes] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
+        # 🔧 WORKFLOW AUTOMÁTICO: Crear tareas para Teams y Moodle si está habilitado
         if nuevos_ids and len(nuevos_ids) > 0:
-            logger.info(f"[Ingesta Auto-Aspirantes] ℹ️ {len(nuevos_ids)} aspirantes nuevos creados (sin procesar)")
+            logger.info(f"[Ingesta Auto-Aspirantes] {len(nuevos_ids)} aspirantes nuevos detectados")
 
-        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
-        # if nuevos_ids and len(nuevos_ids) > 0:
-        #     batch_size = config.batch_size
-        #     logger.info(f"Detectados {len(nuevos_ids)} aspirantes nuevos, lanzando workflow en lotes de {batch_size}")
-        #
-        #     # Dividir en lotes
-        #     for i in range(0, len(nuevos_ids), batch_size):
-        #         lote = nuevos_ids[i:i + batch_size]
-        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} aspirantes")
-        #         procesar_lote_alumnos_nuevos.delay(lote, 'aspirante')
+            # Verificar si hay que crear tareas automáticas
+            if config.aspirantes_activar_teams:
+                logger.info(f"[Ingesta Auto-Aspirantes] 🔵 Creando tarea Teams para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_TEAMS,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_aspirantes'}
+                )
+
+            if config.aspirantes_activar_moodle:
+                logger.info(f"[Ingesta Auto-Aspirantes] 🟠 Creando tarea Moodle para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_MOODLE,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_aspirantes'}
+                )
+
+            if not config.aspirantes_activar_teams and not config.aspirantes_activar_moodle:
+                logger.info(f"[Ingesta Auto-Aspirantes] ℹ️ Sin activación automática configurada")
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 
@@ -463,22 +481,31 @@ def ingestar_ingresantes(self):
         if errores_categorizados['guardado']:
             logger.error(f"[Ingesta Auto-Ingresantes] ❌ Errores de guardado: {len(errores_categorizados['guardado'])}")
 
-        # 🔧 WORKFLOW AUTOMÁTICO DESHABILITADO - Solo crea/actualiza alumnos
-        # Los workflows se ejecutan manualmente desde el admin con acciones atómicas
-        logger.info(f"[Ingesta Auto-Ingresantes] ℹ️ Workflow automático deshabilitado. Usar acciones atómicas en el admin.")
+        # 🔧 WORKFLOW AUTOMÁTICO: Crear tareas para Teams y Moodle si está habilitado
         if nuevos_ids and len(nuevos_ids) > 0:
-            logger.info(f"[Ingesta Auto-Ingresantes] ℹ️ {len(nuevos_ids)} ingresantes nuevos creados (sin procesar)")
+            logger.info(f"[Ingesta Auto-Ingresantes] {len(nuevos_ids)} ingresantes nuevos detectados")
 
-        # # Procesar alumnos nuevos en lotes (Teams + Moodle + Email) - DESHABILITADO
-        # if nuevos_ids and len(nuevos_ids) > 0:
-        #     batch_size = config.batch_size
-        #     logger.info(f"Detectados {len(nuevos_ids)} ingresantes nuevos, lanzando workflow en lotes de {batch_size}")
-        #
-        #     # Dividir en lotes
-        #     for i in range(0, len(nuevos_ids), batch_size):
-        #         lote = nuevos_ids[i:i + batch_size]
-        #         logger.info(f"Lanzando lote {i//batch_size + 1}: {len(lote)} ingresantes")
-        #         procesar_lote_alumnos_nuevos.delay(lote, 'ingresante')
+            # Verificar si hay que crear tareas automáticas
+            if config.ingresantes_activar_teams:
+                logger.info(f"[Ingesta Auto-Ingresantes] 🔵 Creando tarea Teams para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_TEAMS,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_ingresantes'}
+                )
+
+            if config.ingresantes_activar_moodle:
+                logger.info(f"[Ingesta Auto-Ingresantes] 🟠 Creando tarea Moodle para {len(nuevos_ids)} alumnos")
+                Tarea.objects.create(
+                    tipo=Tarea.TipoTarea.CREAR_MOODLE,
+                    estado=Tarea.EstadoTarea.PENDING,
+                    alumnos_ids=nuevos_ids,
+                    detalles={'origen': 'ingesta_automatica_ingresantes'}
+                )
+
+            if not config.ingresantes_activar_teams and not config.ingresantes_activar_moodle:
+                logger.info(f"[Ingesta Auto-Ingresantes] ℹ️ Sin activación automática configurada")
 
         return {'created': created, 'updated': updated, 'errors': len(errors), 'nuevos': len(nuevos_ids) if nuevos_ids else 0}
 

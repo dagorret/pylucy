@@ -3089,8 +3089,10 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'preinscriptos_dia_fin',
                 'preinscriptos_frecuencia_segundos',
                 'preinscriptos_enviar_email',
+                'preinscriptos_activar_teams',
+                'preinscriptos_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de preinscriptos. El checkbox "enviar email" controla si se envían emails de bienvenida.'
+            'description': '✉️ Configuración de ingesta automática de preinscriptos. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('📥 Ingesta Automática - Aspirantes', {
             'fields': (
@@ -3098,8 +3100,10 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'aspirantes_dia_fin',
                 'aspirantes_frecuencia_segundos',
                 'aspirantes_enviar_email',
+                'aspirantes_activar_teams',
+                'aspirantes_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de aspirantes. El checkbox "enviar email" controla si se envían emails (bienvenida + credenciales + enrollamiento).'
+            'description': '✉️ Configuración de ingesta automática de aspirantes. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('📥 Ingesta Automática - Ingresantes', {
             'fields': (
@@ -3107,8 +3111,10 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'ingresantes_dia_fin',
                 'ingresantes_frecuencia_segundos',
                 'ingresantes_enviar_email',
+                'ingresantes_activar_teams',
+                'ingresantes_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de ingresantes. El checkbox "enviar email" controla si se envían emails de enrollamiento.'
+            'description': '✉️ Configuración de ingesta automática de ingresantes. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('🔐 Credenciales Teams/Azure AD', {
             'fields': (
@@ -3233,14 +3239,20 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'preinscriptos_dia_fin': time_to_str(config.preinscriptos_dia_fin),
             'preinscriptos_frecuencia_segundos': config.preinscriptos_frecuencia_segundos,
             'preinscriptos_enviar_email': config.preinscriptos_enviar_email,
+            'preinscriptos_activar_teams': config.preinscriptos_activar_teams,
+            'preinscriptos_activar_moodle': config.preinscriptos_activar_moodle,
             'aspirantes_dia_inicio': time_to_str(config.aspirantes_dia_inicio),
             'aspirantes_dia_fin': time_to_str(config.aspirantes_dia_fin),
             'aspirantes_frecuencia_segundos': config.aspirantes_frecuencia_segundos,
             'aspirantes_enviar_email': config.aspirantes_enviar_email,
+            'aspirantes_activar_teams': config.aspirantes_activar_teams,
+            'aspirantes_activar_moodle': config.aspirantes_activar_moodle,
             'ingresantes_dia_inicio': time_to_str(config.ingresantes_dia_inicio),
             'ingresantes_dia_fin': time_to_str(config.ingresantes_dia_fin),
             'ingresantes_frecuencia_segundos': config.ingresantes_frecuencia_segundos,
             'ingresantes_enviar_email': config.ingresantes_enviar_email,
+            'ingresantes_activar_teams': config.ingresantes_activar_teams,
+            'ingresantes_activar_moodle': config.ingresantes_activar_moodle,
             'teams_tenant_id': config.teams_tenant_id,
             'teams_client_id': config.teams_client_id,
             'teams_client_secret': config.teams_client_secret,

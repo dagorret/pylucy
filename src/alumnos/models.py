@@ -254,6 +254,14 @@ class Configuracion(models.Model):
         default=True,
         help_text="✉️ Enviar email de bienvenida a preinscriptos durante ingesta automática"
     )
+    preinscriptos_activar_teams = models.BooleanField(
+        default=False,
+        help_text="🔵 Crear usuarios en Teams automáticamente para nuevos preinscriptos"
+    )
+    preinscriptos_activar_moodle = models.BooleanField(
+        default=False,
+        help_text="🟠 Enrollar en Moodle automáticamente a nuevos preinscriptos"
+    )
     ultima_ingesta_preinscriptos = models.DateTimeField(
         null=True,
         blank=True,
@@ -280,6 +288,14 @@ class Configuracion(models.Model):
         default=True,
         help_text="✉️ Enviar emails a aspirantes durante ingesta automática (bienvenida + credenciales + enrollamiento)"
     )
+    aspirantes_activar_teams = models.BooleanField(
+        default=False,
+        help_text="🔵 Crear usuarios en Teams automáticamente para nuevos aspirantes"
+    )
+    aspirantes_activar_moodle = models.BooleanField(
+        default=False,
+        help_text="🟠 Enrollar en Moodle automáticamente a nuevos aspirantes"
+    )
     ultima_ingesta_aspirantes = models.DateTimeField(
         null=True,
         blank=True,
@@ -305,6 +321,14 @@ class Configuracion(models.Model):
     ingresantes_enviar_email = models.BooleanField(
         default=True,
         help_text="✉️ Enviar email de enrollamiento a ingresantes durante ingesta automática"
+    )
+    ingresantes_activar_teams = models.BooleanField(
+        default=False,
+        help_text="🔵 Crear usuarios en Teams automáticamente para nuevos ingresantes"
+    )
+    ingresantes_activar_moodle = models.BooleanField(
+        default=False,
+        help_text="🟠 Enrollar en Moodle automáticamente a nuevos ingresantes"
     )
     ultima_ingesta_ingresantes = models.DateTimeField(
         null=True,
