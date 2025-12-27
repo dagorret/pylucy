@@ -183,6 +183,8 @@ def ingestar_preinscriptos(self):
 @shared_task(bind=True)
 def ingestar_aspirantes(self):
     """Tarea programada para ingestar aspirantes desde SIAL."""
+    from datetime import timedelta
+
     config = Configuracion.load()
 
     if not config.aspirantes_dia_inicio:
@@ -339,6 +341,8 @@ def ingestar_aspirantes(self):
 @shared_task(bind=True)
 def ingestar_ingresantes(self):
     """Tarea programada para ingestar ingresantes desde SIAL."""
+    from datetime import timedelta
+
     config = Configuracion.load()
 
     if not config.ingresantes_dia_inicio:
