@@ -5,9 +5,10 @@
 
 {% block extrahead %}
     {{ block.super }}
-    {# cache-buster para evitar CSS viejo #}
-    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}?v=8">
-    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/lucy_scale_admin.css' %}?v=1">
+    {# cache-buster automático: cambia cada hora + minutos para testing #}
+    {% now "YmdHi" as cache_version %}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}?v={{ cache_version }}">
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/lucy_scale_admin.css' %}?v={{ cache_version }}">
     <style>
         /* Estilos adicionales para el logo SVG */
         #branding-logo {
@@ -26,8 +27,8 @@
         .lucy-logo-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 10px;
+            justify-content: flex-start;
+            padding: 10px 0;
         }
 
         @keyframes logo-glow {
@@ -42,8 +43,7 @@
 {% endblock %}
 
 {% block branding %}
-<div id="branding" class="lucy-logo-container">
-    <a href="{% url 'admin:index' %}" id="branding-logo">
+    <a href="{% url 'admin:index' %}" id="branding-logo" class="lucy-logo-container">
         <!-- Logo SVG LUCY -->
         <svg class="lucy-logo-svg" width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -84,7 +84,6 @@
 
         <h1>LUCY</h1>
     </a>
-</div>
 {% endblock %}
 
 {% block nav-global %}{% endblock %}

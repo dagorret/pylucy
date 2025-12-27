@@ -3243,6 +3243,7 @@ class PyLucyAdminSite(AdminSite):
     site_title = "PyLucy Admin"
     index_title = "Dashboard"
     index_template = "admin/pylucy_index.html"
+    enable_nav_sidebar = True  # Habilitar sidebar de navegación
 
     def index(self, request, extra_context=None):
         """Vista del dashboard personalizado con datos de tareas."""
@@ -3463,10 +3464,25 @@ admin_site.register(CursoIngreso, CursoIngresoAdmin)
 admin_site.register(Carrera, CarreraAdmin)
 
 
-# Ocultar modelos innecesarios de django-celery-beat
+# Registrar modelos de django-celery-beat en admin_site personalizado
 try:
-    from django_celery_beat.models import SolarSchedule
-    admin.site.unregister(SolarSchedule)
-    admin_site.unregister(SolarSchedule)
-except:
+    from django_celery_beat.models import (
+        PeriodicTask, IntervalSchedule, CrontabSchedule,
+        SolarSchedule, ClockedSchedule, PeriodicTasks
+    )
+    from django_celery_beat.admin import (
+        PeriodicTaskAdmin, PeriodicTaskForm,
+    )
+
+    # Registrar modelos importantes en admin_site personalizado
+    admin_site.register(PeriodicTask, PeriodicTaskAdmin)
+    admin_site.register(IntervalSchedule)
+    admin_site.register(CrontabSchedule)
+    admin_site.register(ClockedSchedule)
+
+    # SolarSchedule no se registra porque no es útil
+    # PeriodicTasks tampoco (es tabla interna de señales)
+
+except ImportError:
+    # django-celery-beat no está instalado
     pass

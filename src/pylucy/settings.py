@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'pylucy.middleware.NoCacheMiddleware',  # Deshabilitar caché en desarrollo
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -148,6 +149,7 @@ THOUSAND_SEPARATOR = "."
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',  # /app/static/ cuando se monta ./src:/app
+    BASE_DIR / 'pylucy' / 'static',  # /app/pylucy/static/ - archivos CSS personalizados del admin
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 

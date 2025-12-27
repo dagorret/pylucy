@@ -1,10 +1,8 @@
 {% extends "admin/index.html" %}
 {% load i18n static log %}
 
-{% block extrastyle %}
-  {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}?v=8">
-  <link rel="stylesheet" href="{% static 'admin/css/lucy_scale_admin.css' %}?v=1">
+{% block sidebar %}
+{# Ocultar el sidebar de "Acciones Recientes" de Django - usamos nuestro propio widget en el grid #}
 {% endblock %}
 
 {% block content %}
