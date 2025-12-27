@@ -1,0 +1,51 @@
+/* Escala general del Django Admin */
+/* NOTA: zoom desactivado porque achicaba el layout del dashboard */
+
+/* Mejoras adicionales para mejor visualización */
+body {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Textos más grandes en el dashboard */
+.lucy-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.lucy-card table th {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lucy-card table td {
+  font-size: 13px;
+}
+
+/* Acciones rápidas más grandes */
+.lucy-action {
+  font-size: 14px;
+}
+
+.lucy-action div:nth-child(2) {
+  font-size: 15px;
+}
+
+/* Emojis más grandes */
+.lucy-action div:first-child {
+  font-size: 32px !important;
+}
+
+/* Estadísticas más visibles */
+.lucy-card .lucy-muted {
+  font-size: 13px;
+}
+
+/* Mejor spacing */
+.lucy-card {
+  padding: 18px;
+}
+
+.lucy-actions {
+  gap: 14px;
+}

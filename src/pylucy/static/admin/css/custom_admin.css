@@ -1,0 +1,240 @@
+/* Estilos personalizados del panel de administración Lucy AMS */
+:root {
+  --lucy-blue: #1d4ed8;
+  --lucy-red: #ef4444;
+  --lucy-bg: #0f172a;
+}
+
+body.login {
+  background: radial-gradient(circle at 20% 20%, rgba(29, 78, 216, 0.2), transparent 35%),
+              radial-gradient(circle at 80% 0%, rgba(239, 68, 68, 0.2), transparent 40%),
+              var(--lucy-bg);
+  color: #e2e8f0;
+}
+
+#header {
+  background: linear-gradient(90deg, var(--lucy-blue), var(--lucy-red));
+  border-bottom: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#branding {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+  box-sizing: border-box !important;
+}
+
+#user-tools {
+  padding-right: 24px !important;
+}
+
+#branding h1, #branding h1 a:link, #branding h1 a:visited {
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+#user-tools a, #user-tools {
+  color: #e2e8f0;
+}
+
+.module caption {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+div.breadcrumbs {
+  background: #0b1222 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  /* Padding con espacio extra para que "Inicio" no quede pegado al borde */
+  padding: 10px max(24px, calc((100% - 1600px) / 2 + 24px)) !important;
+}
+
+a:link, a:visited {
+  color: var(--lucy-blue);
+}
+
+.button, input[type=submit], input[type=button], .submit-row input {
+  background: linear-gradient(90deg, var(--lucy-blue), var(--lucy-red));
+  border: none;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+  filter: brightness(1.05);
+}
+
+/* Titulos de módulos en el dashboard (lado izquierdo) */
+#content-main .module h2 {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222);
+  color: #e2e8f0;
+  padding: 8px 12px;
+}
+
+/* Barras de mensajes (éxito/info) con azul */
+ul.messagelist li {
+  border: none;
+  color: #0b1222;
+}
+ul.messagelist li.success {
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.2), rgba(29, 78, 216, 0.25));
+}
+ul.messagelist li.info {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Fieldsets personalizados (ej: Herramientas UTI) */
+fieldset.module h2,
+.module h2,
+.aligned h2,
+fieldset h2 {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 40%, #0b1222) !important;
+  color: #e2e8f0 !important;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+/* Sidebar de filtros y título del changelist */
+.filter-panel, .changelist-filter h2 {
+  background: linear-gradient(90deg, #0b1222, #1d4ed8 50%, #0b1222);
+  color: #e2e8f0;
+}
+
+/* ========== ANTI-COMPOSITING (Firefox subpíxeles) ========== */
+/* Evita que inputs hereden transform/filter y terminen borrosos */
+#toolbar,
+#changelist-filter,
+#changelist {
+  transform: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+
+#toolbar input,
+#toolbar select,
+#changelist-filter input,
+#changelist-filter select,
+#changelist input,
+#changelist select {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* ========== FULL WIDTH ADMIN CON MARGENES ========== */
+#container {
+  width: auto !important;
+  max-width: 1600px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+  box-sizing: border-box !important;
+}
+
+.main,
+#content {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Asegurar que todos los elementos internos respeten el box-sizing */
+#content *,
+.main * {
+  box-sizing: border-box;
+}
+
+/* En algunos temas el sidebar empuja: asegúrate de no limitar el ancho */
+.content {
+  max-width: none !important;
+}
+
+/* Si usas nav_sidebar, que no "aplane" el contenido */
+body.nav-sidebar #content {
+  margin-left: 0 !important;
+}
+
+/* ========== DASHBOARD LAYOUT ========== */
+.lucy-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1100px) {
+  .lucy-dashboard-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: start;
+  }
+}
+
+/* cards */
+.lucy-card {
+  background: var(--body-bg, #fff);
+  border: 1px solid var(--hairline-color, #e6e6e6);
+  border-radius: 10px;
+  padding: 14px;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.lucy-card h2 {
+  margin-top: 0;
+}
+
+/* tablas dentro de cards */
+.lucy-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lucy-card th,
+.lucy-card td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  text-align: left;
+}
+
+.lucy-muted {
+  color: #666;
+  font-size: 12px;
+}
+
+/* quick actions grid */
+.lucy-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.lucy-action {
+  display: block;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  padding: 14px;
+  background: rgba(255,255,255,0.9);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.lucy-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
