@@ -40,12 +40,13 @@ def ingestar_preinscriptos(self):
         return
 
     # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    # Formato YYYYMMDDHHMM requerido por API UTI
     desde = None
-    hasta = ahora.isoformat()
+    hasta = ahora.strftime('%Y%m%d%H%M')
 
     if config.ultima_ingesta_preinscriptos:
         # Desde 1 segundo después de última ingesta exitosa
-        desde = (config.ultima_ingesta_preinscriptos + timedelta(seconds=1)).isoformat()
+        desde = (config.ultima_ingesta_preinscriptos + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Preinscriptos] Desde: {desde}, Hasta: {hasta}")
     else:
         logger.info("[Ingesta Completa Preinscriptos] Primera ejecución, trayendo lista completa")
@@ -202,12 +203,13 @@ def ingestar_aspirantes(self):
         return
 
     # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    # Formato YYYYMMDDHHMM requerido por API UTI
     desde = None
-    hasta = ahora.isoformat()
+    hasta = ahora.strftime('%Y%m%d%H%M')
 
     if config.ultima_ingesta_aspirantes:
         # Desde 1 segundo después de última ingesta exitosa
-        desde = (config.ultima_ingesta_aspirantes + timedelta(seconds=1)).isoformat()
+        desde = (config.ultima_ingesta_aspirantes + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Aspirantes] Desde: {desde}, Hasta: {hasta}")
     else:
         logger.info("[Ingesta Completa Aspirantes] Primera ejecución, trayendo lista completa")
@@ -360,12 +362,13 @@ def ingestar_ingresantes(self):
         return
 
     # ✨ CONSULTA INCREMENTAL: Calcular desde/hasta
+    # Formato YYYYMMDDHHMM requerido por API UTI
     desde = None
-    hasta = ahora.isoformat()
+    hasta = ahora.strftime('%Y%m%d%H%M')
 
     if config.ultima_ingesta_ingresantes:
         # Desde 1 segundo después de última ingesta exitosa
-        desde = (config.ultima_ingesta_ingresantes + timedelta(seconds=1)).isoformat()
+        desde = (config.ultima_ingesta_ingresantes + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Ingresantes] Desde: {desde}, Hasta: {hasta}")
     else:
         logger.info("[Ingesta Completa Ingresantes] Primera ejecución, trayendo lista completa")
