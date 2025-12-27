@@ -6,7 +6,8 @@
 {% block extrahead %}
     {{ block.super }}
     {# cache-buster para evitar CSS viejo #}
-    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}?v=6">
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}?v=8">
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/lucy_scale_admin.css' %}?v=1">
     <style>
         /* Estilos adicionales para el logo SVG */
         #branding-logo {

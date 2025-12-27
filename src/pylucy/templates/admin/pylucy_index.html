@@ -1,192 +1,194 @@
 {% extends "admin/index.html" %}
-{% load static %}
+{% load i18n static log %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}?v=8">
+  <link rel="stylesheet" href="{% static 'admin/css/lucy_scale_admin.css' %}?v=1">
+{% endblock %}
 
 {% block content %}
-{{ block.super }}
+  {{ block.super }}
 
-{# Menú de Acciones Rápidas - Ancho completo #}
-<div class="module" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px;">
-    <h2 style="color: white; margin-top: 0; margin-bottom: 20px;">⚡ Acciones Rápidas</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-        <a href="{% url 'admin:test_email' %}" style="display: block; background-color: rgba(255,255,255,0.9); padding: 15px; border-radius: 6px; text-decoration: none; color: #333; transition: all 0.3s; border: 2px solid transparent;">
-            <div style="font-size: 28px; margin-bottom: 8px;">📧</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">Probar Email</div>
-            <div style="font-size: 12px; color: #666;">Office 365 / Graph API</div>
-        </a>
+  {# Acciones Rápidas #}
+  <div class="lucy-card" style="margin-top:16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 0; padding: 20px;">
+    <h2 style="color:white; margin:0 0 16px 0; font-size: 20px;">⚡ Acciones Rápidas</h2>
 
-        <a href="{% url 'admin:alumnos_tarea_changelist' %}" style="display: block; background-color: rgba(255,255,255,0.9); padding: 15px; border-radius: 6px; text-decoration: none; color: #333; transition: all 0.3s; border: 2px solid transparent;">
-            <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">Ver Tareas</div>
-            <div style="font-size: 12px; color: #666;">Tareas asíncronas</div>
-        </a>
+    <div class="lucy-actions">
+      <a class="lucy-action" href="{% url 'admin:test_email' %}">
+        <div style="font-size:36px; margin-bottom:10px;">📧</div>
+        <div style="font-weight:bold; margin-bottom:6px; font-size: 15px;">Probar Email</div>
+        <div class="lucy-muted" style="font-size: 13px;">Office 365 / Graph API</div>
+      </a>
 
-        <a href="{% url 'admin:alumnos_alumno_changelist' %}" style="display: block; background-color: rgba(255,255,255,0.9); padding: 15px; border-radius: 6px; text-decoration: none; color: #333; transition: all 0.3s; border: 2px solid transparent;">
-            <div style="font-size: 28px; margin-bottom: 8px;">👥</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">Alumnos</div>
-            <div style="font-size: 12px; color: #666;">Gestionar alumnos</div>
-        </a>
+      <a class="lucy-action" href="{% url 'admin:alumnos_tarea_changelist' %}">
+        <div style="font-size:36px; margin-bottom:10px;">📋</div>
+        <div style="font-weight:bold; margin-bottom:6px; font-size: 15px;">Ver Tareas</div>
+        <div class="lucy-muted" style="font-size: 13px;">Tareas asíncronas</div>
+      </a>
 
-        <a href="{% url 'admin:alumnos_log_changelist' %}" style="display: block; background-color: rgba(255,255,255,0.9); padding: 15px; border-radius: 6px; text-decoration: none; color: #333; transition: all 0.3s; border: 2px solid transparent;">
-            <div style="font-size: 28px; margin-bottom: 8px;">📝</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">Logs</div>
-            <div style="font-size: 12px; color: #666;">Ver registros</div>
-        </a>
+      <a class="lucy-action" href="{% url 'admin:alumnos_alumno_changelist' %}">
+        <div style="font-size:36px; margin-bottom:10px;">👥</div>
+        <div style="font-weight:bold; margin-bottom:6px; font-size: 15px;">Alumnos</div>
+        <div class="lucy-muted" style="font-size: 13px;">Gestionar alumnos</div>
+      </a>
 
-        <a href="{% url 'admin:alumnos_configuracion_changelist' %}" style="display: block; background-color: rgba(255,255,255,0.9); padding: 15px; border-radius: 6px; text-decoration: none; color: #333; transition: all 0.3s; border: 2px solid transparent;">
-            <div style="font-size: 28px; margin-bottom: 8px;">⚙️</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">Configuración</div>
-            <div style="font-size: 12px; color: #666;">Plantillas y ajustes</div>
-        </a>
+      <a class="lucy-action" href="{% url 'admin:alumnos_log_changelist' %}">
+        <div style="font-size:36px; margin-bottom:10px;">📝</div>
+        <div style="font-weight:bold; margin-bottom:6px; font-size: 15px;">Logs</div>
+        <div class="lucy-muted" style="font-size: 13px;">Ver registros</div>
+      </a>
+
+      <a class="lucy-action" href="{% url 'admin:alumnos_configuracion_changelist' %}">
+        <div style="font-size:36px; margin-bottom:10px;">⚙️</div>
+        <div style="font-weight:bold; margin-bottom:6px; font-size: 15px;">Configuración</div>
+        <div class="lucy-muted" style="font-size: 13px;">Plantillas y ajustes</div>
+      </a>
     </div>
-</div>
+  </div>
 
-<style>
-a[href*="admin:"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-color: #667eea !important;
-}
-</style>
-
-{# Contenedor de dos columnas para Tareas y Acciones Recientes #}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+  {# Grid de 2 columnas: Tareas y Acciones Recientes #}
+  <div class="lucy-dashboard-grid" style="margin-top:16px;">
 
     {# Columna 1: Tareas Asíncronas Recientes #}
-    <div class="module">
-        <h2>📋 Tareas Asíncronas Recientes</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
-                    <th style="padding: 8px; text-align: left; font-size: 12px;">ID</th>
-                    <th style="padding: 8px; text-align: left; font-size: 12px;">Tipo</th>
-                    <th style="padding: 8px; text-align: left; font-size: 12px;">Estado</th>
-                    <th style="padding: 8px; text-align: left; font-size: 12px;">Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tarea in tareas_recientes|slice:":5" %}
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px; font-size: 12px;">
-                        <a href="{% url 'admin:alumnos_tarea_change' tarea.id %}">#{{ tarea.id }}</a>
-                    </td>
-                    <td style="padding: 8px; font-size: 12px;">
-                        {% if tarea.tipo == 'ingesta_preinscriptos' %}
-                            <span style="color: #3498db;">📥 Preinscriptos</span>
-                        {% elif tarea.tipo == 'ingesta_aspirantes' %}
-                            <span style="color: #2ecc71;">📥 Aspirantes</span>
-                        {% elif tarea.tipo == 'ingesta_ingresantes' %}
-                            <span style="color: #9b59b6;">📥 Ingresantes</span>
-                        {% elif tarea.tipo == 'eliminar_cuenta' %}
-                            <span style="color: #e74c3c;">🗑️ Eliminar</span>
-                        {% elif tarea.tipo == 'enviar_email' %}
-                            <span style="color: #f39c12;">📧 Email</span>
-                        {% elif tarea.tipo == 'activar_servicios' %}
-                            <span style="color: #1abc9c;">🚀 Activar</span>
-                        {% elif tarea.tipo == 'crear_usuario_teams' %}
-                            <span style="color: #34495e;">👤 Usuario</span>
-                        {% elif tarea.tipo == 'resetear_password' %}
-                            <span style="color: #e67e22;">🔑 Password</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 8px; font-size: 12px;">
-                        {% if tarea.estado == 'pending' %}
-                            <span style="color: #f39c12;">⏳</span>
-                        {% elif tarea.estado == 'running' %}
-                            <span style="color: #3498db;">▶️</span>
-                        {% elif tarea.estado == 'completed' %}
-                            <span style="color: #27ae60;">✅</span>
-                        {% elif tarea.estado == 'failed' %}
-                            <span style="color: #e74c3c;">❌</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 8px; font-size: 11px; color: #666;">
-                        {{ tarea.hora_programada|date:"d/m H:i" }}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                        No hay tareas recientes
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <p style="margin-top: 15px; text-align: right;">
-            <a href="{% url 'admin:alumnos_tarea_changelist' %}" style="color: #417690; font-weight: bold; font-size: 12px;">
-                Ver todas las tareas →
-            </a>
-        </p>
+    <div class="lucy-card">
+      <h2>📋 Tareas Asíncronas Recientes</h2>
 
-        {# Resumen compacto #}
-        <div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 4px;">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
-                <div>
-                    <div style="font-size: 20px; font-weight: bold; color: #f39c12;">{{ resumen.pending }}</div>
-                    <div style="color: #666; font-size: 10px;">Pendientes</div>
-                </div>
-                <div>
-                    <div style="font-size: 20px; font-weight: bold; color: #3498db;">{{ resumen.running }}</div>
-                    <div style="color: #666; font-size: 10px;">Ejecutando</div>
-                </div>
-                <div>
-                    <div style="font-size: 20px; font-weight: bold; color: #27ae60;">{{ resumen.completed }}</div>
-                    <div style="color: #666; font-size: 10px;">Completadas</div>
-                </div>
-                <div>
-                    <div style="font-size: 20px; font-weight: bold; color: #e74c3c;">{{ resumen.failed }}</div>
-                    <div style="color: #666; font-size: 10px;">Fallidas</div>
-                </div>
-            </div>
+      <table>
+        <thead>
+          <tr style="background-color: #f5f5f5;">
+            <th style="font-size:12px; padding:8px;">ID</th>
+            <th style="font-size:12px; padding:8px;">Tipo</th>
+            <th style="font-size:12px; padding:8px;">Estado</th>
+            <th style="font-size:12px; padding:8px;">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tarea in tareas_recientes|slice:":8" %}
+          <tr>
+            <td style="padding:8px; font-size:12px;">
+              <a href="{% url 'admin:alumnos_tarea_change' tarea.id %}">#{{ tarea.id }}</a>
+            </td>
+            <td style="padding:8px; font-size:12px;">
+              {% if tarea.tipo == 'ingesta_preinscriptos' %}
+                <span style="color:#3498db;">📥 Preinscriptos</span>
+              {% elif tarea.tipo == 'ingesta_aspirantes' %}
+                <span style="color:#2ecc71;">📥 Aspirantes</span>
+              {% elif tarea.tipo == 'ingesta_ingresantes' %}
+                <span style="color:#9b59b6;">📥 Ingresantes</span>
+              {% elif tarea.tipo == 'eliminar_cuenta' %}
+                <span style="color:#e74c3c;">🗑️ Eliminar</span>
+              {% elif tarea.tipo == 'enviar_email' %}
+                <span style="color:#f39c12;">📧 Email</span>
+              {% elif tarea.tipo == 'activar_servicios' %}
+                <span style="color:#1abc9c;">🚀 Activar</span>
+              {% elif tarea.tipo == 'crear_usuario_teams' %}
+                <span style="color:#34495e;">👤 Usuario</span>
+              {% elif tarea.tipo == 'resetear_password' %}
+                <span style="color:#e67e22;">🔑 Password</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px; font-size:12px;">
+              {% if tarea.estado == 'pending' %}
+                <span style="color:#f39c12;">⏳</span>
+              {% elif tarea.estado == 'running' %}
+                <span style="color:#3498db;">▶️</span>
+              {% elif tarea.estado == 'completed' %}
+                <span style="color:#27ae60;">✅</span>
+              {% elif tarea.estado == 'failed' %}
+                <span style="color:#e74c3c;">❌</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px; font-size:11px; color:#666;">
+              {{ tarea.hora_programada|date:"d/m H:i" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" style="padding:20px; text-align:center; color:#999; font-size:12px;">
+              No hay tareas recientes
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <p style="margin-top:15px; text-align:right;">
+        <a href="{% url 'admin:alumnos_tarea_changelist' %}" style="color:#417690; font-weight:bold; font-size:12px;">
+          Ver todas las tareas →
+        </a>
+      </p>
+
+      {# Resumen compacto #}
+      <div style="margin-top:20px; padding:15px; background-color:#f9f9f9; border-radius:4px;">
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; text-align:center;">
+          <div>
+            <div style="font-size:20px; font-weight:bold; color:#f39c12;">{{ resumen.pending }}</div>
+            <div class="lucy-muted">Pendientes</div>
+          </div>
+          <div>
+            <div style="font-size:20px; font-weight:bold; color:#3498db;">{{ resumen.running }}</div>
+            <div class="lucy-muted">Ejecutando</div>
+          </div>
+          <div>
+            <div style="font-size:20px; font-weight:bold; color:#27ae60;">{{ resumen.completed }}</div>
+            <div class="lucy-muted">Completadas</div>
+          </div>
+          <div>
+            <div style="font-size:20px; font-weight:bold; color:#e74c3c;">{{ resumen.failed }}</div>
+            <div class="lucy-muted">Fallidas</div>
+          </div>
         </div>
+      </div>
     </div>
 
-    {# Columna 2: Acciones Recientes (del widget de Django) #}
-    <div class="module">
-        <h2>🕒 Acciones Recientes</h2>
-        {% load log %}
-        {% get_admin_log 10 as admin_log for_user user %}
-        <ul style="list-style: none; padding: 0; margin: 0;">
-            {% for entry in admin_log %}
-            <li style="padding: 10px; border-bottom: 1px solid #eee; font-size: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div style="flex: 1;">
-                        {% if entry.is_addition %}
-                            <span style="color: #27ae60; font-weight: bold;">➕</span>
-                        {% elif entry.is_change %}
-                            <span style="color: #3498db; font-weight: bold;">✏️</span>
-                        {% elif entry.is_deletion %}
-                            <span style="color: #e74c3c; font-weight: bold;">🗑️</span>
-                        {% endif %}
+    {# Columna 2: Acciones Recientes (widget de Django) #}
+    <div class="lucy-card">
+      <h2>🕒 Acciones Recientes</h2>
 
-                        {% if entry.content_type %}
-                            <strong>{{ entry.content_type.name|capfirst }}</strong>
-                        {% endif %}
+      {% get_admin_log 10 as admin_log for_user user %}
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for entry in admin_log %}
+        <li style="padding:10px; border-bottom:1px solid rgba(0,0,0,0.06); font-size:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:start;">
+            <div style="flex:1;">
+              {% if entry.is_addition %}
+                <span style="color:#27ae60; font-weight:bold;">➕</span>
+              {% elif entry.is_change %}
+                <span style="color:#3498db; font-weight:bold;">✏️</span>
+              {% elif entry.is_deletion %}
+                <span style="color:#e74c3c; font-weight:bold;">🗑️</span>
+              {% endif %}
 
-                        {% if entry.is_deletion %}
-                            {{ entry.object_repr }}
-                        {% else %}
-                            <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
-                        {% endif %}
+              {% if entry.content_type %}
+                <strong>{{ entry.content_type.name|capfirst }}</strong>
+              {% endif %}
 
-                        {% if entry.change_message %}
-                            <div style="color: #666; font-size: 11px; margin-top: 3px;">
-                                {{ entry.change_message }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div style="color: #999; font-size: 10px; white-space: nowrap; margin-left: 10px;">
-                        {{ entry.action_time|date:"d/m H:i" }}
-                    </div>
+              {% if entry.is_deletion %}
+                {{ entry.object_repr }}
+              {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+              {% endif %}
+
+              {% if entry.change_message %}
+                <div class="lucy-muted" style="margin-top:3px;">
+                  {{ entry.change_message }}
                 </div>
-            </li>
-            {% empty %}
-            <li style="padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                No hay acciones recientes
-            </li>
-            {% endfor %}
-        </ul>
+              {% endif %}
+            </div>
+            <div class="lucy-muted" style="white-space:nowrap; margin-left:10px;">
+              {{ entry.action_time|date:"d/m H:i" }}
+            </div>
+          </div>
+        </li>
+        {% empty %}
+        <li style="padding:20px; text-align:center; color:#999; font-size:12px;">
+          No hay acciones recientes
+        </li>
+        {% endfor %}
+      </ul>
     </div>
-</div>
+
+  </div>
 
 {% endblock %}

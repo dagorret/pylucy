@@ -3244,6 +3244,33 @@ class PyLucyAdminSite(AdminSite):
     index_title = "Dashboard"
     index_template = "admin/pylucy_index.html"
 
+    def index(self, request, extra_context=None):
+        """Vista del dashboard personalizado con datos de tareas."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Obtener tareas recientes
+        tareas_recientes = Tarea.objects.all().order_by('-hora_programada')[:10]
+
+        # Obtener resumen de tareas
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+
+        resumen = {
+            'pending': Tarea.objects.filter(estado='pending').count(),
+            'running': Tarea.objects.filter(estado='running').count(),
+            'completed': Tarea.objects.filter(estado='completed', hora_programada__gte=last_24h).count(),
+            'failed': Tarea.objects.filter(estado='failed', hora_programada__gte=last_24h).count(),
+        }
+
+        context = {
+            'tareas_recientes': tareas_recientes,
+            'resumen': resumen,
+            **(extra_context or {}),
+        }
+
+        return super().index(request, extra_context=context)
+
     def get_urls(self):
         """Agregar URLs personalizadas."""
         from django.urls import path
@@ -3428,6 +3455,12 @@ admin_site.register(Alumno, AlumnoAdmin)
 admin_site.register(Log, LogAdmin)
 admin_site.register(Configuracion, ConfiguracionAdmin)
 admin_site.register(Tarea, TareaAdmin)
+
+# Registrar modelos de la app cursos
+from cursos.models import CursoIngreso, Carrera
+from cursos.admin import CursoIngresoAdmin, CarreraAdmin
+admin_site.register(CursoIngreso, CursoIngresoAdmin)
+admin_site.register(Carrera, CarreraAdmin)
 
 
 # Ocultar modelos innecesarios de django-celery-beat
