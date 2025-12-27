@@ -10,18 +10,19 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='alumno',
-            name='email_payload',
-        ),
-        migrations.RemoveField(
-            model_name='alumno',
-            name='moodle_payload',
-        ),
-        migrations.RemoveField(
-            model_name='alumno',
-            name='teams_payload',
-        ),
+        # Comentado: campos ya eliminados en migración anterior
+        # migrations.RemoveField(
+        #     model_name='alumno',
+        #     name='email_payload',
+        # ),
+        # migrations.RemoveField(
+        #     model_name='alumno',
+        #     name='moodle_payload',
+        # ),
+        # migrations.RemoveField(
+        #     model_name='alumno',
+        #     name='teams_payload',
+        # ),
         migrations.AddField(
             model_name='configuracion',
             name='ultima_ingesta_aspirantes',
