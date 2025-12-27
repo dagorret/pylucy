@@ -40,6 +40,54 @@ def extraer_codigo_error(excepcion_msg, codigo_default='G-001'):
     return (codigo_default, error_msg)
 
 
+def encolar_o_ejecutar_tarea(alumno, tipo_tarea, task_func=None, task_args=None, usuario=None, detalles=None):
+    """
+    Helper para encolar tarea o ejecutarla inmediatamente según USE_QUEUE_SYSTEM.
+
+    Args:
+        alumno: Instancia de Alumno
+        tipo_tarea: Tarea.TipoTarea (ej: Tarea.TipoTarea.CREAR_USUARIO_TEAMS)
+        task_func: Función de tarea de Celery (ej: crear_usuario_teams_async)
+        task_args: Tupla con argumentos para task_func (ej: (alumno.id,))
+        usuario: Nombre de usuario que ejecuta la acción
+        detalles: Dict con detalles adicionales para la tarea
+
+    Returns:
+        Objeto Tarea creado
+    """
+    from django.conf import settings
+
+    use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+
+    if use_queue:
+        # NUEVO: Solo crear registro Tarea (procesador lo ejecutará)
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea,
+            estado=Tarea.EstadoTarea.PENDING,
+            alumno=alumno,
+            usuario=usuario,
+            detalles=detalles or {}
+        )
+    else:
+        # LEGACY: Ejecutar inmediatamente con .delay()
+        if task_func and task_args is not None:
+            task = task_func.delay(*task_args)
+            celery_task_id = task.id
+        else:
+            celery_task_id = None
+
+        tarea = Tarea.objects.create(
+            tipo=tipo_tarea,
+            estado=Tarea.EstadoTarea.PENDING,
+            celery_task_id=celery_task_id,
+            alumno=alumno,
+            usuario=usuario,
+            detalles=detalles or {}
+        )
+
+    return tarea
+
+
 @admin.register(Alumno)
 class AlumnoAdmin(admin.ModelAdmin):
     change_list_template = "admin/alumnos/alumno/change_list.html"
@@ -2288,35 +2336,44 @@ class AlumnoAdmin(admin.ModelAdmin):
     def crear_usuario_teams(self, request, queryset):
         """
         Crea usuario en Teams sin enviar email (modo asíncrono).
-        Las tareas se ejecutan en background vía Celery.
+
+        **Comportamiento según USE_QUEUE_SYSTEM**:
+        - False (default): Ejecuta inmediatamente con .delay() (legacy)
+        - True: Encola tareas que se procesarán cada 5 min con rate limiting
         """
+        from django.conf import settings
         from .tasks import crear_usuario_teams_async
-        from .models import Tarea
 
         tareas_programadas = 0
+        use_queue = getattr(settings, 'USE_QUEUE_SYSTEM', False)
+        usuario = request.user.username if request.user.is_authenticated else None
 
         for alumno in queryset:
-            # Programar tarea asíncrona
-            task = crear_usuario_teams_async.delay(alumno.id)
-
-            # Crear registro de tarea
-            Tarea.objects.create(
-                tipo=Tarea.TipoTarea.CREAR_USUARIO_TEAMS,
-                estado=Tarea.EstadoTarea.PENDING,
-                celery_task_id=task.id,
+            encolar_o_ejecutar_tarea(
                 alumno=alumno,
-                usuario=request.user.username if request.user.is_authenticated else None
+                tipo_tarea=Tarea.TipoTarea.CREAR_USUARIO_TEAMS,
+                task_func=crear_usuario_teams_async,
+                task_args=(alumno.id,),
+                usuario=usuario
             )
-
             tareas_programadas += 1
 
-        # Resumen final
-        self.message_user(
-            request,
-            f"📋 {tareas_programadas} tareas programadas en cola de Celery. "
-            f"Revisa la tabla de Tareas Asíncronas para ver credenciales.",
-            level=messages.SUCCESS
-        )
+        # Mensaje según modo
+        if use_queue:
+            self.message_user(
+                request,
+                f"✅ {tareas_programadas} tareas encoladas. "
+                f"Serán procesadas en máx 5 minutos con rate limiting. "
+                f"Revisa Tareas Asíncronas para ver el progreso.",
+                level=messages.SUCCESS
+            )
+        else:
+            self.message_user(
+                request,
+                f"📋 {tareas_programadas} tareas ejecutándose en background. "
+                f"Revisa la tabla de Tareas Asíncronas para ver credenciales.",
+                level=messages.SUCCESS
+            )
 
     @admin.action(description="📧 Enviar email con credenciales")
     def enviar_email_credenciales(self, request, queryset):

@@ -217,3 +217,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# =============================================================================
+# SISTEMA DE COLAS - Feature Flag
+# =============================================================================
+# Controla si las acciones del admin usan el nuevo sistema de colas con
+# procesamiento cada 5 minutos (True) o ejecutan inmediatamente con .delay() (False)
+#
+# True:  Las acciones crean registros Tarea(estado=PENDING) y el procesador
+#        los ejecuta cada 5 min respetando batch_size y rate_limits
+# False: Las acciones llaman .delay() inmediatamente (comportamiento anterior)
+#
+# Para activar en producción/testing: agregar USE_QUEUE_SYSTEM=true en .env
+USE_QUEUE_SYSTEM = os.getenv("USE_QUEUE_SYSTEM", "False").lower() == "true"
