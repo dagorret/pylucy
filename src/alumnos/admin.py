@@ -3208,6 +3208,12 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'description': 'Plantillas HTML para emails. Pegar HTML completo en cada campo. Variables disponibles: {nombre}, {apellido}, {dni}, {email}, {upn}, {password}, {moodle_url}, {cursos_html}. IMPORTANTE: En CSS usar {{{{ y }}}} para escapar llaves.',
             'classes': ('collapse',)
         }),
+        ('🔧 Acciones', {
+            'fields': (
+                'boton_resetear_checkpoints',
+            ),
+            'description': 'Herramientas de administración de checkpoints e ingesta.'
+        }),
         ('ℹ️ Metadatos', {
             'fields': (
                 'actualizado_en',
@@ -3217,9 +3223,34 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         }),
     )
 
-    readonly_fields = ('actualizado_en', 'actualizado_por')
+    readonly_fields = ('actualizado_en', 'actualizado_por', 'boton_resetear_checkpoints')
 
     actions = ['resetear_checkpoints_ingesta']
+
+    def boton_resetear_checkpoints(self, obj):
+        """Botón para resetear checkpoints desde el formulario."""
+        if obj and obj.pk:
+            from django.middleware.csrf import get_token
+            from django.contrib.admin.templatetags.admin_urls import admin_urlname
+            # Obtener el request desde thread local (Django lo guarda automáticamente)
+            return format_html(
+                '<div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 10px;">'
+                '<p style="margin: 0 0 10px 0;"><strong>🔄 Resetear Checkpoints de Ingesta</strong></p>'
+                '<p style="margin: 0 0 10px 0; font-size: 13px; color: #666;">'
+                'Resetea los timestamps de última ingesta (preinscriptos, aspirantes, ingresantes) para forzar carga completa en la próxima ejecución automática.<br>'
+                '<strong>Nota:</strong> Esto hará que la próxima tarea periódica traiga TODOS los registros desde dia_inicio hasta ahora.'
+                '</p>'
+                '<form method="post" action="resetear-checkpoints/" style="margin: 0;" onsubmit="return confirm(\'¿Estás seguro de resetear los checkpoints? La próxima ingesta traerá TODOS los registros desde dia_inicio.\');">'
+                '{}'
+                '<button type="submit" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">'
+                '🔄 Resetear Checkpoints Ahora'
+                '</button>'
+                '</form>'
+                '</div>',
+                format_html('<input type="hidden" name="csrfmiddlewaretoken">')
+            )
+        return "Guarda primero la configuración"
+    boton_resetear_checkpoints.short_description = "🔧 Resetear Checkpoints"
 
     def has_add_permission(self, request):
         """Solo puede haber una configuración (Singleton)."""
@@ -3253,6 +3284,31 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             messages.SUCCESS
         )
 
+    def resetear_checkpoints_view(self, request, object_id):
+        """Vista para resetear checkpoints desde el formulario."""
+        from django.shortcuts import get_object_or_404
+        from django.http import HttpResponseRedirect
+
+        config = get_object_or_404(Configuracion, pk=object_id)
+
+        if request.method == 'POST':
+            config.ultima_ingesta_preinscriptos = None
+            config.ultima_ingesta_aspirantes = None
+            config.ultima_ingesta_ingresantes = None
+            config.save(update_fields=[
+                'ultima_ingesta_preinscriptos',
+                'ultima_ingesta_aspirantes',
+                'ultima_ingesta_ingresantes'
+            ])
+
+            self.message_user(
+                request,
+                "✅ Checkpoints reseteados exitosamente. La próxima ingesta automática traerá todos los registros desde dia_inicio.",
+                messages.SUCCESS
+            )
+
+        return HttpResponseRedirect(f'../')
+
     def get_urls(self):
         """Agregar URLs personalizadas para exportar/importar."""
         urls = super().get_urls()
@@ -3267,6 +3323,11 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'importar-json/',
                 self.admin_site.admin_view(self.importar_json_view),
                 name='alumnos_configuracion_importar_json',
+            ),
+            path(
+                '<path:object_id>/resetear-checkpoints/',
+                self.admin_site.admin_view(self.resetear_checkpoints_view),
+                name='alumnos_configuracion_resetear_checkpoints',
             ),
         ]
         return custom_urls + urls
