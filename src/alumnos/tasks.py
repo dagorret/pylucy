@@ -74,11 +74,21 @@ def ingestar_preinscriptos(self):
     desde = None
     hasta = ahora.strftime('%Y%m%d%H%M')
 
-    if config.ultima_ingesta_preinscriptos:
-        # Desde 1 segundo después de última ingesta exitosa
+    # 🔄 VERIFICAR SI SE FUERZA CARGA COMPLETA
+    if config.preinscriptos_forzar_carga_completa:
+        # FORZAR desde dia_inicio hasta ahora
+        if config.preinscriptos_dia_inicio:
+            desde = config.preinscriptos_dia_inicio.strftime('%Y%m%d%H%M')
+        logger.info(f"[Carga Completa FORZADA Preinscriptos] Desde: {desde or 'inicio'}, Hasta: {hasta}")
+        # Desactivar flag después de usarlo
+        config.preinscriptos_forzar_carga_completa = False
+        config.save(update_fields=['preinscriptos_forzar_carga_completa'])
+    elif config.ultima_ingesta_preinscriptos:
+        # INCREMENTAL: Desde 1 segundo después de última ingesta exitosa
         desde = (config.ultima_ingesta_preinscriptos + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Preinscriptos] Desde: {desde}, Hasta: {hasta}")
     else:
+        # PRIMERA VEZ: Trayendo lista completa
         logger.info("[Ingesta Completa Preinscriptos] Primera ejecución, trayendo lista completa")
 
     # Crear registro de tarea
@@ -246,11 +256,21 @@ def ingestar_aspirantes(self):
     desde = None
     hasta = ahora.strftime('%Y%m%d%H%M')
 
-    if config.ultima_ingesta_aspirantes:
-        # Desde 1 segundo después de última ingesta exitosa
+    # 🔄 VERIFICAR SI SE FUERZA CARGA COMPLETA
+    if config.aspirantes_forzar_carga_completa:
+        # FORZAR desde dia_inicio hasta ahora
+        if config.aspirantes_dia_inicio:
+            desde = config.aspirantes_dia_inicio.strftime('%Y%m%d%H%M')
+        logger.info(f"[Carga Completa FORZADA Aspirantes] Desde: {desde or 'inicio'}, Hasta: {hasta}")
+        # Desactivar flag después de usarlo
+        config.aspirantes_forzar_carga_completa = False
+        config.save(update_fields=['aspirantes_forzar_carga_completa'])
+    elif config.ultima_ingesta_aspirantes:
+        # INCREMENTAL: Desde 1 segundo después de última ingesta exitosa
         desde = (config.ultima_ingesta_aspirantes + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Aspirantes] Desde: {desde}, Hasta: {hasta}")
     else:
+        # PRIMERA VEZ: Trayendo lista completa
         logger.info("[Ingesta Completa Aspirantes] Primera ejecución, trayendo lista completa")
 
     # Crear registro de tarea
@@ -414,11 +434,21 @@ def ingestar_ingresantes(self):
     desde = None
     hasta = ahora.strftime('%Y%m%d%H%M')
 
-    if config.ultima_ingesta_ingresantes:
-        # Desde 1 segundo después de última ingesta exitosa
+    # 🔄 VERIFICAR SI SE FUERZA CARGA COMPLETA
+    if config.ingresantes_forzar_carga_completa:
+        # FORZAR desde dia_inicio hasta ahora
+        if config.ingresantes_dia_inicio:
+            desde = config.ingresantes_dia_inicio.strftime('%Y%m%d%H%M')
+        logger.info(f"[Carga Completa FORZADA Ingresantes] Desde: {desde or 'inicio'}, Hasta: {hasta}")
+        # Desactivar flag después de usarlo
+        config.ingresantes_forzar_carga_completa = False
+        config.save(update_fields=['ingresantes_forzar_carga_completa'])
+    elif config.ultima_ingesta_ingresantes:
+        # INCREMENTAL: Desde 1 segundo después de última ingesta exitosa
         desde = (config.ultima_ingesta_ingresantes + timedelta(seconds=1)).strftime('%Y%m%d%H%M')
         logger.info(f"[Ingesta Incremental Ingresantes] Desde: {desde}, Hasta: {hasta}")
     else:
+        # PRIMERA VEZ: Trayendo lista completa
         logger.info("[Ingesta Completa Ingresantes] Primera ejecución, trayendo lista completa")
 
     # Crear registro de tarea

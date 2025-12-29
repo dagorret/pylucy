@@ -300,6 +300,10 @@ class Configuracion(models.Model):
         editable=False,
         help_text="🕒 Timestamp de última ingesta exitosa de preinscriptos (para consulta incremental)"
     )
+    preinscriptos_forzar_carga_completa = models.BooleanField(
+        default=False,
+        help_text="🔄 Forzar carga completa desde dia_inicio ignorando checkpoint (se desactiva automáticamente después de ejecutar)"
+    )
 
     # Ingesta automática de Aspirantes
     aspirantes_dia_inicio = models.DateTimeField(
@@ -334,6 +338,10 @@ class Configuracion(models.Model):
         editable=False,
         help_text="🕒 Timestamp de última ingesta exitosa de aspirantes (para consulta incremental)"
     )
+    aspirantes_forzar_carga_completa = models.BooleanField(
+        default=False,
+        help_text="🔄 Forzar carga completa desde dia_inicio ignorando checkpoint (se desactiva automáticamente después de ejecutar)"
+    )
 
     # Ingesta automática de Ingresantes
     ingresantes_dia_inicio = models.DateTimeField(
@@ -367,6 +375,10 @@ class Configuracion(models.Model):
         blank=True,
         editable=False,
         help_text="🕒 Timestamp de última ingesta exitosa de ingresantes (para consulta incremental)"
+    )
+    ingresantes_forzar_carga_completa = models.BooleanField(
+        default=False,
+        help_text="🔄 Forzar carga completa desde dia_inicio ignorando checkpoint (se desactiva automáticamente después de ejecutar)"
     )
 
     # Configuración de procesamiento en lotes
@@ -496,6 +508,10 @@ class Configuracion(models.Model):
         help_text="Plantilla HTML para email de enrollamiento en Moodle. Variables: {nombre}, {apellido}, {upn}, {moodle_url}, {cursos_html}. Pegar HTML completo."
     )
 
+    email_usar_microsoft_graph = models.BooleanField(
+        default=False,
+        help_text="📧 Usar Microsoft Graph API para enviar emails en lugar de SMTP (requiere credenciales Teams configuradas)"
+    )
     email_from = models.EmailField(
         max_length=255,
         blank=True,

@@ -3120,33 +3120,36 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'preinscriptos_dia_inicio',
                 'preinscriptos_dia_fin',
                 'preinscriptos_frecuencia_segundos',
+                'preinscriptos_forzar_carga_completa',
                 'preinscriptos_enviar_email',
                 'preinscriptos_activar_teams',
                 'preinscriptos_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de preinscriptos. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
+            'description': '✉️ Configuración de ingesta automática de preinscriptos. FORZAR CARGA COMPLETA: trae todos los registros desde dia_inicio (se desactiva automáticamente después de ejecutar). Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('📥 Ingesta Automática - Aspirantes', {
             'fields': (
                 'aspirantes_dia_inicio',
                 'aspirantes_dia_fin',
                 'aspirantes_frecuencia_segundos',
+                'aspirantes_forzar_carga_completa',
                 'aspirantes_enviar_email',
                 'aspirantes_activar_teams',
                 'aspirantes_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de aspirantes. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
+            'description': '✉️ Configuración de ingesta automática de aspirantes. FORZAR CARGA COMPLETA: trae todos los registros desde dia_inicio (se desactiva automáticamente después de ejecutar). Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('📥 Ingesta Automática - Ingresantes', {
             'fields': (
                 'ingresantes_dia_inicio',
                 'ingresantes_dia_fin',
                 'ingresantes_frecuencia_segundos',
+                'ingresantes_forzar_carga_completa',
                 'ingresantes_enviar_email',
                 'ingresantes_activar_teams',
                 'ingresantes_activar_moodle',
             ),
-            'description': '✉️ Configuración de ingesta automática de ingresantes. Los checkboxes controlan emails y activación automática en Teams/Moodle.'
+            'description': '✉️ Configuración de ingesta automática de ingresantes. FORZAR CARGA COMPLETA: trae todos los registros desde dia_inicio (se desactiva automáticamente después de ejecutar). Los checkboxes controlan emails y activación automática en Teams/Moodle.'
         }),
         ('🔐 Credenciales Teams/Azure AD', {
             'fields': (
@@ -3179,15 +3182,16 @@ class ConfiguracionAdmin(admin.ModelAdmin):
             'description': 'Credenciales de Moodle. Auth method: oauth2 (Microsoft) o manual. Courses config: JSON con cursos por estado de alumno.',
             'classes': ('collapse',)
         }),
-        ('📧 Configuración de Email SMTP', {
+        ('📧 Configuración de Email', {
             'fields': (
+                'email_usar_microsoft_graph',
                 'email_from',
                 'email_host',
                 'email_port',
                 'email_use_tls',
                 'deshabilitar_fallback_email_personal',
             ),
-            'description': 'Configuración SMTP para envío de emails. Si están vacíos, se usan las variables de entorno (DEFAULT_FROM_EMAIL, EMAIL_HOST, etc.). ⚠️ FALLBACK: Si está deshabilitado, el sistema NO usará email_personal cuando falte email_institucional.',
+            'description': 'Configuración de envío de emails. MICROSOFT GRAPH: Si se activa, usa Microsoft Graph API en lugar de SMTP (requiere credenciales Teams configuradas, solo necesita email_from). SMTP: Si Graph está desactivado, usa configuración SMTP tradicional. ⚠️ FALLBACK: Si está deshabilitado, el sistema NO usará email_personal cuando falte email_institucional.',
             'classes': ('collapse',)
         }),
         ('✉️ Plantillas de Emails', {
@@ -3215,6 +3219,8 @@ class ConfiguracionAdmin(admin.ModelAdmin):
 
     readonly_fields = ('actualizado_en', 'actualizado_por')
 
+    actions = ['resetear_checkpoints_ingesta']
+
     def has_add_permission(self, request):
         """Solo puede haber una configuración (Singleton)."""
         return not Configuracion.objects.exists()
@@ -3227,6 +3233,25 @@ class ConfiguracionAdmin(admin.ModelAdmin):
         """Guarda quién modificó la configuración."""
         obj.actualizado_por = request.user.username
         super().save_model(request, obj, form, change)
+
+    @admin.action(description="🔄 Resetear checkpoints de ingesta (fuerza carga completa en próxima ejecución)")
+    def resetear_checkpoints_ingesta(self, request, queryset):
+        """Resetea los timestamps de última ingesta para forzar carga completa."""
+        for config in queryset:
+            config.ultima_ingesta_preinscriptos = None
+            config.ultima_ingesta_aspirantes = None
+            config.ultima_ingesta_ingresantes = None
+            config.save(update_fields=[
+                'ultima_ingesta_preinscriptos',
+                'ultima_ingesta_aspirantes',
+                'ultima_ingesta_ingresantes'
+            ])
+
+        self.message_user(
+            request,
+            "Checkpoints reseteados. La próxima ingesta automática traerá todos los registros desde dia_inicio.",
+            messages.SUCCESS
+        )
 
     def get_urls(self):
         """Agregar URLs personalizadas para exportar/importar."""
