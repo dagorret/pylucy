@@ -3230,6 +3230,8 @@ class ConfiguracionAdmin(admin.ModelAdmin):
     def boton_resetear_checkpoints(self, obj):
         """Botón para resetear checkpoints desde el formulario."""
         if obj and obj.pk:
+            from django.urls import reverse
+            url = reverse('admin:alumnos_configuracion_resetear_checkpoints', args=[obj.pk])
             return format_html(
                 '<div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 10px;">'
                 '<p style="margin: 0 0 10px 0;"><strong>🔄 Resetear Checkpoints de Ingesta</strong></p>'
@@ -3237,12 +3239,13 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'Resetea los timestamps de última ingesta (preinscriptos, aspirantes, ingresantes) para forzar carga completa en la próxima ejecución automática.<br>'
                 '<strong>Nota:</strong> Esto hará que la próxima tarea periódica traiga TODOS los registros desde dia_inicio hasta ahora.'
                 '</p>'
-                '<a href="resetear-checkpoints/" '
+                '<a href="{}" '
                 'onclick="return confirm(\'¿Estás seguro de resetear los checkpoints? La próxima ingesta traerá TODOS los registros desde dia_inicio.\');" '
                 'style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">'
                 '🔄 Resetear Checkpoints Ahora'
                 '</a>'
-                '</div>'
+                '</div>',
+                url
             )
         return "Guarda primero la configuración"
     boton_resetear_checkpoints.short_description = "🔧 Resetear Checkpoints"
