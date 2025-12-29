@@ -104,6 +104,7 @@ class EmailService:
 
         # 🔧 USAR PLANTILLA DESDE BD O FALLBACK A TEXTO DEFAULT
         plantilla = config.email_plantilla_credenciales
+        html_message = None  # Inicializar siempre
         if plantilla:
             # Reemplazar variables en la plantilla
             try:
@@ -120,37 +121,120 @@ class EmailService:
             except KeyError as e:
                 logger.error(f"Error en variables de plantilla: {e}")
                 plantilla = None
+                html_message = None  # Resetear si hubo error
 
         if not plantilla:
-            # Fallback si no hay plantilla configurada
-            message = f"""
-Hola {alumno.nombre} {alumno.apellido},
+            # Fallback: Plantilla FCE - UNRC (Credenciales)
+            message = f"Hola {alumno.nombre} {alumno.apellido}, tus credenciales de acceso V.ECO están disponibles."
+            html_message = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bienvenida - V.ECO</title>
+  <style>
+    body {{ margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; }}
+    .wrapper {{ width: 100%; background: #f4f6f9; padding: 24px 12px; }}
+    .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }}
+    .header {{ background: #0b2f5b; padding: 26px 20px; text-align: center; color: #fff; }}
+    .header h1 {{ margin: 0; font-size: 20px; letter-spacing: 0.2px; }}
+    .header p {{ margin: 6px 0 0; font-size: 13px; opacity: 0.9; }}
+    .content {{ padding: 22px 20px; }}
+    .title {{ margin: 0 0 10px; font-size: 18px; }}
+    .muted {{ color: #6b7280; font-size: 13px; margin: 0 0 14px; }}
+    .card {{ background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 14px; margin: 16px 0; }}
+    .label {{ font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .6px; margin: 0 0 4px; }}
+    .value {{ margin: 0; font-size: 15px; color: #111827; }}
+    .pill {{ display: inline-block; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #e8f1ff; color: #0b2f5b; border: 1px solid #cfe1ff; margin-bottom: 10px; }}
+    .warning {{ background: #fff7e6; border: 1px solid #ffe1a6; border-left: 5px solid #f59e0b; border-radius: 10px; padding: 12px 14px; margin: 16px 0; }}
+    .warning strong {{ color: #92400e; }}
+    .warning ul {{ margin: 8px 0 0 18px; padding: 0; }}
+    .steps {{ margin: 12px 0 0; padding-left: 18px; }}
+    .btn-wrap {{ text-align: center; margin: 18px 0 8px; }}
+    .button {{ display: inline-block; background: #0b2f5b; color: #ffffff !important; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 14px; }}
+    .help {{ margin-top: 16px; font-size: 13px; color: #374151; }}
+    .help b {{ color: #0b2f5b; }}
+    .divider {{ height: 1px; background: #e5e7eb; margin: 18px 0; }}
+    .signature {{ font-size: 13px; color: #374151; }}
+    .footer {{ padding: 16px 20px; background: #fbfbfb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    a {{ color: #0b2f5b; }}
+  </style>
+</head>
 
-Te damos la bienvenida a la Universidad Nacional de Río Cuarto.
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>Credenciales de acceso | V.ECO (FCE)</h1>
+        <p>Universidad Nacional de Río Cuarto</p>
+      </div>
 
-Tus credenciales de acceso a Microsoft Teams y servicios institucionales son:
+      <div class="content">
+        <span class="pill">Bienvenida/o al ecosistema virtual</span>
 
-Usuario: {upn}
-Contraseña temporal: {password}
+        <h2 class="title">Hola {alumno.nombre} {alumno.apellido},</h2>
+        <p class="muted">
+          Te compartimos tu cuenta institucional para ingresar al <b>Ecosistema Virtual de la FCE (V.ECO)</b>.
+        </p>
 
-IMPORTANTE:
-- La primera vez que ingreses, se te pedirá cambiar la contraseña
-- Guarda tu nueva contraseña en un lugar seguro
-- Si olvidaste tu contraseña, contacta a soporte técnico
+        <div class="card">
+          <p class="label">Usuario</p>
+          <p class="value"><b>{upn}</b></p>
 
-Accede a Teams en: https://teams.microsoft.com
+          <div class="divider"></div>
 
-Saludos,
-Sistema Lucy AMS
-Universidad Nacional de Río Cuarto
+          <p class="label">Contraseña temporal</p>
+          <p class="value"><b>{password}</b></p>
+        </div>
 
----
-Este es un mensaje automático, por favor no responder.
-"""
+        <div class="warning">
+          <strong>⚠️ Importante</strong>
+          <ul>
+            <li>En tu primer ingreso, el sistema te solicitará <b>cambiar la contraseña</b>.</li>
+            <li>Guardá tu nueva contraseña en un lugar seguro y no la compartas.</li>
+          </ul>
+        </div>
 
-        # Si no hay plantilla personalizada, no enviar html_message (solo texto plano)
-        if not html_message:
-            html_message = None
+        <p class="muted" style="margin-bottom:8px;">
+          Para ingresar, seguí estos pasos:
+        </p>
+        <ol class="steps">
+          <li>Accedé a <b>V.ECO</b> desde el botón de abajo.</li>
+          <li>Ingresá y seleccioná el botón <b>MS TEAMS</b> de la FCE.</li>
+          <li>Si es tu primera vez, completá el cambio de contraseña.</li>
+        </ol>
+
+        <div class="btn-wrap">
+          <a class="button" href="https://v.eco.unrc.edu.ar" target="_blank" rel="noopener">Accedé a V.ECO</a>
+        </div>
+
+        <p class="help">
+          Ante cualquier consulta, escribinos a: <b>v.estudiantes@fce.unrc.edu.ar</b><br />
+          Tel.: <b>0358 4676542</b><br />
+          También podés consultar al <b>ChatBOT FCE</b> las 24 hs.
+        </p>
+
+        <div class="divider"></div>
+
+        <p class="signature">
+          Atentamente,<br />
+          Secretaría de Virtualización Estratégica<br />
+          Facultad de Ciencias Económicas<br />
+          Universidad Nacional de Río Cuarto
+        </p>
+      </div>
+
+      <div class="footer">
+        Este es un mensaje automático, por favor no responder.
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+        else:
+            # Si hay plantilla personalizada pero no es HTML, crear versión texto simple
+            if not html_message:
+                html_message = None
 
         try:
             # IMPORTANTE: Siempre enviar al email_personal
@@ -230,20 +314,99 @@ Este es un mensaje automático, por favor no responder.
             except KeyError as e:
                 logger.error(f"Error en variables de plantilla: {e}")
                 plantilla = None
+                html_message = None  # Resetear si hubo error
 
         if not plantilla:
-            # Fallback si no hay plantilla configurada
-            message = f"""
-Hola {alumno.nombre} {alumno.apellido},
+            # Fallback: Plantilla FCE - UNRC
+            message = f"Hola {alumno.apellido}, {alumno.nombre}, bienvenido/a a la FCE-UNRC."
+            html_message = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bienvenida | FCE - UNRC</title>
+  <style>
+    body {{ margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; }}
+    .wrapper {{ width: 100%; background: #f4f6f9; padding: 24px 12px; }}
+    .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }}
+    .header {{ background: #0b2f5b; padding: 26px 20px; text-align: center; color: #fff; }}
+    .header h1 {{ margin: 0; font-size: 20px; letter-spacing: 0.2px; }}
+    .header p {{ margin: 6px 0 0; font-size: 13px; opacity: 0.9; }}
+    .content {{ padding: 22px 20px; }}
+    .pill {{ display: inline-block; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #e8f1ff; color: #0b2f5b; border: 1px solid #cfe1ff; margin-bottom: 10px; }}
+    .title {{ margin: 0 0 10px; font-size: 18px; }}
+    .muted {{ color: #6b7280; font-size: 13px; margin: 0 0 14px; }}
+    .card {{ background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 14px; margin: 16px 0; }}
+    .label {{ font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }}
+    .list {{ margin: 8px 0 0 18px; padding: 0; }}
+    .btn-wrap {{ text-align: center; margin: 18px 0 8px; }}
+    .button {{ display: inline-block; background: #0b2f5b; color: #ffffff !important; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 14px; }}
+    .divider {{ height: 1px; background: #e5e7eb; margin: 18px 0; }}
+    .footer {{ padding: 16px 20px; background: #fbfbfb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    a {{ color: #0b2f5b; }}
+  </style>
+</head>
 
-Te damos la bienvenida a la Universidad Nacional de Río Cuarto.
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>Bienvenida/o a la Facultad de Ciencias Económicas</h1>
+        <p>Universidad Nacional de Río Cuarto</p>
+      </div>
 
-En breve recibirás un email con tus credenciales de acceso a los servicios institucionales.
+      <div class="content">
+        <span class="pill">Inscripción recibida</span>
 
-Saludos,
-Sistema Lucy AMS
-Universidad Nacional de Río Cuarto
-"""
+        <h2 class="title">Estimado/a {alumno.apellido}, {alumno.nombre} <span style="font-weight: normal; color:#6b7280;">(DNI: {alumno.dni})</span></h2>
+
+        <p class="muted">
+          Es un placer darte la bienvenida a la <b>Facultad de Ciencias Económicas de la UNRC</b>.
+          Hemos recibido tu inscripción correctamente.
+        </p>
+
+        <div class="card">
+          <p class="label">En los próximos días vas a recibir información sobre</p>
+          <ul class="list">
+            <li><b>Credenciales de acceso a V.ECO</b></li>
+          </ul>
+
+          <div class="divider" style="margin: 14px 0;"></div>
+
+          <p class="muted" style="margin:0;">
+            Para ver información y materiales del cursillo de ingreso, ingresá desde el siguiente enlace:
+          </p>
+
+          <div class="btn-wrap" style="margin-top:12px;">
+            <a class="button" href="https://www.eco.unrc.edu.ar/ingresantes/" target="_blank" rel="noopener">
+              Ir a Ingresantes
+            </a>
+          </div>
+
+          <p class="muted" style="margin:10px 0 0;">
+            Si el botón no funciona, copiá y pegá este enlace en tu navegador:<br />
+            <a href="https://www.eco.unrc.edu.ar/ingresantes/" target="_blank" rel="noopener">https://www.eco.unrc.edu.ar/ingresantes/</a>
+          </p>
+        </div>
+
+        <p style="margin: 0;">
+          ¡Bienvenido/a y éxitos en esta nueva etapa!
+        </p>
+      </div>
+
+      <div class="footer">
+        <b>Secretaría de Virtualización Estratégica - Facultad de Ciencias Económicas – UNRC</b><br />
+        Ruta Nacional 36 Km 601 – Río Cuarto, Córdoba<br />
+        <a href="https://www.eco.unrc.edu.ar" target="_blank" rel="noopener">www.eco.unrc.edu.ar</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+        else:
+            # Si hay plantilla personalizada pero no es HTML, no enviar html
+            if not html_message:
+                html_message = None
 
         try:
             # IMPORTANTE: Siempre enviar al email_personal
@@ -336,112 +499,104 @@ Universidad Nacional de Río Cuarto
                 plantilla = None
 
         if not plantilla:
-            # Mensaje en texto plano (fallback)
-            message = f"""
-Hola {alumno.nombre} {alumno.apellido},
-
-¡Bienvenido/a al Ecosistema Virtual de la Facultad de Ciencias Económicas!
-
-Has sido enrollado/a en nuestro campus virtual Moodle.
-
-🌐 ACCESO AL ECOSISTEMA VIRTUAL:
-URL: {moodle_url}
-
-🔑 CREDENCIALES DE ACCESO:
-Usuario: {upn}
-Contraseña: {password}
-
-IMPORTANTE:
-- Estas son las mismas credenciales para Microsoft Teams y el Campus Virtual
-- En el primer acceso deberás cambiar tu contraseña
-- El acceso es mediante autenticación de Microsoft (OpenID Connect)
-- Guarda estas credenciales en un lugar seguro
-
-📚 CURSOS ENROLLADOS:
-{cursos_texto}
-
-Si tienes alguna consulta o problema para acceder, contacta con soporte técnico.
-
-Saludos,
-Sistema Lucy AMS
-Facultad de Ciencias Económicas
-Universidad Nacional de Río Cuarto
-
----
-Este es un mensaje automático, por favor no responder.
-"""
-            # Generar versión HTML del fallback
-            html_message = f"""
-<!DOCTYPE html>
-<html>
+            # Fallback: Plantilla FCE - UNRC (Enrollamiento)
+            message = f"Hola {alumno.nombre} {alumno.apellido}, ya tienes acceso al Campus Virtual Moodle."
+            html_message = f"""<!DOCTYPE html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #003366; color: white; padding: 20px; text-align: center; }}
-        .content {{ background-color: #f9f9f9; padding: 20px; }}
-        .credentials {{ background-color: #e8f4f8; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0; }}
-        .important {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
-        .courses {{ background-color: #fff; padding: 15px; margin: 20px 0; border: 1px solid #ddd; }}
-        .footer {{ background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-        ul {{ padding-left: 20px; }}
-        a {{ color: #0066cc; text-decoration: none; }}
-        a:hover {{ text-decoration: underline; }}
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ecosistema Virtual FCE - V.ECO</title>
+  <style>
+    body {{ margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; }}
+    .wrapper {{ width: 100%; background: #f4f6f9; padding: 24px 12px; }}
+    .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }}
+    .header {{ background: #0b2f5b; padding: 26px 20px; text-align: center; color: #fff; }}
+    .header h1 {{ margin: 0; font-size: 20px; letter-spacing: 0.2px; }}
+    .header p {{ margin: 6px 0 0; font-size: 13px; opacity: 0.9; }}
+    .content {{ padding: 22px 20px; }}
+    .pill {{ display: inline-block; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #e8f1ff; color: #0b2f5b; border: 1px solid #cfe1ff; margin-bottom: 10px; }}
+    .title {{ margin: 0 0 10px; font-size: 18px; }}
+    .muted {{ color: #6b7280; font-size: 13px; margin: 0 0 14px; }}
+    .card {{ background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 14px; margin: 16px 0; }}
+    .label {{ font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .6px; margin: 0 0 8px; }}
+    .divider {{ height: 1px; background: #e5e7eb; margin: 14px 0; }}
+    .button {{ display: inline-block; background: #0b2f5b; color: #ffffff !important; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 14px; }}
+    .btn-wrap {{ text-align: center; margin: 14px 0 6px; }}
+    .notice {{ background: #fff7e6; border: 1px solid #ffe1a6; border-left: 5px solid #f59e0b; border-radius: 10px; padding: 12px 14px; margin: 16px 0; }}
+    .notice strong {{ color: #92400e; }}
+    .footer {{ padding: 16px 20px; background: #fbfbfb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    a {{ color: #0b2f5b; }}
+  </style>
 </head>
+
 <body>
+  <div class="wrapper">
     <div class="container">
-        <div class="header">
-            <h1>🎓 Ecosistema Virtual FCE - UNRC</h1>
+      <div class="header">
+        <h1>Ecosistema Virtual FCE - V.ECO</h1>
+        <p>Facultad de Ciencias Económicas · UNRC</p>
+      </div>
+
+      <div class="content">
+        <span class="pill">Cursillo de ingreso</span>
+
+        <h2 class="title">Hola {alumno.nombre} {alumno.apellido},</h2>
+
+        <p class="muted">
+          ¡Bienvenido/a al <b>Ecosistema Virtual</b> de la Facultad de Ciencias Económicas (<b>V.ECO</b>)!
+          Has sido matriculado/a a los siguientes módulos del cursillo de ingreso:
+        </p>
+
+        <div class="card">
+          <p class="label">Módulos matriculados</p>
+          {cursos_html}
         </div>
 
-        <div class="content">
-            <p>Hola <strong>{alumno.nombre} {alumno.apellido}</strong>,</p>
+        <div class="card">
+          <p class="label">🌐 Acceso al ecosistema virtual</p>
 
-            <p>¡Bienvenido/a al <strong>Ecosistema Virtual de la Facultad de Ciencias Económicas</strong>!</p>
+          <p style="margin:0; font-size: 14px;">
+            URL: <a href="{moodle_url}" target="_blank" rel="noopener">{moodle_url}</a>
+          </p>
 
-            <p>Has sido enrollado/a en nuestro campus virtual Moodle.</p>
+          <div class="divider"></div>
 
-            <h3>🌐 ACCESO AL ECOSISTEMA VIRTUAL</h3>
-            <p>URL: <a href="{moodle_url}">{moodle_url}</a></p>
+          <p class="muted" style="margin:0;">
+            🔑 Ingresá con el <b>nombre de usuario</b> y la <b>contraseña</b> que recibiste en el correo anterior.
+            Guardá estas credenciales en un lugar seguro.
+          </p>
 
-            <div class="credentials">
-                <h3>🔑 CREDENCIALES DE ACCESO</h3>
-                <p><strong>Usuario:</strong> {upn}</p>
-                <p><strong>Contraseña:</strong> {password}</p>
-            </div>
+          <div class="btn-wrap">
+            <a class="button" href="{moodle_url}" target="_blank" rel="noopener">Ingresar a V.ECO</a>
+          </div>
 
-            <div class="important">
-                <h3>⚠️ IMPORTANTE</h3>
-                <ul>
-                    <li>Estas son las mismas credenciales para Microsoft Teams y el Campus Virtual</li>
-                    <li>En el primer acceso deberás cambiar tu contraseña</li>
-                    <li>El acceso es mediante autenticación de Microsoft (OpenID Connect)</li>
-                    <li>Guarda estas credenciales en un lugar seguro</li>
-                </ul>
-            </div>
-
-            <div class="courses">
-                <h3>📚 CURSOS ENROLLADOS</h3>
-                {cursos_html}
-            </div>
-
-            <p>Si tienes alguna consulta o problema para acceder, contacta con soporte técnico.</p>
-
-            <p>Saludos,<br>
-            <strong>Sistema Lucy AMS</strong><br>
-            Facultad de Ciencias Económicas<br>
-            Universidad Nacional de Río Cuarto</p>
+          <p class="muted" style="margin:8px 0 0;">
+            Si el botón no funciona, copiá y pegá este enlace en tu navegador:<br />
+            <a href="{moodle_url}" target="_blank" rel="noopener">{moodle_url}</a>
+          </p>
         </div>
 
-        <div class="footer">
-            <p>Este es un mensaje automático, por favor no responder.</p>
+        <div class="notice">
+          <strong>📩 Soporte</strong><br />
+          Si tenés alguna consulta, escribinos a
+          <b><a href="mailto:v.estudiantes@fce.unrc.edu.ar">v.estudiantes@fce.unrc.edu.ar</a></b>
+          o consultá el <b>CHATBOT</b> de la FCE desde la página de la Facultad (24 hs).
         </div>
+      </div>
+
+      <div class="footer">
+        Este es un mensaje automático, por favor no responder.<br />
+        <b>Facultad de Ciencias Económicas – UNRC</b>
+      </div>
     </div>
+  </div>
 </body>
-</html>
-"""
+</html>"""
+        else:
+            # Si hay plantilla personalizada pero no es HTML, no enviar html
+            if not html_message:
+                html_message = None
 
         try:
             email_to = alumno.email_personal or alumno.email_institucional
@@ -527,6 +682,139 @@ Universidad Nacional de Río Cuarto
 
         except Exception as e:
             logger.error(f"Error enviando confirmación a {email_destino}: {e}")
+            return False
+
+    def enviar_email_password_reset(self, alumno, password: str) -> bool:
+        """
+        Envía email con nueva contraseña temporal después de un reset.
+
+        Args:
+            alumno: Instancia del modelo Alumno
+            password: Nueva contraseña temporal
+
+        Returns:
+            True si se envió exitosamente, False en caso contrario
+        """
+        from ..models import Configuracion
+        config = Configuracion.load()
+
+        upn = alumno.email_institucional or f"{alumno.dni}@eco.unrc.edu.ar"
+        subject = "Nueva contraseña temporal - FCE UNRC"
+
+        message = f"Hola {alumno.nombre} {alumno.apellido}, se ha generado una nueva contraseña temporal."
+        html_message = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nueva contraseña temporal | FCE - UNRC</title>
+  <style>
+    body {{ margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; }}
+    .wrapper {{ width: 100%; background: #f4f6f9; padding: 24px 12px; }}
+    .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }}
+    .header {{ background: #0b2f5b; padding: 26px 20px; text-align: center; color: #fff; }}
+    .header h1 {{ margin: 0; font-size: 20px; letter-spacing: 0.2px; }}
+    .header p {{ margin: 6px 0 0; font-size: 13px; opacity: 0.9; }}
+    .content {{ padding: 22px 20px; }}
+    .pill {{ display: inline-block; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #e8f1ff; color: #0b2f5b; border: 1px solid #cfe1ff; margin-bottom: 10px; }}
+    .title {{ margin: 0 0 10px; font-size: 18px; }}
+    .muted {{ color: #6b7280; font-size: 13px; margin: 0 0 14px; }}
+    .card {{ background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 14px; margin: 16px 0; }}
+    .label {{ font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }}
+    .value {{ margin: 0; font-size: 15px; color: #111827; }}
+    .divider {{ height: 1px; background: #e5e7eb; margin: 14px 0; }}
+    .warning {{ background: #fff7e6; border: 1px solid #ffe1a6; border-left: 5px solid #f59e0b; border-radius: 10px; padding: 12px 14px; margin: 16px 0; }}
+    .warning strong {{ color: #92400e; }}
+    .warning ul {{ margin: 8px 0 0 18px; padding: 0; }}
+    .help {{ margin-top: 16px; font-size: 13px; color: #374151; }}
+    .help b {{ color: #0b2f5b; }}
+    .footer {{ padding: 16px 20px; background: #fbfbfb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    a {{ color: #0b2f5b; }}
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>Nueva contraseña temporal</h1>
+        <p>Facultad de Ciencias Económicas · UNRC</p>
+      </div>
+
+      <div class="content">
+        <span class="pill">Recuperación de acceso</span>
+
+        <h2 class="title">Hola {alumno.nombre} {alumno.apellido},</h2>
+
+        <p class="muted">
+          Se ha generado una <b>nueva contraseña temporal</b> para tu cuenta institucional.
+          Utilizala para ingresar y completar el cambio de contraseña.
+        </p>
+
+        <div class="card">
+          <p class="label">Usuario</p>
+          <p class="value"><b>{upn}</b></p>
+
+          <div class="divider"></div>
+
+          <p class="label">Nueva contraseña temporal</p>
+          <p class="value"><b>{password}</b></p>
+        </div>
+
+        <div class="warning">
+          <strong>⚠️ Importante</strong>
+          <ul>
+            <li>Al ingresar con esta contraseña, el sistema te solicitará <b>cambiarla</b>.</li>
+            <li>Guardá tu nueva contraseña en un lugar seguro y no la compartas.</li>
+            <li>Si no solicitaste este cambio, contactate con soporte técnico <b>de inmediato</b>.</li>
+          </ul>
+        </div>
+
+        <p class="help">
+          Ante cualquier consulta, escribinos a: <b><a href="mailto:v.estudiantes@fce.unrc.edu.ar">v.estudiantes@fce.unrc.edu.ar</a></b>
+        </p>
+
+        <p class="help" style="margin-top: 12px;">
+          Saludos,<br />
+          <b>Facultad de Ciencias Económicas</b><br />
+          Universidad Nacional de Río Cuarto
+        </p>
+      </div>
+
+      <div class="footer">
+        Este es un mensaje automático, por favor no responder.<br />
+        <b>Facultad de Ciencias Económicas – UNRC</b>
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+
+        try:
+            email_destino = alumno.email_personal or alumno.email_institucional
+            if not email_destino:
+                logger.error(f"Alumno {alumno.id} no tiene email configurado")
+                return False
+
+            logger.info(f"Enviando email de password reset a {email_destino}")
+
+            result = send_mail(
+                subject=subject,
+                message=message,
+                from_email=self.from_email,
+                recipient_list=[email_destino],
+                html_message=html_message,
+                fail_silently=False
+            )
+
+            if result == 1:
+                logger.info(f"Email de password reset enviado a {email_destino}")
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            logger.error(f"Error enviando email de password reset a {email_destino}: {e}")
             return False
 
     def send_status_change_email(self, alumno, old_status: str, new_status: str) -> bool:

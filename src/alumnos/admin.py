@@ -3710,6 +3710,12 @@ from cursos.admin import CursoIngresoAdmin, CarreraAdmin
 admin_site.register(CursoIngreso, CursoIngresoAdmin)
 admin_site.register(Carrera, CarreraAdmin)
 
+# Registrar modelos de autenticación de Django (Users y Groups)
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.admin import UserAdmin, GroupAdmin
+admin_site.register(User, UserAdmin)
+admin_site.register(Group, GroupAdmin)
+
 
 # =============================================================================
 # TAREAS PERSONALIZADAS
