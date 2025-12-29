@@ -3230,9 +3230,6 @@ class ConfiguracionAdmin(admin.ModelAdmin):
     def boton_resetear_checkpoints(self, obj):
         """Botón para resetear checkpoints desde el formulario."""
         if obj and obj.pk:
-            from django.middleware.csrf import get_token
-            from django.contrib.admin.templatetags.admin_urls import admin_urlname
-            # Obtener el request desde thread local (Django lo guarda automáticamente)
             return format_html(
                 '<div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 10px;">'
                 '<p style="margin: 0 0 10px 0;"><strong>🔄 Resetear Checkpoints de Ingesta</strong></p>'
@@ -3240,14 +3237,12 @@ class ConfiguracionAdmin(admin.ModelAdmin):
                 'Resetea los timestamps de última ingesta (preinscriptos, aspirantes, ingresantes) para forzar carga completa en la próxima ejecución automática.<br>'
                 '<strong>Nota:</strong> Esto hará que la próxima tarea periódica traiga TODOS los registros desde dia_inicio hasta ahora.'
                 '</p>'
-                '<form method="post" action="resetear-checkpoints/" style="margin: 0;" onsubmit="return confirm(\'¿Estás seguro de resetear los checkpoints? La próxima ingesta traerá TODOS los registros desde dia_inicio.\');">'
-                '{}'
-                '<button type="submit" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">'
+                '<a href="resetear-checkpoints/" '
+                'onclick="return confirm(\'¿Estás seguro de resetear los checkpoints? La próxima ingesta traerá TODOS los registros desde dia_inicio.\');" '
+                'style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">'
                 '🔄 Resetear Checkpoints Ahora'
-                '</button>'
-                '</form>'
-                '</div>',
-                format_html('<input type="hidden" name="csrfmiddlewaretoken">')
+                '</a>'
+                '</div>'
             )
         return "Guarda primero la configuración"
     boton_resetear_checkpoints.short_description = "🔧 Resetear Checkpoints"
@@ -3291,21 +3286,21 @@ class ConfiguracionAdmin(admin.ModelAdmin):
 
         config = get_object_or_404(Configuracion, pk=object_id)
 
-        if request.method == 'POST':
-            config.ultima_ingesta_preinscriptos = None
-            config.ultima_ingesta_aspirantes = None
-            config.ultima_ingesta_ingresantes = None
-            config.save(update_fields=[
-                'ultima_ingesta_preinscriptos',
-                'ultima_ingesta_aspirantes',
-                'ultima_ingesta_ingresantes'
-            ])
+        # Resetear checkpoints (GET o POST, ya confirmado por JavaScript)
+        config.ultima_ingesta_preinscriptos = None
+        config.ultima_ingesta_aspirantes = None
+        config.ultima_ingesta_ingresantes = None
+        config.save(update_fields=[
+            'ultima_ingesta_preinscriptos',
+            'ultima_ingesta_aspirantes',
+            'ultima_ingesta_ingresantes'
+        ])
 
-            self.message_user(
-                request,
-                "✅ Checkpoints reseteados exitosamente. La próxima ingesta automática traerá todos los registros desde dia_inicio.",
-                messages.SUCCESS
-            )
+        self.message_user(
+            request,
+            "✅ Checkpoints reseteados exitosamente. La próxima ingesta automática traerá todos los registros desde dia_inicio.",
+            messages.SUCCESS
+        )
 
         return HttpResponseRedirect(f'../')
 
