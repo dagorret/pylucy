@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Docker Compose para servidor de testing (Alfa 1)
 # Usa configuración de desarrollo para simplicidad
 # Expone puertos para acceso directo
@@ -53,6 +51,7 @@ services:
       - "8000:8000"
     volumes:
       - ./src:/app
+      - ./credenciales:/credenciales:ro  # Montar credenciales en modo read-only
       - pylucy-static-testing:/app/staticfiles
     depends_on:
       db:
@@ -72,6 +71,7 @@ services:
       - .env.dev
     volumes:
       - ./src:/app
+      - ./credenciales:/credenciales:ro  # Montar credenciales en modo read-only
     depends_on:
       db:
         condition: service_healthy
@@ -90,6 +90,7 @@ services:
       - .env.dev
     volumes:
       - ./src:/app
+      - ./credenciales:/credenciales:ro  # Montar credenciales en modo read-only
     depends_on:
       db:
         condition: service_healthy

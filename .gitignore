@@ -28,14 +28,18 @@ staticfiles/
 !src/*/static/
 
 # --- Environment variables ---
-# Repo privado: Permitimos archivos de desarrollo y examples
-# SOLO ignoramos .env.prod (contiene credenciales reales de producción)
-.env.prod
-.env.production
-.env.secrets
+# Ignorar TODOS los archivos .env excepto .example
+.env
+.env.*
+!.env.*.example
+!.env.example
 
-# Permitidos: .env.dev, .env.dev.example, .env.prod.example
-# Estos tienen credenciales de testing/desarrollo
+# --- Credenciales (archivos JSON con datos sensibles) ---
+# Carpeta para almacenar credenciales de servicios externos
+credenciales/*.json
+!credenciales/*.json.example
+# Permitir README.md de credenciales
+!credenciales/README.md
 
 # --- IDEs ---
 .vscode/

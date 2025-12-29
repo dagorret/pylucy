@@ -70,10 +70,30 @@ cmd_start() {
     log_info "Esperando a que la base de datos esté lista..."
     sleep 10
 
-    # Ejecutar migraciones
-    log_info "Ejecutando migraciones..."
-    docker compose -f "$COMPOSE_FILE" exec -T web python manage.py migrate
+    # Verificar y resolver conflictos de migraciones
+    log_info "Verificando migraciones..."
 
+    # Detectar si hay conflictos de migraciones
+    CONFLICTS=$(docker compose -f "$COMPOSE_FILE" exec -T web python manage.py showmigrations 2>&1 | grep -c "CONFLICT" || true)
+
+    if [ "$CONFLICTS" -gt 0 ]; then
+        log_warning "Detectados conflictos de migraciones. Mergeando automáticamente..."
+        docker compose -f "$COMPOSE_FILE" exec -T web python manage.py makemigrations --merge --noinput || {
+            log_error "Error al mergear migraciones. Por favor revisa manualmente."
+            exit 1
+        }
+        log_success "Conflictos de migraciones resueltos"
+    fi
+
+    # Ejecutar migraciones
+    log_info "Aplicando migraciones..."
+    if ! docker compose -f "$COMPOSE_FILE" exec -T web python manage.py migrate; then
+        log_error "Error al aplicar migraciones"
+        log_info "Revisa los logs con: ./deploy-testing.sh logs"
+        exit 1
+    fi
+
+    log_success "Migraciones aplicadas correctamente"
     log_success "PyLucy Testing está corriendo!"
     echo ""
     cmd_info
