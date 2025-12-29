@@ -77,6 +77,7 @@ class TeamsService:
         self.domain = settings.TEAMS_DOMAIN  # Domain siempre de ENV (no configurable en DB)
         self.client_id = config.teams_client_id or settings.TEAMS_CLIENT_ID
         self.client_secret = config.teams_client_secret or settings.TEAMS_CLIENT_SECRET
+        self.account_prefix = config.account_prefix or settings.ACCOUNT_PREFIX
         self._token = None
         self._sku_id = None
 
@@ -167,8 +168,8 @@ class TeamsService:
         Returns:
             Dict con información del usuario (created=True si fue creado, False si ya existía)
         """
-        # Generar UPN con prefijo según ENVIRONMENT_MODE
-        prefix = settings.ACCOUNT_PREFIX  # "test-a" o "a"
+        # Generar UPN con prefijo desde configuración
+        prefix = self.account_prefix  # Desde BD o settings
         upn = f"{prefix}{alumno.dni}@{self.domain}"
 
         # 1. BUSCAR PRIMERO si el usuario ya existe
@@ -384,7 +385,7 @@ class TeamsService:
         """
         # Generar contraseña si no se proporcionó
         if not new_password:
-            dni = upn.split('@')[0].replace(settings.ACCOUNT_PREFIX, '')
+            dni = upn.split('@')[0].replace(self.account_prefix, '')
             new_password = self._generate_temp_password(dni)
 
         # URL encode del UPN para manejar caracteres especiales como @

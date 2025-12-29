@@ -1075,7 +1075,7 @@ def resetear_password_y_enviar_email(self, alumno_id):
         email_svc = EmailService()
 
         # Construir UPN
-        prefix = settings.ACCOUNT_PREFIX
+        prefix = teams_svc.account_prefix
         upn = f"{prefix}{alumno.dni}@{settings.TEAMS_DOMAIN}"
 
         # 1. Verificar que el usuario existe

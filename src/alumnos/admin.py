@@ -2494,7 +2494,7 @@ class AlumnoAdmin(admin.ModelAdmin):
 
             try:
                 # Construir UPN y obtener usuario de Teams
-                prefix = settings.ACCOUNT_PREFIX
+                prefix = teams_svc.account_prefix
                 upn = f"{prefix}{alumno.dni}@{settings.TEAMS_DOMAIN}"
 
                 # Verificar que el usuario existe en Teams
@@ -2570,7 +2570,7 @@ class AlumnoAdmin(admin.ModelAdmin):
 
         for alumno in queryset:
             try:
-                prefix = settings.ACCOUNT_PREFIX
+                prefix = teams_svc.account_prefix
                 upn = f"{prefix}{alumno.dni}@{settings.TEAMS_DOMAIN}"
 
                 new_password = teams_svc.reset_password(upn)
