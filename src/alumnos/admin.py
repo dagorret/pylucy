@@ -32,6 +32,7 @@ O EL USO U OTROS TRATOS EN EL SOFTWARE.
 """
 from django.contrib import admin
 from django.contrib import messages
+from django.db import models as db_models
 from django.shortcuts import redirect
 from django.urls import path
 from django.utils import timezone
@@ -121,7 +122,7 @@ def encolar_o_ejecutar_tarea(alumno, tipo_tarea, task_func=None, task_args=None,
     return tarea
 
 
-@admin.register(Alumno)
+# AlumnoAdmin base (no registrar aquí, se registra AlumnoAdminWithFilters en PyLucyAdminSite)
 class AlumnoAdmin(admin.ModelAdmin):
     change_list_template = "admin/alumnos/alumno/change_list.html"
     list_display = (
@@ -2855,16 +2856,94 @@ class CarreraListFilter(admin.SimpleListFilter):
         return queryset
 
 
-# Re-registrar AlumnoAdmin con el filtro personalizado
-admin.site.unregister(Alumno)
+class TeamsStatusFilter(admin.SimpleListFilter):
+    """Filtro para estado de Teams (tiene email institucional)."""
+    title = 'Estado Teams'
+    parameter_name = 'teams_status'
 
-@admin.register(Alumno)
+    def lookups(self, request, model_admin):
+        return (
+            ('con_teams', 'Con Teams (tiene email institucional)'),
+            ('sin_teams', 'Sin Teams (sin email institucional)'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'con_teams':
+            return queryset.exclude(email_institucional__isnull=True).exclude(email_institucional='')
+        if self.value() == 'sin_teams':
+            return queryset.filter(email_institucional__isnull=True) | queryset.filter(email_institucional='')
+        return queryset
+
+
+class MoodleStatusFilter(admin.SimpleListFilter):
+    """Filtro para estado de Moodle (enrollado en cursos)."""
+    title = 'Estado Moodle'
+    parameter_name = 'moodle_status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('con_moodle', 'Con Moodle (tiene cursos)'),
+            ('sin_moodle', 'Sin Moodle (sin cursos)'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'con_moodle':
+            # Alumnos con carreras_data que contenga al menos una carrera
+            return queryset.exclude(carreras_data__isnull=True).exclude(carreras_data=[])
+        if self.value() == 'sin_moodle':
+            # Alumnos sin carreras_data o con array vacío
+            return queryset.filter(carreras_data__isnull=True) | queryset.filter(carreras_data=[])
+        return queryset
+
+
+class EmailStatusFilter(admin.SimpleListFilter):
+    """Filtro para estado de Email (tiene email personal o institucional)."""
+    title = 'Estado Email'
+    parameter_name = 'email_status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('con_email_personal', 'Con email personal'),
+            ('con_email_institucional', 'Con email institucional'),
+            ('con_cualquier_email', 'Con cualquier email'),
+            ('sin_email', 'Sin email'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'con_email_personal':
+            return queryset.exclude(email_personal__isnull=True).exclude(email_personal='')
+        if self.value() == 'con_email_institucional':
+            return queryset.exclude(email_institucional__isnull=True).exclude(email_institucional='')
+        if self.value() == 'con_cualquier_email':
+            # Tiene al menos uno de los dos
+            return queryset.filter(
+                db_models.Q(email_personal__isnull=False, email_personal__gt='') |
+                db_models.Q(email_institucional__isnull=False, email_institucional__gt='')
+            )
+        if self.value() == 'sin_email':
+            # No tiene ninguno de los dos
+            return queryset.filter(
+                db_models.Q(email_personal__isnull=True) | db_models.Q(email_personal='')
+            ).filter(
+                db_models.Q(email_institucional__isnull=True) | db_models.Q(email_institucional='')
+            )
+        return queryset
+
+
+# AlumnoAdmin con filtros personalizados (se registra en PyLucyAdminSite más abajo)
 class AlumnoAdminWithFilters(AlumnoAdmin):
     """AlumnoAdmin con filtros personalizados."""
-    list_filter = ("estado_actual", "modalidad_actual", CarreraListFilter, "cohorte")
+    list_filter = (
+        "estado_actual",
+        "modalidad_actual",
+        CarreraListFilter,
+        "cohorte",
+        TeamsStatusFilter,
+        MoodleStatusFilter,
+        EmailStatusFilter,
+    )
 
 
-@admin.register(Log)
 class LogAdmin(admin.ModelAdmin):
     """Admin para visualizar logs del sistema."""
 
@@ -3699,7 +3778,7 @@ Sistema PyLucy"""
 admin_site = PyLucyAdminSite(name='admin')
 
 # Re-registrar todos los modelos en el nuevo admin site
-admin_site.register(Alumno, AlumnoAdmin)
+admin_site.register(Alumno, AlumnoAdminWithFilters)
 admin_site.register(Log, LogAdmin)
 admin_site.register(Configuracion, ConfiguracionAdmin)
 admin_site.register(Tarea, TareaAdmin)
