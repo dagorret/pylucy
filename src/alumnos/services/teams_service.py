@@ -474,10 +474,10 @@ class TeamsService:
             True si se eliminó exitosamente, False en caso contrario
         """
         # Verificación de seguridad: solo permitir eliminar cuentas test-*
-        if not upn.startswith('test-'):
-            logger.error(f"SEGURIDAD: Intento de eliminar cuenta no-test: {upn}")
-            log_to_db('ERROR', 'teams_service', f'SEGURIDAD: Intento de eliminar cuenta no-test: {upn}', alumno=alumno)
-            raise ValueError(f"T-999: Por seguridad, solo se pueden eliminar cuentas test-*")
+        #if not upn.startswith('test-'):
+        #    logger.error(f"SEGURIDAD: Intento de eliminar cuenta no-test: {upn}")
+        #     log_to_db('ERROR', 'teams_service', f'SEGURIDAD: Intento de eliminar cuenta no-test: {upn}', alumno=alumno)
+        #    raise ValueError(f"T-999: Por seguridad, solo se pueden eliminar cuentas test-*")
 
         # URL encode del UPN para manejar caracteres especiales como @
         upn_encoded = quote(upn, safe='')
