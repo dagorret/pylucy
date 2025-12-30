@@ -567,29 +567,24 @@ class MoodleService:
 
         # Extraer datos del alumno (tomamos la primera carrera)
         carrera_data = alumno.carreras_data[0]
+        id_carrera = carrera_data.get('id_carrera')
         nombre_carrera = carrera_data.get('nombre_carrera', '')
         modalidad_codigo = carrera_data.get('modalidad', '')
         comisiones_alumno = [c.get('nombre_comision', '') for c in carrera_data.get('comisiones', [])]
 
-        # Mapeo de nombre de carrera a código
-        carrera_map = {
-            'CONTADOR PÚBLICO': 'CP',
-            'LICENCIATURA EN ECONOMÍA': 'LE',
-            'LICENCIATURA EN ADMINISTRACIÓN': 'LA',
-            'TECNICATURA EN GESTIÓN AGROPECUARIA Y AGROALIMENTARIA': 'TGA',
-            'TECNICATURA UNIVERSITARIA EN GESTIÓN EMPRESARIAL': 'TGE',
-        }
-        codigo_carrera = carrera_map.get(nombre_carrera.upper(), None)
+        # Mapeo de id_carrera (UTI) a código interno (más confiable que nombre)
+        from cursos.constants import CARRERAS_DICT
+        codigo_carrera = CARRERAS_DICT.get(str(id_carrera)) or CARRERAS_DICT.get(id_carrera)
 
         # Mapeo de modalidad
         modalidad_map = {'1': 'PRES', '2': 'DIST'}
         modalidad = modalidad_map.get(modalidad_codigo, 'PRES')
 
         if not codigo_carrera:
-            logger.error(f"No se pudo mapear carrera: {nombre_carrera}")
+            logger.error(f"No se pudo mapear carrera: ID={id_carrera}, Nombre={nombre_carrera}")
             return {
                 'success': False,
-                'error': f'Carrera no reconocida: {nombre_carrera}'
+                'error': f'Carrera no reconocida: {nombre_carrera} (ID: {id_carrera})'
             }
 
         logger.info(f"Filtrando cursos para: Carrera={codigo_carrera}, Modalidad={modalidad}, Comisiones={comisiones_alumno}")
@@ -620,7 +615,12 @@ class MoodleService:
             if modalidad not in modalidades:
                 continue
 
-            # Verificar si alguna comisión del alumno está en el curso (o si el curso acepta todas las comisiones)
+            # TGA y TGE: Una sola entrada por carrera, NO filtrar por comisión
+            if codigo_carrera in ['TGA', 'TGE']:
+                cursos_filtrados.append(curso_moodle)
+                continue
+
+            # Para otras carreras: Verificar si alguna comisión del alumno está en el curso (o si el curso acepta todas las comisiones)
             comisiones_match = any(com in comisiones for com in comisiones_alumno)
             todas_comisiones = len(comisiones) > 6  # Si tiene muchas comisiones, probablemente acepta todas
 
