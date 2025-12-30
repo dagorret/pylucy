@@ -202,10 +202,14 @@ ADMIN_INDEX_TITLE = "Panel de Administración"
 
 # Email configuration
 # =============================================================================
-# CONFIGURACIÓN DE EMAIL (Office 365 / SMTP)
+# CONFIGURACIÓN DE EMAIL (Microsoft Graph API)
 # =============================================================================
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Backend personalizado que usa Microsoft Graph API en lugar de SMTP
+# Ventajas: No requiere habilitar SMTP en O365, mejor control de errores
+# Documentación: doc/EMAIL-BACKEND-MSGRAPH.md
+EMAIL_BACKEND = "alumnos.backends.msgraph.MicrosoftGraphEmailBackend"
 
+# Configuración SMTP (solo se usa si se cambia el backend a SMTP)
 # Office 365 SMTP: smtp.office365.com:587 (TLS)
 # MailHog (dev): mailhog:1025 (sin auth)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "mailhog")
