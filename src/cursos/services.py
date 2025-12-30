@@ -62,6 +62,9 @@ def resolver_curso(codigo_carrera: str, modalidad: str, comision: str) -> List[s
     """
     Devuelve TODOS los shortnames de Moodle para la combinación carrera + modalidad + comisión.
     Retorna una lista de cursos que coinciden (un alumno puede estar en múltiples materias).
+
+    REGLA ESPECIAL: TGA y TGE tienen una sola entrada por carrera, NO se filtra por comisión.
+
     Prioridad: CursoIngreso con coincidencia exacta de comisión si viene informada.
     Lanza ValueError si no hay match.
     """
@@ -81,7 +84,13 @@ def resolver_curso(codigo_carrera: str, modalidad: str, comision: str) -> List[s
         activo=True, carreras__contains=[carrera], modalidades__contains=[mod]
     )
 
-    # Si hay comisión especificada, filtrar por ella
+    # TGA y TGE: Una sola entrada por carrera, NO filtrar por comisión
+    if carrera in ["TGA", "TGE"]:
+        if normales.exists():
+            return [c.curso_moodle for c in normales]
+        raise ValueError(f"No se encontró curso para {carrera}")
+
+    # Para otras carreras: Si hay comisión especificada, filtrar por ella
     if com_list:
         for com in com_list:
             con_comision = normales.filter(comisiones__contains=[com])
