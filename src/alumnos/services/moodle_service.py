@@ -576,8 +576,8 @@ class MoodleService:
             'CONTADOR PÚBLICO': 'CP',
             'LICENCIATURA EN ECONOMÍA': 'LE',
             'LICENCIATURA EN ADMINISTRACIÓN': 'LA',
-            'TECNICATURA EN GESTIÓN ADMINISTRATIVA Y CONTABLE': 'TGA',
-            'TECNICATURA EN GESTIÓN DE EMPRESAS': 'TGE',
+            'TECNICATURA EN GESTIÓN AGROPECUARIA Y AGROALIMENTARIA': 'TGA',
+            'TECNICATURA UNIVERSITARIA EN GESTIÓN EMPRESARIAL': 'TGE',
         }
         codigo_carrera = carrera_map.get(nombre_carrera.upper(), None)
 
