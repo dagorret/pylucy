@@ -3091,6 +3091,119 @@ class TareaAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'hora_programada'
     ordering = ('-hora_programada',)
+    actions = ['limpiar_tareas_atoradas', 'reintentar_tareas_seleccionadas', 'marcar_como_fallidas']
+
+    @admin.action(description="🔄 Reintentar tareas atoradas (>1 hora en 'ejecutando')")
+    def limpiar_tareas_atoradas(self, request, queryset):
+        """Vuelve a poner en estado PENDING las tareas que llevan más de 1 hora en estado 'running' para que se reintenten."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Filtrar tareas en estado running con más de 1 hora desde hora_inicio
+        hace_1_hora = timezone.now() - timedelta(hours=1)
+
+        tareas_atoradas = queryset.filter(
+            estado=Tarea.EstadoTarea.RUNNING,
+            hora_inicio__lt=hace_1_hora
+        )
+
+        count = tareas_atoradas.count()
+
+        if count == 0:
+            self.message_user(
+                request,
+                "No se encontraron tareas atoradas en la selección.",
+                messages.WARNING
+            )
+            return
+
+        # Volver a estado PENDING para que se reintenten automáticamente
+        for tarea in tareas_atoradas:
+            tarea.estado = Tarea.EstadoTarea.PENDING
+            tarea.hora_inicio = None
+            tarea.hora_fin = None
+            # Agregar nota en detalles
+            if not tarea.detalles:
+                tarea.detalles = {}
+            if 'reintentos' not in tarea.detalles:
+                tarea.detalles['reintentos'] = []
+            tarea.detalles['reintentos'].append({
+                'fecha': timezone.now().isoformat(),
+                'motivo': 'Tarea atorada >1h en estado running, reintentando automáticamente'
+            })
+            tarea.save(update_fields=['estado', 'hora_inicio', 'hora_fin', 'detalles'])
+
+        self.message_user(
+            request,
+            f"✅ {count} tarea(s) atorada(s) puesta(s) en cola para reintentar. Se procesarán automáticamente en los próximos 5 minutos.",
+            messages.SUCCESS
+        )
+
+    @admin.action(description="🔄 Reintentar tareas seleccionadas (volver a PENDING)")
+    def reintentar_tareas_seleccionadas(self, request, queryset):
+        """Vuelve a poner en estado PENDING las tareas seleccionadas para que se reintenten."""
+        from django.utils import timezone
+
+        count = 0
+        for tarea in queryset:
+            if tarea.estado in [Tarea.EstadoTarea.RUNNING, Tarea.EstadoTarea.FAILED]:
+                tarea.estado = Tarea.EstadoTarea.PENDING
+                tarea.hora_inicio = None
+                tarea.hora_fin = None
+                tarea.mensaje_error = None
+                # Agregar nota en detalles
+                if not tarea.detalles:
+                    tarea.detalles = {}
+                if 'reintentos' not in tarea.detalles:
+                    tarea.detalles['reintentos'] = []
+                tarea.detalles['reintentos'].append({
+                    'fecha': timezone.now().isoformat(),
+                    'motivo': 'Reintento manual desde el admin'
+                })
+                tarea.save(update_fields=['estado', 'hora_inicio', 'hora_fin', 'mensaje_error', 'detalles'])
+                count += 1
+
+        if count == 0:
+            self.message_user(
+                request,
+                "No se encontraron tareas en estado 'running' o 'failed' en la selección.",
+                messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                f"✅ {count} tarea(s) puesta(s) en cola para reintentar. Se procesarán automáticamente en los próximos 5 minutos.",
+                messages.SUCCESS
+            )
+
+    @admin.action(description="❌ Marcar tareas seleccionadas como fallidas")
+    def marcar_como_fallidas(self, request, queryset):
+        """Marca las tareas seleccionadas como fallidas, independientemente de su estado."""
+        from django.utils import timezone
+
+        count = 0
+        for tarea in queryset:
+            if tarea.estado in [Tarea.EstadoTarea.PENDING, Tarea.EstadoTarea.RUNNING]:
+                tarea.estado = Tarea.EstadoTarea.FAILED
+                if not tarea.hora_fin:
+                    tarea.hora_fin = timezone.now()
+                if not tarea.mensaje_error:
+                    tarea.mensaje_error = "Tarea marcada como fallida manualmente desde el admin"
+                tarea.save(update_fields=['estado', 'hora_fin', 'mensaje_error'])
+                count += 1
+
+        if count == 0:
+            self.message_user(
+                request,
+                "No se encontraron tareas pendientes o en ejecución en la selección.",
+                messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                f"✅ {count} tarea(s) marcada(s) como fallidas.",
+                messages.SUCCESS
+            )
 
     def has_add_permission(self, request):
         return False
